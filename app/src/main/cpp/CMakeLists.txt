@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.4.1)
 project(rimdroid)
+message(STATUS "CMake configuring at: ${CMAKE_CURRENT_SOURCE_DIR}")
+string(TIMESTAMP BUILD_TIME "%Y-%m-%d %H:%M:%S")
+message(STATUS "Build time: ${BUILD_TIME}")
 cmake_policy(SET CMP0079 NEW)
 set(CMAKE_C_STANDARD 11)
 

@@ -65,7 +65,7 @@ jobs:
           path: app/build/outputs/apk/debug/rimdroid-debug.apk
           retention-days: 30
 
-      # 8. Опционально — Release APK (без подписи, для тестирования)
+     # 8. Release APK (unsigned)
       - name: Build Release APK (unsigned)
         run: ./gradlew assembleRelease
         env:
@@ -75,5 +75,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rimdroid-release-unsigned-${{ github.sha }}
-          path: app/build/outputs/apk/release/rimdroid-release-unsigned.apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
           retention-days: 30

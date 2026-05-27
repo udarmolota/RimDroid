@@ -282,6 +282,8 @@ void rimdroid_start_game(const char* game_dir_path,
 }
 
 int rimdroid_init() {
+    FILE* f = fopen("/data/data/com.rimdroid/files/init_called.txt", "w");
+    if (f) { fprintf(f, "rimdroid_init called\n"); fclose(f); }
     const char* renderer_name = getenv("RIMDROID_RENDERER");
 
     if (renderer_name == NULL || strcmp(renderer_name, "GL4ES") == 0) {

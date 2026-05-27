@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rimdroid-debug-${{ github.sha }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/rimdroid-debug.apk
           retention-days: 30
 
       # 8. Опционально — Release APK (без подписи, для тестирования)
@@ -75,5 +75,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rimdroid-release-unsigned-${{ github.sha }}
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/release/rimdroid-release-unsigned.apk
           retention-days: 30

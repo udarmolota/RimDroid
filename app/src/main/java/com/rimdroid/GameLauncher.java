@@ -11,47 +11,64 @@ public class GameLauncher {
 
     private static final String TAG = "RimDroid/GameLauncher";
 
+    // Callback для передачи лог-строк в UI
+    public interface LogCallback {
+        void onLogLine(String line);
+    }
+
+    private static LogCallback logCallback;
+    private static LogcatReader logcatReader;
+
+    public static void setLogCallback(LogCallback callback) {
+        logCallback = callback;
+    }
+
+    public static void postLog(String line) {
+        if (logCallback != null) logCallback.onLogLine(line);
+    }
+
     public static void launch(GameInstance gameInstance) throws ErrnoException {
 
         // --- Box64 tuning ---
-        Os.setenv("BOX64_LOG", "1", false);
-        Os.setenv("BOX64_SHOWBT", "1", false);
-        Os.setenv("BOX64_DYNAREC", "1", false);
-        Os.setenv("BOX64_DYNAREC_BIGBLOCK", "1", false);
-        Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", false);
+        Os.setenv("BOX64_LOG", "1", true);
+        Os.setenv("BOX64_SHOWBT", "1", true);
+        Os.setenv("BOX64_DYNAREC", "1", true);
+        Os.setenv("BOX64_DYNAREC_BIGBLOCK", "0", true);  // 0 для Unity/Mono JIT
+        Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", true);
+        Os.setenv("BOX64_DYNAREC_STRONGMEM", "1", true); // Важно для Unity
+        Os.setenv("BOX64_PREFER_EMULATED", "1", true);   // Использовать x86_64 glibc
 
         // Library path for box64 to find x86_64 .so files
-        Os.setenv("BOX64_LD_LIBRARY_PATH", gameInstance.getLdLibraryPathForEmulation(), false);
+        Os.setenv("BOX64_LD_LIBRARY_PATH", gameInstance.getLdLibraryPathForEmulation(), true);
 
         // Renderer selection — read by rimdroid.c on init
-        Os.setenv("RIMDROID_RENDERER", LauncherPreferences.requireSingleton().getRenderer().name(), false);
-        Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), false);
+        Os.setenv("RIMDROID_RENDERER", LauncherPreferences.requireSingleton().getRenderer().name(), true);
+        Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
 
         // Renderer-specific env vars
         LauncherPreferences.Renderer renderer = LauncherPreferences.requireSingleton().getRenderer();
         switch (renderer) {
             case GL4ES:
-                Os.setenv("BOX64_LIBGL", "libgl4es.so", false);
-                Os.setenv("LIBGL_ES", "2", false);
-                Os.setenv("LIBGL_MIPMAP", "1", false);
-                Os.setenv("RIMDROID_GLES_MAJOR", "2", false);
-                Os.setenv("RIMDROID_GLES_MINOR", "0", false);
+                Os.setenv("BOX64_LIBGL", "libgl4es.so", true);
+                Os.setenv("LIBGL_ES", "2", true);
+                Os.setenv("LIBGL_MIPMAP", "1", true);
+                Os.setenv("RIMDROID_GLES_MAJOR", "2", true);
+                Os.setenv("RIMDROID_GLES_MINOR", "0", true);
                 break;
             case ZINK_ZFA:
-                Os.setenv("BOX64_LIBGL", "libzfa.so", false);
-                Os.setenv("GALLIUM_DRIVER", "zink", false);
-                Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", false);
-                Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", false);
+                Os.setenv("BOX64_LIBGL", "libzfa.so", true);
+                Os.setenv("GALLIUM_DRIVER", "zink", true);
+                Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", true);
+                Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", true);
                 break;
             case ZINK_OSMESA:
-                Os.setenv("BOX64_LIBGL", "libOSMesa.so", false);
-                Os.setenv("GALLIUM_DRIVER", "zink", false);
-                Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", false);
-                Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", false);
-                // Vulkan driver
+                Os.setenv("BOX64_LIBGL", "libOSMesa.so", true);
+                Os.setenv("GALLIUM_DRIVER", "zink", true);
+                Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", true);
+                Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", true);
                 String vulkanDriverName = LauncherPreferences.requireSingleton().getVulkanDriver().libName;
                 if (vulkanDriverName != null) {
-                    Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vulkanDriverName, false);
+                    Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vulkanDriverName, true);
                 }
                 break;
         }
@@ -77,7 +94,13 @@ public class GameLauncher {
         Log.i(TAG, "Renderer: " + renderer.name());
         Log.i(TAG, "BOX64_LD_LIBRARY_PATH: " + gameInstance.getLdLibraryPathForEmulation());
 
-        // Initialize the native window surface (GLFW replacement)
+        postLog("Launching " + gameInstance.getName() + " [" + renderer.name() + "]...");
+        postLog("Path: " + gameInstance.getGamePath());
+
+        // Запускаем чтение logcat
+        startLogcatReader();
+
+        // Initialize the native window surface
         initRimDroidWindow();
 
         // Launch: box64 runs RimWorldLinux ELF directly (no JVM needed)
@@ -86,31 +109,33 @@ public class GameLauncher {
                 gameInstance.getNativeLibraryPath(),
                 gameInstance.getArgs()
         );
+
+        postLog("Game process ended.");
+        stopLogcatReader();
+    }
+
+    // ---- Logcat reader ------------------------------------------------------
+
+    private static void startLogcatReader() {
+        stopLogcatReader();
+        logcatReader = new LogcatReader(line -> postLog(line));
+        logcatReader.start();
+    }
+
+    private static void stopLogcatReader() {
+        if (logcatReader != null) {
+            logcatReader.stop();
+            logcatReader = null;
+        }
     }
 
     // -------------------------------------------------------------------------
-    // Native methods — implemented in rimdroid_jni.c
+    // Native methods
     // -------------------------------------------------------------------------
 
-    /** Called before startGame — initialises renderer/surface state */
     public static native int initRimDroidWindow();
-
-    /** Called on Activity destroy */
     public static native void destroyRimDroidWindow();
-
-    /** Called when SurfaceView surface is ready */
     public static native int setSurface(Surface surface, int width, int height);
-
-    /** Called when surface is destroyed */
     public static native void destroySurface();
-
-    /**
-     * Core launch entry point.
-     * Implemented in rimdroid_jni.c → rimdroid.c → zomdroid_start_game equivalent.
-     *
-     * @param gameDirPath     absolute path to RimWorld instance folder
-     * @param libraryDirPath  colon-separated ARM64 native lib paths
-     * @param args            args passed to RimWorldLinux (usually empty)
-     */
     static native void startGame(String gameDirPath, String libraryDirPath, String[] args);
 }

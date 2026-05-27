@@ -21,44 +21,42 @@ public class GameInstance {
         return AppStorage.requireSingleton().getInstanceDir(name).getAbsolutePath();
     }
 
-    /** LD_LIBRARY_PATH passed into BOX64_LD_LIBRARY_PATH env var */
+    /**
+     * x86_64 library search path for box64 (BOX64_LD_LIBRARY_PATH).
+     * Contains ONLY x86_64 libraries — game libs and Linux system libs.
+     * ARM64 renderer libs do NOT belong here.
+     */
     public String getLdLibraryPathForEmulation() {
         AppStorage storage = AppStorage.requireSingleton();
-        LauncherPreferences prefs = LauncherPreferences.requireSingleton();
 
         ArrayList<String> paths = new ArrayList<>();
 
-        // Game dir itself — libsteam_api.so, Data/Managed libs etc.
+        // Game dir — libsteam_api.so, libUnity.so etc.
         paths.add(getGamePath());
         paths.add(getGamePath() + "/Data/Plugins/x86_64");
         paths.add(getGamePath() + "/Libs64");
 
-        // x86_64 system libs (SDL2, OpenAL, etc.)
+        // x86_64 system libs — glibc, SDL2, OpenAL etc.
         paths.add(storage.getLibsLinuxX86Path());
-
-        // Renderer-specific ARM64 libs (gl4es or zink .so files)
-        switch (prefs.getRenderer()) {
-            case GL4ES:
-                paths.add(storage.getGl4esLibsPath());
-                break;
-            case ZINK_ZFA:
-            case ZINK_OSMESA:
-                paths.add(storage.getZinkLibsPath());
-                break;
-        }
 
         return join(paths, ":");
     }
 
-    /** Native ARM64 library path — passed to zomdroid linker as library_dir_path */
+    /**
+     * ARM64 native library path — passed to Android linker for loading
+     * our ARM64 .so files (renderer, APK native libs).
+     */
     public String getNativeLibraryPath() {
         AppStorage storage = AppStorage.requireSingleton();
         LauncherPreferences prefs = LauncherPreferences.requireSingleton();
 
         ArrayList<String> paths = new ArrayList<>();
-        paths.add(storage.getLibraryPath());          // APK native libs (librimdroid.so etc.)
+
+        // APK native libs (librimdroid.so, librimdroidlinker.so etc.)
+        paths.add(storage.getLibraryPath());
         paths.add("/system/lib64");
 
+        // ARM64 renderer libs
         switch (prefs.getRenderer()) {
             case GL4ES:
                 paths.add(storage.getGl4esLibsPath());
@@ -72,12 +70,9 @@ public class GameInstance {
         return join(paths, ":");
     }
 
-    /** Args passed to RimWorldLinux binary (none needed by default) */
+    /** Args passed to RimWorldLinux binary */
     public String[] getArgs() {
-        ArrayList<String> args = new ArrayList<>();
-        // RimWorld accepts no special startup args normally
-        // Could add: -logfile /path, -batchmode, etc.
-        return args.toArray(new String[0]);
+        return new String[0];
     }
 
     public boolean isInstalled() {

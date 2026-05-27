@@ -11,6 +11,7 @@
 #include <sys/sysinfo.h>
 #include <asm-generic/fcntl.h>
 #include <bits/stdatomic.h>
+#include <stdio.h>
 
 #include "rimdroid_globals.h"
 #include "rimdroid.h"
@@ -30,7 +31,9 @@ RimDroidSurface g_rimdroid_surface = {
     .ready_for_destroy_cond = PTHREAD_COND_INITIALIZER
 };
 
-// Путь к лог-файлу — устанавливается из rimdroid_start_game
+// Лог-файл — extern в logger.h, используется макросами LOGI/LOGW/LOGE
+FILE* g_rimdroid_log_file = NULL;
+
 static char g_log_file_path[1024] = {0};
 
 // ---- Memory / stdio monitor -------------------------------------------------
@@ -61,20 +64,6 @@ static void monitor_stdio_and_memory() {
     close(pipefd[1]);
     fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
 
-    // Открываем лог-файл если путь задан
-    FILE* log_file = NULL;
-    if (g_log_file_path[0] != '\0') {
-        log_file = fopen(g_log_file_path, "w");
-        if (log_file) {
-            setvbuf(log_file, NULL, _IOLBF, 0); // Line-buffered для надёжности
-            fprintf(log_file, "=== RimDroid log started ===\n");
-            fflush(log_file);
-            LOGI("Log file opened: %s", g_log_file_path);
-        } else {
-            LOGW("Failed to open log file: %s (%s)", g_log_file_path, strerror(errno));
-        }
-    }
-
     time_t last_mem_check = 0;
     time_t last_mem_log   = 0;
 
@@ -85,15 +74,10 @@ static void monitor_stdio_and_memory() {
             char* saveptr;
             char* line = strtok_r(buffer, "\n", &saveptr);
             while (line) {
-                // Пишем в logcat
+                // Пишем в logcat и в файл через LOGI
                 LOGI("%s", line);
-                // Пишем в файл
-                if (log_file) {
-                    fprintf(log_file, "%s\n", line);
-                }
                 line = strtok_r(NULL, "\n", &saveptr);
             }
-            if (log_file) fflush(log_file);
         }
 
         time_t now = time(NULL);
@@ -103,10 +87,6 @@ static void monitor_stdio_and_memory() {
             if (free_mb != -1 && free_mb < 300) {
                 last_mem_log = now;
                 LOGW("Low memory: only %ld MB available", free_mb);
-                if (log_file) {
-                    fprintf(log_file, "[WARN] Low memory: only %ld MB available\n", free_mb);
-                    fflush(log_file);
-                }
             }
         }
         usleep(10000);
@@ -247,12 +227,22 @@ void rimdroid_start_game(const char* game_dir_path,
                          const char** argv) {
 
     signal(SIGABRT, handle_abort);
-    // Явно устанавливаем ДО инициализации box64
+
+    // Открываем лог-файл ПЕРВЫМ ДЕЛОМ — до всего остального
+    snprintf(g_log_file_path, sizeof(g_log_file_path), "%s/rimdroid.log", game_dir_path);
+    g_rimdroid_log_file = fopen(g_log_file_path, "w");
+    if (g_rimdroid_log_file) {
+        setvbuf(g_rimdroid_log_file, NULL, _IOLBF, 0);
+        fprintf(g_rimdroid_log_file, "=== RimDroid log started ===\n");
+        fflush(g_rimdroid_log_file);
+    }
+
+    // Теперь все LOGI/LOGE пишут и в logcat и в файл
+    LOGI("rimdroid_start_game: game=%s libs=%s", game_dir_path, library_dir_path);
+
+    // Явно устанавливаем BOX64_LD_LIBRARY_PATH ДО инициализации box64
     setenv("BOX64_LD_LIBRARY_PATH", library_dir_path, 1);
     LOGI("BOX64_LD_LIBRARY_PATH forced to: %s", library_dir_path);
-
-    // Устанавливаем путь к лог-файлу ДО запуска потока мониторинга
-    snprintf(g_log_file_path, sizeof(g_log_file_path), "%s/rimdroid.log", game_dir_path);
 
     // Start stdout/stderr → logcat + file bridge
     pthread_t logging_thread;
@@ -262,9 +252,6 @@ void rimdroid_start_game(const char* game_dir_path,
     } else {
         LOGW("Failed to create stdio logging thread");
     }
-
-    // Также пишем box64 собственный лог в файл
-    setenv("BOX64_LOG_FILE", g_log_file_path, 0); // 0 = не перезаписывать если уже задан
 
     if (init_rimdroid_namespace(library_dir_path) != 0) {
         LOGE("Failed to initialize rimdroid namespace");

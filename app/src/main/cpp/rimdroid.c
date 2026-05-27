@@ -36,9 +36,6 @@ FILE* g_rimdroid_log_file = NULL;
 
 static char g_log_file_path[1024] = {0};
 
-// Force rebuild marker
-static const char build_marker[] = "RIMDROID_BUILD_2026_05_27_FORCED_REBUILD_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-
 // ---- Memory / stdio monitor -------------------------------------------------
 
 static long get_mem_available_mb() {

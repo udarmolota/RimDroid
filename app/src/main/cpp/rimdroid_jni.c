@@ -15,6 +15,9 @@ Java_com_rimdroid_GameLauncher_startGame(
         jstring j_library_dir_path,
         jobjectArray j_args)
 {
+    FILE* f = fopen("/data/data/com.rimdroid/files/jni_called.txt", "w");
+    if (f) { fprintf(f, "JNI startGame called\n"); fclose(f); }
+        
     const char* game_dir_path    = (*env)->GetStringUTFChars(env, j_game_dir_path, NULL);
     const char* library_dir_path = (*env)->GetStringUTFChars(env, j_library_dir_path, NULL);
 

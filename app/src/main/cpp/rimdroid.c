@@ -247,6 +247,9 @@ void rimdroid_start_game(const char* game_dir_path,
                          const char** argv) {
 
     signal(SIGABRT, handle_abort);
+    // Явно устанавливаем ДО инициализации box64
+    setenv("BOX64_LD_LIBRARY_PATH", library_dir_path, 1);
+    LOGI("BOX64_LD_LIBRARY_PATH forced to: %s", library_dir_path);
 
     // Устанавливаем путь к лог-файлу ДО запуска потока мониторинга
     snprintf(g_log_file_path, sizeof(g_log_file_path), "%s/rimdroid.log", game_dir_path);

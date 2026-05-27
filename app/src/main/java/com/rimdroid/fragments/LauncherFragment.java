@@ -42,16 +42,18 @@ import java.util.List;
 public class LauncherFragment extends Fragment {
 
     private static final String TAG = "RimDroid/LauncherFrag";
+    private static final int MAX_LOG_LINES = 500;
 
-    private Spinner  spinnerInstances;
-    private Button   btnLaunch;
-    private Button   btnInstallInstance;
+    private Spinner spinnerInstances;
+    private Button btnLaunch;
+    private Button btnInstallInstance;
+    private Button btnClearLog;
     private TextView tvLog;
     private ScrollView scrollLog;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private int logLineCount = 0;
 
-    // File picker for instance zip
     private final ActivityResultLauncher<String[]> zipPicker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
                     uri -> { if (uri != null) onZipSelected(uri); });
@@ -65,15 +67,20 @@ public class LauncherFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        spinnerInstances  = view.findViewById(R.id.spinner_instances);
-        btnLaunch         = view.findViewById(R.id.btn_launch);
+        spinnerInstances   = view.findViewById(R.id.spinner_instances);
+        btnLaunch          = view.findViewById(R.id.btn_launch);
         btnInstallInstance = view.findViewById(R.id.btn_install_instance);
-        tvLog             = view.findViewById(R.id.tv_log);
-        scrollLog         = view.findViewById(R.id.scroll_log);
+        btnClearLog        = view.findViewById(R.id.btn_clear_log);
+        tvLog              = view.findViewById(R.id.tv_log);
+        scrollLog          = view.findViewById(R.id.scroll_log);
 
         btnLaunch.setOnClickListener(v -> onLaunchClicked());
         btnInstallInstance.setOnClickListener(v ->
                 zipPicker.launch(new String[]{"application/zip", "application/x-zip-compressed"}));
+        btnClearLog.setOnClickListener(v -> clearLog());
+
+        // Подключаем callback для лога из GameLauncher
+        GameLauncher.setLogCallback(line -> appendLog(line));
 
         refreshInstances();
         registerInstallerReceiver();
@@ -87,6 +94,7 @@ public class LauncherFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        GameLauncher.setLogCallback(null);
         requireContext().unregisterReceiver(installerReceiver);
     }
 
@@ -124,9 +132,7 @@ public class LauncherFragment extends Fragment {
 
         LauncherPreferences.requireSingleton().setLastInstanceName(name);
         clearLog();
-        appendLog("Launching " + name + " [" + LauncherPreferences.requireSingleton().getRenderer().name() + "]...");
 
-        // Start GameActivity for surface, then launch via native
         requireContext().startActivity(
                 new android.content.Intent(requireContext(), GameActivity.class));
 
@@ -145,7 +151,6 @@ public class LauncherFragment extends Fragment {
     private void onZipSelected(Uri uri) {
         new Thread(() -> {
             try {
-                // Copy zip to cache dir
                 File cacheZip = new File(requireContext().getCacheDir(), "instance.zip");
                 try (InputStream in = requireContext().getContentResolver().openInputStream(uri);
                      FileOutputStream out = new FileOutputStream(cacheZip)) {
@@ -153,12 +158,10 @@ public class LauncherFragment extends Fragment {
                     int len;
                     while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
                 }
-
                 String instanceName = guessInstanceName(uri);
                 mainHandler.post(() -> appendLog("Installing: " + instanceName + "..."));
                 InstallerService.startInstallInstance(requireContext(),
                         cacheZip.getAbsolutePath(), instanceName);
-
             } catch (Exception e) {
                 Log.e(TAG, "Failed to copy zip", e);
                 appendLog("ERROR: " + e.getMessage());
@@ -182,7 +185,7 @@ public class LauncherFragment extends Fragment {
         return "rimworld";
     }
 
-    // ---- Installer broadcast receiver ---------------------------------------
+    // ---- Installer broadcast ------------------------------------------------
 
     private final BroadcastReceiver installerReceiver = new BroadcastReceiver() {
         @Override
@@ -210,14 +213,28 @@ public class LauncherFragment extends Fragment {
 
     // ---- Log ----------------------------------------------------------------
 
-    private void appendLog(String line) {
+    public void appendLog(String line) {
+        if (line == null) return;
         mainHandler.post(() -> {
+            // Ограничиваем количество строк чтобы не замедлять UI
+            if (logLineCount >= MAX_LOG_LINES) {
+                String current = tvLog.getText().toString();
+                int newline = current.indexOf('\n');
+                if (newline >= 0) {
+                    tvLog.setText(current.substring(newline + 1));
+                    logLineCount--;
+                }
+            }
             tvLog.append(line + "\n");
+            logLineCount++;
             scrollLog.post(() -> scrollLog.fullScroll(View.FOCUS_DOWN));
         });
     }
 
     private void clearLog() {
-        mainHandler.post(() -> tvLog.setText(""));
+        mainHandler.post(() -> {
+            tvLog.setText("");
+            logLineCount = 0;
+        });
     }
 }

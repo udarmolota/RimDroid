@@ -57,6 +57,14 @@ int rimdroid_emulation_init() {
 
     LoadEnvVariables();
 
+    // Passing LD_LIBRARY_PATH to box64 after LoadEnvVariables
+    const char* ld_path = getenv("BOX64_LD_LIBRARY_PATH");
+    if (ld_path) {
+        LOGI("[emulation] BOX64_LD_LIBRARY_PATH = %s", ld_path);
+    } else {
+        LOGE("[emulation] BOX64_LD_LIBRARY_PATH is NOT SET!");
+    }
+
     LOGI("[emulation] pre-init done, pagesize=%lu", (unsigned long)box64_pagesize);
     return 0;
 }

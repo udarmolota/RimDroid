@@ -109,7 +109,9 @@ public class GameLauncher {
 
         // Initialize the native window surface
         initRimDroidWindow();
-
+        // Passing libraries x86_64 path before start
+        Os.setenv("BOX64_LD_LIBRARY_PATH", gameInstance.getLdLibraryPathForEmulation(), true);
+        
         // Launch: box64 runs RimWorldLinux ELF directly (no JVM needed)
         startGame(
                 gameInstance.getGamePath(),

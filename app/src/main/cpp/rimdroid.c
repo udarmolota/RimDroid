@@ -30,6 +30,9 @@ RimDroidSurface g_rimdroid_surface = {
     .ready_for_destroy_cond = PTHREAD_COND_INITIALIZER
 };
 
+// Путь к лог-файлу — устанавливается из rimdroid_start_game
+static char g_log_file_path[1024] = {0};
+
 // ---- Memory / stdio monitor -------------------------------------------------
 
 static long get_mem_available_mb() {
@@ -58,6 +61,20 @@ static void monitor_stdio_and_memory() {
     close(pipefd[1]);
     fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
 
+    // Открываем лог-файл если путь задан
+    FILE* log_file = NULL;
+    if (g_log_file_path[0] != '\0') {
+        log_file = fopen(g_log_file_path, "w");
+        if (log_file) {
+            setvbuf(log_file, NULL, _IOLBF, 0); // Line-buffered для надёжности
+            fprintf(log_file, "=== RimDroid log started ===\n");
+            fflush(log_file);
+            LOGI("Log file opened: %s", g_log_file_path);
+        } else {
+            LOGW("Failed to open log file: %s (%s)", g_log_file_path, strerror(errno));
+        }
+    }
+
     time_t last_mem_check = 0;
     time_t last_mem_log   = 0;
 
@@ -68,10 +85,17 @@ static void monitor_stdio_and_memory() {
             char* saveptr;
             char* line = strtok_r(buffer, "\n", &saveptr);
             while (line) {
+                // Пишем в logcat
                 LOGI("%s", line);
+                // Пишем в файл
+                if (log_file) {
+                    fprintf(log_file, "%s\n", line);
+                }
                 line = strtok_r(NULL, "\n", &saveptr);
             }
+            if (log_file) fflush(log_file);
         }
+
         time_t now = time(NULL);
         if ((now - last_mem_check >= 1) && (now - last_mem_log >= 30)) {
             last_mem_check = now;
@@ -79,6 +103,10 @@ static void monitor_stdio_and_memory() {
             if (free_mb != -1 && free_mb < 300) {
                 last_mem_log = now;
                 LOGW("Low memory: only %ld MB available", free_mb);
+                if (log_file) {
+                    fprintf(log_file, "[WARN] Low memory: only %ld MB available\n", free_mb);
+                    fflush(log_file);
+                }
             }
         }
         usleep(10000);
@@ -89,7 +117,6 @@ static void monitor_stdio_and_memory() {
 
 static void handle_abort(int sig) {
     LOGE("SIGABRT received");
-    // Let Android crash handler collect the tombstone
     signal(SIGABRT, SIG_DFL);
     raise(SIGABRT);
 }
@@ -145,9 +172,9 @@ static int load_linker_hook() {
     }
 
     void* libdl = dlopen("libdl.so", RTLD_LAZY);
-    void* _loader_dlopen_fn               = dlsym(libdl, "__loader_dlopen");
-    void* _loader_dlsym_fn                = dlsym(libdl, "__loader_dlsym");
-    void* _loader_android_dlopen_ext_fn   = dlsym(libdl, "__loader_android_dlopen_ext");
+    void* _loader_dlopen_fn             = dlsym(libdl, "__loader_dlopen");
+    void* _loader_dlsym_fn              = dlsym(libdl, "__loader_dlsym");
+    void* _loader_android_dlopen_ext_fn = dlsym(libdl, "__loader_android_dlopen_ext");
 
     if (!_loader_dlopen_fn || !_loader_dlsym_fn || !_loader_android_dlopen_ext_fn) {
         LOGE("Failed to locate loader symbols in libdl.so");
@@ -162,7 +189,6 @@ static int load_linker_hook() {
         return -1;
     }
 
-    // Vulkan driver — only needed for Zink renderers
     if (g_rimdroid_vulkan_driver_name != NULL) {
         void* vulkan_loader = linkernsbypass_namespace_dlopen_unique(
             "/system/lib64/libvulkan.so", NULL, RTLD_GLOBAL, rimdroid_ns);
@@ -187,16 +213,12 @@ static int load_linker_hook() {
 // ---- ELF launch via box64 ---------------------------------------------------
 
 static void launch_rimworld_elf(const char* game_dir_path, int argc, const char** argv) {
-    // box64 entry: RunElfFile is the standard box64 API for executing an ELF
-    // The symbol lives in librimdroidlinker.so which wraps box64
     void* linker = dlopen("librimdroidlinker.so", RTLD_NOLOAD);
     if (!linker) {
         LOGE("librimdroidlinker.so not loaded when trying to run ELF");
         return;
     }
 
-    // RunELFFile(const char* path, int argc, const char** argv)
-    // This is exposed by the linker wrapper built on top of box64
     int (*run_elf_file)(const char*, int, const char**) =
         dlsym(linker, "rimdroid_run_elf");
 
@@ -205,7 +227,6 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
         return;
     }
 
-    // Build argv: [binary_path, ...user_args]
     char binary_path[1024];
     snprintf(binary_path, sizeof(binary_path), "%s/RimWorldLinux", game_dir_path);
 
@@ -227,7 +248,10 @@ void rimdroid_start_game(const char* game_dir_path,
 
     signal(SIGABRT, handle_abort);
 
-    // Start stdout/stderr → logcat bridge
+    // Устанавливаем путь к лог-файлу ДО запуска потока мониторинга
+    snprintf(g_log_file_path, sizeof(g_log_file_path), "%s/rimdroid.log", game_dir_path);
+
+    // Start stdout/stderr → logcat + file bridge
     pthread_t logging_thread;
     if (pthread_create(&logging_thread, NULL,
                        (void *(*)(void *))&monitor_stdio_and_memory, NULL) == 0) {
@@ -235,6 +259,9 @@ void rimdroid_start_game(const char* game_dir_path,
     } else {
         LOGW("Failed to create stdio logging thread");
     }
+
+    // Также пишем box64 собственный лог в файл
+    setenv("BOX64_LOG_FILE", g_log_file_path, 0); // 0 = не перезаписывать если уже задан
 
     if (init_rimdroid_namespace(library_dir_path) != 0) {
         LOGE("Failed to initialize rimdroid namespace");
@@ -251,7 +278,6 @@ void rimdroid_start_game(const char* game_dir_path,
         return;
     }
 
-    // Reset signal handlers that box64 may have set
     struct sigaction sa = { 0 };
     for (int sig = SIGHUP; sig < NSIG; sig++) {
         if (sig == SIGSEGV)      sa.sa_handler = SIG_IGN;
@@ -280,7 +306,6 @@ int rimdroid_init() {
     }
 
     g_rimdroid_vulkan_driver_name = getenv("RIMDROID_VULKAN_DRIVER_NAME");
-
     LOGI("rimdroid_init: renderer=%s", renderer_name ? renderer_name : "GL4ES");
     return 0;
 }

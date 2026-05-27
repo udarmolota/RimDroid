@@ -32,6 +32,26 @@ set(ARM_DYNAREC ON)
 add_subdirectory(${BOX64_ROOT} box64_build)
 target_compile_definitions(box64 PRIVATE BUILD_DYNAMIC)
 
+# box64/CMakeLists.txt:377 applies -fvisibility=hidden to all its sources.
+# This makes my_* wrapper functions invisible to dlsym(box64lib, "my_xxx"),
+# causing all wrapped libc/pthread symbols to be "not found" at runtime.
+#
+# Fix: apply -fvisibility=default surgically to ONLY the wrapper source files.
+# We cannot touch all of mainobj because arm64_lock.S accesses cpuext from
+# core.c via non-GOT PC-relative addressing (R_AARCH64_ADR_PREL_PG_HI21),
+# which requires cpuext to keep hidden visibility in a shared library.
+#
+# set_source_files_properties overrides the per-target compile options at the
+# translation-unit level — the last flag wins, so this beats the hidden default.
+file(GLOB_RECURSE _box64_wrapper_srcs
+    "${BOX64_ROOT}/src/wrapped/*.c"
+    "${BOX64_ROOT}/src/wrapped32/*.c"
+)
+if(_box64_wrapper_srcs)
+    set_source_files_properties(${_box64_wrapper_srcs}
+        PROPERTIES COMPILE_OPTIONS "-fvisibility=default")
+endif()
+
 # ---------------------------------------------------------------------------
 # librimdroidlinker — box64 + linker hook + emulation
 # Equivalent to libzomdroidlinker in Zomdroid

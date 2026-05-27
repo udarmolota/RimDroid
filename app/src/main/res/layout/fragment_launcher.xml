@@ -5,13 +5,6 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/nav_launcher"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp" />
-
     <Spinner
         android:id="@+id/spinner_instances"
         android:layout_width="match_parent"
@@ -31,14 +24,33 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/install_instance"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="8dp" />
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Log header row -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/log"
-        android:textAppearance="?attr/textAppearanceLabelSmall"
-        android:layout_marginBottom="4dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/log"
+            android:textAppearance="?attr/textAppearanceLabelSmall" />
+
+        <Button
+            android:id="@+id/btn_clear_log"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/clear"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp" />
+
+    </LinearLayout>
 
     <ScrollView
         android:id="@+id/scroll_log"

@@ -38,6 +38,13 @@ public class GameLauncher {
         Os.setenv("BOX64_DYNAREC_STRONGMEM", "1", true); // Важно для Unity
         Os.setenv("BOX64_PREFER_EMULATED", "1", true);   // Использовать x86_64 glibc
 
+        // box64 log
+        Os.setenv("BOX64_LOG_FILE", gameInstance.getGamePath() + "/box64.log", true);
+        
+        // Unity writes Player.log here
+        Os.setenv("HOME", gameInstance.getGamePath(), true);
+        Os.setenv("XDG_CONFIG_HOME", gameInstance.getGamePath(), true);
+
         // Library path for box64 to find x86_64 .so files
         Os.setenv("BOX64_LD_LIBRARY_PATH", gameInstance.getLdLibraryPathForEmulation(), true);
 

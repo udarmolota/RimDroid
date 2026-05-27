@@ -240,7 +240,8 @@ void rimdroid_start_game(const char* game_dir_path,
     // Теперь все LOGI/LOGE пишут и в logcat и в файл
     LOGI("rimdroid_start_game: game=%s libs=%s", game_dir_path, library_dir_path);
 
-    LOGI("BOX64_LD_LIBRARY_PATH forced to: %s", library_dir_path);
+    const char* ld_path = getenv("BOX64_LD_LIBRARY_PATH");
+    LOGI("BOX64_LD_LIBRARY_PATH from env: %s", ld_path ? ld_path : "NOT SET");
 
     // Start stdout/stderr → logcat + file bridge
     pthread_t logging_thread;

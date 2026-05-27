@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/renderer"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:layout_marginBottom="8dp" />
+
+    <RadioGroup
+        android:id="@+id/rg_renderer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp">
+
+        <RadioButton
+            android:id="@+id/rb_gl4es"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/gl4es_label" />
+
+        <RadioButton
+            android:id="@+id/rb_zink_zfa"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/zink_zfa_label" />
+
+        <RadioButton
+            android:id="@+id/rb_zink_osmesa"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/zink_osmesa_label" />
+
+    </RadioGroup>
+
+    <Switch
+        android:id="@+id/sw_debug"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/debug_mode" />
+
+</LinearLayout>

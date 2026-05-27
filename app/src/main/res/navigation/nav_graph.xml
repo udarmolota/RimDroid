@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/launcher_fragment">
+
+    <fragment
+        android:id="@+id/launcher_fragment"
+        android:name="com.rimdroid.fragments.LauncherFragment"
+        android:label="@string/nav_launcher" />
+
+    <fragment
+        android:id="@+id/settings_fragment"
+        android:name="com.rimdroid.fragments.SettingsFragment"
+        android:label="@string/nav_settings" />
+
+    <fragment
+        android:id="@+id/new_instance_fragment"
+        android:name="com.rimdroid.fragments.NewInstanceFragment"
+        android:label="@string/nav_new_instance" />
+
+    <action android:id="@+id/action_settings"
+        app:destination="@id/settings_fragment" />
+
+    <action android:id="@+id/action_install_instance"
+        app:destination="@id/new_instance_fragment" />
+
+</navigation>

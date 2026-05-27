@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RimDroid</string>
+    <string name="launch">Launch</string>
+    <string name="stop">Stop</string>
+    <string name="install_instance">Install Instance (ZIP)…</string>
+    <string name="no_instances">No instances installed</string>
+    <string name="log">Log</string>
+    <string name="renderer">Renderer</string>
+    <string name="nav_launcher">Launcher</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_new_instance">Add Instance</string>
+    <string name="gl4es_label">GL4ES (compatible, older GPUs)</string>
+    <string name="zink_zfa_label">Zink ZFA (Vulkan, recommended)</string>
+    <string name="zink_osmesa_label">Zink OSMesa (Vulkan, fallback)</string>
+    <string name="debug_mode">Debug mode (verbose log)</string>
+    <string name="pick_zip">Pick ZIP file…</string>
+    <string name="install">Install</string>
+    <string name="installing">Installing…</string>
+    <string name="instance_name_hint">Instance name</string>
+    <string name="selected_zip_hint">No file selected</string>
+    <string name="error_name_required">Name is required</string>
+    <string name="nav_manage_storage">Manage Storage</string>
+</resources>

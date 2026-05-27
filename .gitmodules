@@ -1,0 +1,6 @@
+[submodule "box64"]
+	path = box64
+	url = https://github.com/ptitSeb/box64.git
+[submodule "app/src/main/cpp/box64"]
+	path = app/src/main/cpp/box64
+	url = https://github.com/ptitSeb/box64.git

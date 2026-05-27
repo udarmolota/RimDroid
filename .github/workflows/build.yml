@@ -1,0 +1,79 @@
+name: Build RimDroid APK
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Позволяет запускать вручную из браузера
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Клонируем репозиторий со всеми submodules
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive  # Клонирует box64 и liblinkernsbypass
+          fetch-depth: 0
+
+      # 2. Устанавливаем Java 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 3. Кэшируем Gradle чтобы сборки были быстрее
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4. Устанавливаем Android SDK + NDK
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          echo "Installing NDK..."
+          sdkmanager "ndk;27.0.12077973" "cmake;3.22.1"
+          echo "NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      # 5. Даём права на выполнение gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 6. Собираем debug APK
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+        env:
+          ANDROID_NDK_HOME: ${{ env.NDK_HOME }}
+
+      # 7. Сохраняем APK как артефакт
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rimdroid-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # 8. Опционально — Release APK (без подписи, для тестирования)
+      - name: Build Release APK (unsigned)
+        run: ./gradlew assembleRelease
+        env:
+          ANDROID_NDK_HOME: ${{ env.NDK_HOME }}
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rimdroid-release-unsigned-${{ github.sha }}
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 30

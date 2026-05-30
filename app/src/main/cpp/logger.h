@@ -7,7 +7,7 @@
 #define LOG_TAG "rimdroid"
 #endif
 
-extern FILE* g_rimdroid_log_file;  // определён в rimdroid.c
+extern FILE* g_rimdroid_log_file;  // defined in rimdroid.c
 
 #define _LOG_TO_FILE(fmt, ...) do { \
     if (g_rimdroid_log_file) { \

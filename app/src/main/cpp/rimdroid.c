@@ -65,7 +65,7 @@ RimDroidSurface g_rimdroid_surface = {
     .ready_for_destroy_cond = PTHREAD_COND_INITIALIZER
 };
 
-// Лог-файл — extern в logger.h, используется макросами LOGI/LOGW/LOGE
+// Log file — extern in logger.h, used by the LOGI/LOGW/LOGE macros
 FILE* g_rimdroid_log_file = NULL;
 
 static char g_log_file_path[1024] = {0};
@@ -352,7 +352,7 @@ static void monitor_stdio_and_memory() {
             char* saveptr;
             char* line = strtok_r(buffer, "\n", &saveptr);
             while (line) {
-                // Пишем в logcat и в файл через LOGI
+                // Write to logcat and to the file via LOGI
                 LOGI("%s", line);
                 line = strtok_r(NULL, "\n", &saveptr);
             }
@@ -569,7 +569,7 @@ void rimdroid_start_game(const char* game_dir_path,
     signal(SIGABRT, handle_abort);
     atexit(rimdroid_atexit_handler);
 
-    // Открываем лог-файл ПЕРВЫМ ДЕЛОМ — до всего остального
+    // Open the log file FIRST — before anything else
     snprintf(g_log_file_path, sizeof(g_log_file_path), "%s/rimdroid.log", game_dir_path);
     g_rimdroid_log_file = fopen(g_log_file_path, "w");
     if (g_rimdroid_log_file) {
@@ -578,7 +578,7 @@ void rimdroid_start_game(const char* game_dir_path,
         fflush(g_rimdroid_log_file);
     }
 
-    // Теперь все LOGI/LOGE пишут и в logcat и в файл
+    // Now all LOGI/LOGE write to both logcat and the file
     LOGI("rimdroid_start_game: game=%s libs=%s", game_dir_path, library_dir_path);
 
     const char* ld_path = getenv("BOX64_LD_LIBRARY_PATH");

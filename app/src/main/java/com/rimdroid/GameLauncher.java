@@ -13,7 +13,7 @@ public class GameLauncher {
 
     private static final String TAG = "RimDroid/GameLauncher";
 
-    // Callback для передачи лог-строк в UI
+    // Callback for passing log lines to the UI
     public interface LogCallback {
         void onLogLine(String line);
     }
@@ -37,7 +37,7 @@ public class GameLauncher {
         Os.setenv("BOX64_LOG", "0", true);
         Os.setenv("BOX64_SHOWBT", "1", true);
         Os.setenv("BOX64_DYNAREC", "1", true);
-        Os.setenv("BOX64_DYNAREC_BIGBLOCK", "0", true);  // 0 для Unity/Mono JIT
+        Os.setenv("BOX64_DYNAREC_BIGBLOCK", "0", true);  // 0 for Unity/Mono JIT
         Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", true);
         Os.setenv("BOX64_DYNAREC_STRONGMEM", "3", true);    // TSO full emulation — fix memory ordering SIGSEGV
         Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "1", true); // Extra barriers in dynarec
@@ -188,7 +188,7 @@ public class GameLauncher {
         postLog("Launching " + gameInstance.getName() + " [" + renderer.name() + "]...");
         postLog("Path: " + gameInstance.getGamePath());
 
-        // Запускаем чтение logcat
+        // Start reading logcat
         startLogcatReader();
 
         // Initialize the native window surface

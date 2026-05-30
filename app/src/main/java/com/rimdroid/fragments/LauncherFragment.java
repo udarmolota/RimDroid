@@ -79,7 +79,7 @@ public class LauncherFragment extends Fragment {
                 zipPicker.launch(new String[]{"application/zip", "application/x-zip-compressed"}));
         btnClearLog.setOnClickListener(v -> clearLog());
 
-        // Подключаем callback для лога из GameLauncher
+        // Hook up the log callback from GameLauncher
         GameLauncher.setLogCallback(line -> appendLog(line));
 
         refreshInstances();
@@ -216,7 +216,7 @@ public class LauncherFragment extends Fragment {
     public void appendLog(String line) {
         if (line == null) return;
         mainHandler.post(() -> {
-            // Ограничиваем количество строк чтобы не замедлять UI
+            // Cap the number of lines so the UI doesn't slow down
             if (logLineCount >= MAX_LOG_LINES) {
                 String current = tvLog.getText().toString();
                 int newline = current.indexOf('\n');

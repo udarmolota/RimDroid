@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 
 /**
  * Reads logcat output filtered by com.rimdroid tag and forwards lines to callback.
- * Shows only rimdroid-main, rimdroid-emu, RimDroid/* tags — т.е. box64 и наш код.
+ * Shows only rimdroid-main, rimdroid-emu, RimDroid/* tags — i.e. box64 and our own code.
  */
 public class LogcatReader {
 
@@ -30,16 +30,16 @@ public class LogcatReader {
         running = true;
         thread = new Thread(() -> {
             try {
-                // Очищаем старый logcat и читаем только новые строки
-                // Фильтруем по нашим тегам
+                // Clear old logcat and read only new lines
+                // Filter by our tags
                 process = new ProcessBuilder(
                         "logcat",
-                        "-v", "tag",          // Формат: TAG: message
-                        "-T", "1",            // Только с этого момента
-                        "rimdroid-main:I",    // box64 вывод через наш pipe
+                        "-v", "tag",          // Format: TAG: message
+                        "-T", "1",            // only from this point on
+                        "rimdroid-main:I",    // box64 output via our pipe
                         "rimdroid-emu:I",     // emulation init
-                        "RimDroid/*:I",       // наши Java теги
-                        "*:S"                 // Остальное — silence
+                        "RimDroid/*:I",       // our Java tags
+                        "*:S"                 // everything else — silence
                 ).start();
 
                 BufferedReader reader = new BufferedReader(
@@ -47,7 +47,7 @@ public class LogcatReader {
 
                 String line;
                 while (running && (line = reader.readLine()) != null) {
-                    // Убираем префикс тега для чистоты
+                    // Strip the tag prefix for cleanliness
                     String clean = stripTag(line);
                     if (!clean.isEmpty()) {
                         callback.onLine(clean);
@@ -74,7 +74,7 @@ public class LogcatReader {
     }
 
     private String stripTag(String line) {
-        // Формат logcat -v tag: "TAG: message" или "TAG : message"
+        // logcat -v tag format: "TAG: message" or "TAG : message"
         int colon = line.indexOf(": ");
         if (colon > 0) return line.substring(colon + 2).trim();
         return line.trim();

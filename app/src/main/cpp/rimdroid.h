@@ -31,4 +31,14 @@ void rimdroid_start_game(const char* game_dir_path,
 void rimdroid_surface_init(ANativeWindow* wnd, int width, int height);
 void rimdroid_surface_deinit();
 
+/**
+ * NO-FORK entry point for the standalone exec'd binary (librimdroid_exec.so).
+ * Runs box64+RimWorld in a fresh process (clean address space, fresh binder) so
+ * the GPU context can be created+used without fork.  See rimdroid.c for details.
+ */
+int rimdroid_run_standalone(const char* game_dir_path,
+                            const char* library_dir_path,
+                            int argc,
+                            const char** argv);
+
 #endif // RIMDROID_H

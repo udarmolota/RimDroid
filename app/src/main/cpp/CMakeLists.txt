@@ -22,6 +22,8 @@ add_library(rimdroid SHARED
 target_link_libraries(rimdroid
     log
     android
+    EGL
+    mediandk
     linkernsbypass
 )
 
@@ -79,3 +81,24 @@ target_link_libraries(rimdroidlinker PRIVATE
     rimdroid
 )
 target_link_options(rimdroidlinker PRIVATE "-Wl,-z,global")
+
+# ---------------------------------------------------------------------------
+# librimdroid_exec.so — STANDALONE EXECUTABLE (not a library).
+# The "lib*.so" name is the Android packaging trick: the APK build extracts it
+# into the app's nativeLibraryDir with exec permission, so the Java launcher can
+# exec() it as a fresh process.  A fresh process gives box64 a clean address
+# space (RimWorld's fixed 0x021a9000 free, no ART heap → NO fork needed) and a
+# fresh binder ProcessState → GPU context can be created+used without fork.
+# It links librimdroid.so (which has rimdroid_run_standalone + the launch logic;
+# box64 itself is dlopen'd at runtime via librimdroidlinker.so, same as the JNI
+# path).  Android NDK builds executables as PIE by default.
+# ---------------------------------------------------------------------------
+add_executable(rimdroid_exec rimdroid_main.c)
+set_target_properties(rimdroid_exec PROPERTIES
+    PREFIX "lib"
+    SUFFIX ".so"
+    OUTPUT_NAME "rimdroid_exec")
+target_link_libraries(rimdroid_exec
+    rimdroid
+    log
+    android)

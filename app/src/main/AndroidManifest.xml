@@ -13,6 +13,7 @@
     <application
         android:name=".RimDroidApplication"
         android:appCategory="game"
+        android:extractNativeLibs="true"
         android:allowNativeHeapPointerTagging="false"
         android:allowBackup="true"
         android:hasFragileUserData="true"

@@ -24,6 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/install_instance"
+        android:textSize="15dp"
         android:layout_marginBottom="8dp" />
 
     <!-- Log header row -->
@@ -39,6 +40,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/log"
+            android:textSize="15dp"
             android:textAppearance="?attr/textAppearanceLabelSmall" />
 
         <Button
@@ -47,6 +49,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/clear"
+            android:textSize="15dp"
             android:paddingStart="8dp"
             android:paddingEnd="8dp" />
 

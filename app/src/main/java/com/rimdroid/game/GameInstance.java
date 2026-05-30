@@ -31,12 +31,23 @@ public class GameInstance {
 
         ArrayList<String> paths = new ArrayList<>();
 
-        // Game dir — libsteam_api.so, libUnity.so etc.
-        paths.add(getGamePath());
-        paths.add(getGamePath() + "/Data/Plugins/x86_64");
-        paths.add(getGamePath() + "/Libs64");
+        String gameDir = getGamePath();
+        // Unity data dir is always named {Executable}_Data for Linux builds
+        String dataDir = gameDir + "/RimWorldLinux_Data";
 
-        // x86_64 system libs — glibc, SDL2, OpenAL etc.
+        // Game root dir (top-level .so files, if any)
+        paths.add(gameDir);
+
+        // Mono runtime — libmonobdwgc-2.0.so, libMonoPosixHelper.so
+        paths.add(dataDir + "/MonoBleedingEdge/x86_64");
+
+        // Game plugins (x86_64) — ScreenSelector.so etc.
+        paths.add(dataDir + "/Plugins/x86_64");
+
+        // Game plugins (no arch suffix) — libsteam_api.so, libCSteamworks.so etc.
+        paths.add(dataDir + "/Plugins");
+
+        // x86_64 system libs — libgcc_s.so.1 etc.
         paths.add(storage.getLibsLinuxX86Path());
 
         return join(paths, ":");
@@ -72,7 +83,11 @@ public class GameInstance {
 
     /** Args passed to RimWorldLinux binary */
     public String[] getArgs() {
-        return new String[0];
+        // -force-gfx-direct: disable Unity's threaded render device (threaded=1).
+        // Our single ZFA/Zink GL context is made current on one thread only;
+        // a separate render thread would have no current GL context. Forcing the
+        // direct (single-threaded) GfxDevice keeps all GL on one thread for bring-up.
+        return new String[]{ "-force-gfx-direct" };
     }
 
     public boolean isInstalled() {

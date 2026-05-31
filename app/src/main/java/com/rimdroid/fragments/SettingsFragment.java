@@ -35,12 +35,11 @@ public class SettingsFragment extends Fragment {
         RadioButton rbZinkOsmesa = view.findViewById(R.id.rb_zink_osmesa);
         Switch swDebug        = view.findViewById(R.id.sw_debug);
 
-        // Restore current selection
-        switch (prefs.getRenderer()) {
-            case ZINK_ZFA:    rbZinkZfa.setChecked(true);    break;
-            case ZINK_OSMESA: rbZinkOsmesa.setChecked(true); break;
-            default:          rbGl4es.setChecked(true);       break;
-        }
+        // Only ZINK_ZFA works right now — hide GL4ES / ZINK_OSMESA and force ZFA.
+        rbGl4es.setVisibility(View.GONE);
+        rbZinkOsmesa.setVisibility(View.GONE);
+        rbZinkZfa.setChecked(true);
+        prefs.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
         swDebug.setChecked(prefs.isDebug());
 
         rgRenderer.setOnCheckedChangeListener((group, checkedId) -> {

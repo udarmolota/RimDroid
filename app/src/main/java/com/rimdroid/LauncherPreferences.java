@@ -63,8 +63,8 @@ public class LauncherPreferences {
     // --- Renderer ---
 
     public Renderer getRenderer() {
-        String name = prefs.getString("renderer", Renderer.GL4ES.name());
-        try { return Renderer.valueOf(name); } catch (Exception e) { return Renderer.GL4ES; }
+        String name = prefs.getString("renderer", Renderer.ZINK_ZFA.name());
+        try { return Renderer.valueOf(name); } catch (Exception e) { return Renderer.ZINK_ZFA; }
     }
 
     public void setRenderer(Renderer renderer) {

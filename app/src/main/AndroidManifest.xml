@@ -34,7 +34,7 @@
 
         <activity
             android:name=".GameActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|touchscreen"
             android:screenOrientation="landscape" />
 
         <service

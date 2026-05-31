@@ -38,6 +38,29 @@
 
     </RadioGroup>
 
+    <TextView
+        android:id="@+id/tv_render_scale_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Render scale: 60%"
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Lower % = bigger UI. RimWorld needs ≥67% or its menus overflow."
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:layout_marginBottom="4dp" />
+
+    <SeekBar
+        android:id="@+id/sb_render_scale"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="33"
+        android:progress="5"
+        android:layout_marginBottom="16dp" />
+
     <Switch
         android:id="@+id/sw_debug"
         android:layout_width="wrap_content"

@@ -82,6 +82,25 @@ public class LauncherPreferences {
         prefs.edit().putString("vulkan_driver", driver.name()).apply();
     }
 
+    // --- Render scale (UI size) ---
+    // RimWorld scales its UI with resolution, so rendering at a LOWER fraction of
+    // the native surface makes on-screen UI BIGGER (and is lighter on the GPU).
+    // RimWorld's UI has a ~1280x720 minimum, so below ~67% on a 1080-tall surface the
+    // layout overflows (the colony START button falls off the bottom). Clamp 67..100,
+    // default 72.
+    public static final int RENDER_SCALE_MIN = 67;
+
+    public int getRenderScalePercent() {
+        int v = prefs.getInt("render_scale_pct", 72);
+        return Math.max(RENDER_SCALE_MIN, Math.min(100, v));
+    }
+
+    public void setRenderScalePercent(int pct) {
+        prefs.edit().putInt("render_scale_pct", Math.max(RENDER_SCALE_MIN, Math.min(100, pct))).apply();
+    }
+
+    public float getRenderScale() { return getRenderScalePercent() / 100f; }
+
     // --- Last instance ---
 
     public String getLastInstanceName() {

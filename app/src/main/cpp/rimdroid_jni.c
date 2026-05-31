@@ -138,3 +138,49 @@ JNIEXPORT void JNICALL
 Java_com_rimdroid_GameLauncher_destroySurface(JNIEnv* env, jobject clazz) {
     rimdroid_surface_deinit();
 }
+
+// --- Phase A input injection (touch → SDL mouse); rd_input_* declared in rimdroid.h ---
+// action: 0 = move, 1 = down, 2 = up. x,y are game-window pixels (already scaled).
+JNIEXPORT void JNICALL
+Java_com_rimdroid_GameActivity_nativeTouch(JNIEnv* env, jclass clazz,
+                                           jint action, jint x, jint y) {
+    if (action == 1) {            // DOWN: move there, then press left button
+        rd_input_mouse_motion(x, y);
+        rd_input_mouse_button(1 /*SDL_BUTTON_LEFT*/, 1, x, y);
+    } else if (action == 2) {     // UP: release left button
+        rd_input_mouse_button(1, 0, x, y);
+    } else {                      // MOVE
+        rd_input_mouse_motion(x, y);
+    }
+}
+
+// Generic button (1=L,2=M,3=R), down=1/0, at (x,y). Moves cursor there first.
+JNIEXPORT void JNICALL
+Java_com_rimdroid_GameActivity_nativeButton(JNIEnv* env, jclass clazz,
+                                            jint button, jint down, jint x, jint y) {
+    rd_input_mouse_motion(x, y);
+    rd_input_mouse_button(button, down, x, y);
+}
+
+// Mouse wheel (zoom). Positions the cursor at (x,y) first so RimWorld zooms there.
+JNIEXPORT void JNICALL
+Java_com_rimdroid_GameActivity_nativeScroll(JNIEnv* env, jclass clazz,
+                                            jint x, jint y, jint dy) {
+    rd_input_mouse_motion(x, y);
+    rd_input_mouse_scroll(dy);
+}
+
+// Keyboard key (SDL scancode + keycode), down=1/0. For camera pan (WASD) etc.
+JNIEXPORT void JNICALL
+Java_com_rimdroid_GameActivity_nativeKey(JNIEnv* env, jclass clazz,
+                                         jint scancode, jint keycode, jint down) {
+    rd_input_key(scancode, keycode, down);
+}
+
+// Text input (typing) — UTF-8 string from the Android IME keyboard.
+JNIEXPORT void JNICALL
+Java_com_rimdroid_GameActivity_nativeText(JNIEnv* env, jclass clazz, jstring jtext) {
+    if (!jtext) return;
+    const char* s = (*env)->GetStringUTFChars(env, jtext, NULL);
+    if (s) { rd_input_text(s); (*env)->ReleaseStringUTFChars(env, jtext, s); }
+}

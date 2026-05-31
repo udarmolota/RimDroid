@@ -6,7 +6,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.Switch;
+import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
@@ -53,5 +55,22 @@ public class SettingsFragment extends Fragment {
 
         swDebug.setOnCheckedChangeListener((btn, checked) ->
                 prefs.getSharedPrefs().edit().putBoolean("debug_mode", checked).apply());
+
+        // --- Render scale (UI size) seek bar: 30..100%, lower = bigger UI ---
+        SeekBar sbScale  = view.findViewById(R.id.sb_render_scale);
+        TextView tvScale = view.findViewById(R.id.tv_render_scale_label);
+        final int MIN = LauncherPreferences.RENDER_SCALE_MIN;   // 67; seek max=33 → 67..100
+        int pct = prefs.getRenderScalePercent();
+        sbScale.setProgress(pct - MIN);
+        tvScale.setText("Render scale: " + pct + "%");
+        sbScale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
+                tvScale.setText("Render scale: " + (progress + MIN) + "%");
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) {}
+            @Override public void onStopTrackingTouch(SeekBar s) {
+                prefs.setRenderScalePercent(s.getProgress() + MIN);
+            }
+        });
     }
 }

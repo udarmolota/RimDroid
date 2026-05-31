@@ -1,64 +1,87 @@
 # RimDroid
 
-A launcher that runs **RimWorld** (the native Linux x86_64 build, Unity) on an Android phone via x86_64→ARM64 emulation — with real GPU rendering.
+Run **RimWorld** (the native Linux x86_64 build, Unity 2019) on an Android phone via
+x86_64→ARM64 emulation, with **real GPU rendering** and **on-screen touch controls**.
 
-> Status: **work in progress.** RimWorld 1.5 launches, initializes Mono and the GPU pipeline, and draws the main menu — but hits one wall (see below).
+> **Status (v0.1.1): playable.** RimWorld 1.5 boots, renders at native resolution,
+> takes touch input (move/select, orders, camera, zoom), and runs mods (incl. Harmony).
 
 ---
 
 ## What & why
 
-RimWorld officially ships only for x86_64 (Windows/Linux/macOS). RimDroid takes the **native Linux build of the game** and runs it directly on an ARM64 phone:
+RimWorld officially ships only for x86_64 (Windows/Linux/macOS). RimDroid takes the
+**native Linux build of the game** and runs it directly on an ARM64 phone:
 
-- **box64** emulates the x86_64 code (the Unity engine + Mono) on ARM64;
-- it runs **in-process, without fork** — possible for 1.5 because `UnityPlayer.so` is relocatable (PIE) and loads below the ART heap (unlike the monolithic 1.2, which needed a fork that broke the GPU);
-- graphics go through the phone's real GPU, not a software renderer.
+- **box64** emulates the x86_64 code (Unity engine + Mono) on ARM64;
+- it runs **in-process, without fork** — possible for 1.5 because `UnityPlayer.so` is
+  relocatable (PIE) and loads below the ART heap;
+- graphics go through the phone's real GPU (not a software renderer);
+- touch input is injected into the game's SDL event queue.
 
 ## Stack
 
 | Layer | What is used |
 |-------|--------------|
-| Emulation | **box64** (x86_64 → ARM64), in-process |
-| GPU | **Zink** (OpenGL→Vulkan, Mesa) over **Turnip** (`libvulkan_freedreno`, Adreno) → real **OpenGL 4.3 Core** via `libzfa.so` |
-| Window/input | **SDL2** with `SDL_VIDEODRIVER=dummy` (no X11/Wayland); rendering into the Android Activity's `ANativeWindow` |
-| SDL dynapi | **remap** of the jump_table to the proc order of the SDL statically linked into `UnityPlayer.so` (which differs from box64's) |
-| Game runtime | the game's own **Mono / Boehm GC** |
+| Emulation | **box64** (x86_64 → ARM64), in-process, no fork |
+| GPU | **Zink** (OpenGL→Vulkan, Mesa 25) over **Turnip** (`libvulkan_freedreno`, Adreno) → real **OpenGL 4.3 Core** via `libzfa.so` |
+| Window | **SDL2** (`SDL_VIDEODRIVER=dummy`), rendering into the Activity's `ANativeWindow`; orientation handled Zomdroid-style (landscape + identity buffer transform) |
+| SDL dynapi | **remap** of the jump_table to the proc order of the SDL statically linked into `UnityPlayer.so` (differs from box64's) |
+| Input | Android touch → injected **SDL events** (`my2_SDL_PollEvent` / `SDL_GetMouseState`); on-screen sticks + buttons |
+| Runtime | the game's own **Mono / Boehm GC** |
 
-Development device: **Snapdragon 8 Elite, Adreno 830** (rendering is currently 1024×768, scaled to the screen).
+Reference device: **Snapdragon 8 Elite, Adreno 830**.
 
-## What already works
+## What works
 
-- ✅ RimWorld 1.5 launches in-process (no fork);
-- ✅ box64 + SDL dynapi seeding/remap, GL bridges (CreateContext/MakeCurrent/SwapWindow/DeleteContext, etc.);
-- ✅ full GPU pipeline: Zink/Vulkan/Turnip provides GL 4.3 Core, the default framebuffer is valid, textures/shaders load without errors;
-- ✅ Mono starts, assemblies load, the `RimWorld 1.5.x` banner prints;
-- ✅ the **main menu** renders (background + UI), scaled to fill the screen.
+- ✅ RimWorld **1.5 launches** in-process and **renders at native resolution** (landscape);
+- ✅ full GPU pipeline (Zink/Vulkan/Turnip, GL 4.3 Core);
+- ✅ **render-scale slider** in Settings (67–100%) — lower = bigger, more readable UI;
+- ✅ **input:** left-click (tap / mouse-stick), **right-click** (RMB button), camera pan
+  (WASD-stick → arrow keys), **pinch-to-zoom**;
+- ✅ **mods** load and apply (tested with **Harmony** + a large mod list);
+- ✅ saving/loading.
 
-## Where we stopped (current wall)
+## Key problems that were solved
 
-At startup Unity 1.5 switches **windowed → fullscreen**, and its `GfxDevice` goes into an **infinite teardown** (a recursive walk that calls `SDL_GL_DeleteContext` endlessly) — it never reaches the first `SwapWindow`, so the picture "freezes" on the first frame.
+- **The "infinite `SDL_GL_DeleteContext` loop"** that froze the first frame for days was a
+  **red herring**: the SDL dynapi remap was off-by-one (it assumed the game lacks
+  `SDL_GL_GetDrawableSize`), so the game's **`SDL_GL_SwapWindow` was routed to
+  `SDL_GL_DeleteContext`**. Unity's normal present loop was spinning into our no-op delete.
+  Fixed by correcting the slot indices (SwapWindow 522, DeleteContext 523).
+- **Orientation** (rotated / quarter-screen) — fixed by mirroring Zomdroid: `SENSOR_LANDSCAPE`
+  + `holder.setFixedSize()` + an IDENTITY `ANativeWindow` buffer transform, no native
+  `setBuffersGeometry`.
+- **Clicks "selected everything of a type" / right-click misbehaved** — injected SDL events
+  had `timestamp == 0`, so RimWorld read every click as a double/triple click. Fixed by
+  stamping a real monotonic-ms timestamp on each injected event.
 
-Tested and **ruled out** as the cause:
+## Controls
 
-- window size / FBO mismatch (everything was unified to 1024×768 — same loop);
-- the dummy driver's 0 Hz refresh (forced 60 Hz — same loop);
-- broken context/window/format, shader compile failure, GC, advapi32 — all disproven by data.
-
-**Conclusion:** the trigger is the fullscreen transition itself in Unity (a GfxDevice reset/recreate) which, combined with the dummy SDL driver + a fixed ZFA context, never completes.
-
-## Next steps
-
-1. **RimWorld 1.6** (newer Unity, 2025) — it may not have this teardown at all (would require re-deriving the dynapi remap);
-2. on 1.5 — find out why `-screen-fullscreen 0` is ignored and force it to stay windowed; or neutralize the context recreation in the teardown;
-3. input (touch → SDL events) and audio (FMOD) — once the menu is live.
+- **Mouse-stick** (right): drag to move the cursor (white arrow); tap the stick = left-click.
+- **Direct tap** on the game = left-click.
+- **WASD-stick** (left): pan the camera (arrow keys).
+- **RMB** button (top-right): hold to right-click at the cursor (orders, context menus).
+- **Pinch**: zoom.
 
 ## Build
 
 - Android Studio, **JDK 21** (JDK 25 breaks Kotlin DSL compilation — see `gradle.properties`);
 - native part: `gradlew :app:externalNativeBuildDebug`;
-- `box64/` is a submodule (fork `udarmolota/rimdroid-box64`);
+- `box64/` is a fork (`udarmolota/rimdroid-box64`);
+- `libzfa.so` (Mesa+Zink+ZFA target) is built via GitHub Actions in the
+  `udarmolota/zomdroid-dependencies` fork;
 - an instance holds the extracted Linux build of RimWorld (`RimWorldLinux` + `RimWorldLinux_Data`).
+
+## Remaining / TODO
+
+- left-drag (selection box / zone painting / Architect drag);
+- on-screen keyboard (text fields: colony/pawn names, search);
+- occasional black screen on launch (kill + relaunch);
+- physical mouse/keyboard polish; audio (FMOD).
 
 ---
 
-*Experimental project. Core logic lives in `app/src/main/cpp/rimdroid.c` (launch, ZFA/GPU) and `box64/src/wrapped/wrappedsdl2.c` (SDL/GL intercepts).*
+*Core logic: `app/src/main/cpp/rimdroid.c` (launch, ZFA/GPU, input ring),
+`box64/src/wrapped/wrappedsdl2.c` (SDL/GL/event intercepts + dynapi remap),
+`app/src/main/java/com/rimdroid/` (`GameActivity`, `InputOverlayView`).*

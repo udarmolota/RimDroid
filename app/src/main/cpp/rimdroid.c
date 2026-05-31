@@ -55,10 +55,12 @@ typedef void* (*PFN_zfaCreateContext)(int depth, int stencil, int compat, int ma
 typedef int   (*PFN_zfaMakeCurrent)(void* ctx, ANativeWindow* win, int w, int h);
 typedef void  (*PFN_zfaFlushFront)(void);
 typedef void  (*PFN_zfaDestroyContext)(void* ctx);
+typedef int   (*PFN_zfaReleaseCurrent)(void);   // added to libzfa (Plan A): st_api_make_current(NULL,NULL,NULL)
 static PFN_zfaCreateContext  p_zfaCreateContext  = NULL;
 static PFN_zfaMakeCurrent    p_zfaMakeCurrent    = NULL;
 static PFN_zfaFlushFront     p_zfaFlushFront     = NULL;
 static PFN_zfaDestroyContext p_zfaDestroyContext = NULL;
+static PFN_zfaReleaseCurrent p_zfaReleaseCurrent = NULL;
 
 RimDroidSurface g_rimdroid_surface = {
     .mutex = PTHREAD_MUTEX_INITIALIZER,
@@ -111,17 +113,25 @@ int rimdroid_zfa_make_current(void) {
     // mismatch suspected of triggering the fullscreen GfxDevice teardown loop.
     // ANativeWindow_setBuffersGeometry resizes the producer buffers; SurfaceFlinger
     // then scales them to fill the physical SurfaceView (2340x1080).
-    const int RD_RENDER_W = 1024, RD_RENDER_H = 768;
-    int ww = w ? RD_RENDER_W : 1;
-    int hh = w ? RD_RENDER_H : 1;
-    if (w) ANativeWindow_setBuffersGeometry(w, RD_RENDER_W, RD_RENDER_H, 0 /* keep format */);
+    // Render at the NATIVE surface size, taken CONSTANTLY from the surface dims
+    // (captured once in surfaceChanged) — NOT per-call ANativeWindow_getWidth,
+    // which changes when Unity resizes mid-run and made the frame blink then
+    // collapse into a corner. Constant size + forced buffer geometry = stable.
+    // Mirror Zomdroid's ZFA path: do NOT call ANativeWindow_setBuffersGeometry here
+    // (the Java holder.setFixedSize establishes the buffer). Just make current at the
+    // surface size, then force the buffer transform to IDENTITY (below).
+    int rw = g_rimdroid_surface.width  > 0 ? g_rimdroid_surface.width  : 2340;
+    int rh = g_rimdroid_surface.height > 0 ? g_rimdroid_surface.height : 1080;
+    int ww = w ? rw : 1;
+    int hh = w ? rh : 1;
     if (!p_zfaMakeCurrent(g_zfa_context, w, ww, hh)) {
-        LOGE("ZFA: zfaMakeCurrent failed");
+        LOGE("ZFA: zfaMakeCurrent failed (%dx%d)", ww, hh);
         return 0;
     }
-    // Vulkan applies the device-orientation transform by default; force identity.
-    // Resolved via dlsym (ANativeWindow_setBuffersTransform is API 26+, not in the
-    // link-time stub at this project's minSdk).
+    // Force the device-orientation transform to IDENTITY. With the landscape lock,
+    // this cancels the system's portrait pre-rotation → the frame stays HORIZONTAL
+    // (this is the pair that produced yesterday's good horizontal screen). API 26+,
+    // resolved via dlsym.
     if (w) {
         static int (*fn_set_transform)(ANativeWindow*, int32_t) = NULL;
         static int checked = 0;
@@ -133,12 +143,147 @@ int rimdroid_zfa_make_current(void) {
         }
         if (fn_set_transform) fn_set_transform(w, 0 /* IDENTITY */);
     }
+    LOGI("ZFA make_current native %dx%d (landscape, identity transform)", ww, hh);
     return 1;
 }
 
 void rimdroid_zfa_swap(void) {
     if (p_zfaFlushFront) p_zfaFlushFront();
 }
+
+// Release the ZFA/Zink GL context from the CALLING thread (Plan A: serialize the
+// context handoff between Unity's main + render-worker threads).  Returns 1 on
+// success, 0 if libzfa doesn't export zfaReleaseCurrent yet (then it's a no-op and
+// behaviour is unchanged).  Called from wrappedsdl2.c on SDL_GL_MakeCurrent(NULL).
+int rimdroid_zfa_release_current(void) {
+    if (p_zfaReleaseCurrent) return p_zfaReleaseCurrent();
+    return 0;
+}
+
+// ===================== RimDroid injected input (Phase A) =====================
+// Lock-protected ring of pre-built x86_64 SDL_Event records. The Android touch
+// handler (JNI, UI thread) pushes events here; box64's my2_SDL_PollEvent drains
+// them via the weak rd_input_poll() below (box64 is a separate .so, so the ring
+// lives here where JNI can reach it directly). SDL_Event is 56 bytes; we fill
+// only the mouse fields.
+#define RD_IN_QCAP 256
+#define RD_SDL_EVENT_SZ 56
+static unsigned char rd_in_q[RD_IN_QCAP][RD_SDL_EVENT_SZ];
+static int rd_in_head = 0, rd_in_tail = 0;
+static pthread_mutex_t rd_in_mx = PTHREAD_MUTEX_INITIALIZER;
+static unsigned int rd_mouse_btnmask = 0;
+static int rd_mouse_x = 0, rd_mouse_y = 0;   // current injected cursor (for SDL_GetMouseState)
+
+#define RD_PUT32(buf,off,val) do { unsigned int _v=(unsigned int)(val); \
+    (buf)[(off)+0]=_v&0xff; (buf)[(off)+1]=(_v>>8)&0xff; \
+    (buf)[(off)+2]=(_v>>16)&0xff; (buf)[(off)+3]=(_v>>24)&0xff; } while(0)
+
+#include <time.h>
+static unsigned int rd_now_ms(void) {
+    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (unsigned int)((unsigned long long)ts.tv_sec * 1000ULL + ts.tv_nsec / 1000000ULL);
+}
+static void rd_in_push(const unsigned char* ev) {
+    pthread_mutex_lock(&rd_in_mx);
+    int n = (rd_in_head + 1) % RD_IN_QCAP;
+    if (n != rd_in_tail) {
+        memcpy(rd_in_q[rd_in_head], ev, RD_SDL_EVENT_SZ);
+        RD_PUT32(rd_in_q[rd_in_head], 4, rd_now_ms());  // real SDL timestamp → fixes false double-clicks
+        rd_in_head = n;
+    }
+    pthread_mutex_unlock(&rd_in_mx);
+}
+
+void rd_input_mouse_motion(int x, int y) {
+    rd_mouse_x = x; rd_mouse_y = y;
+    unsigned char e[RD_SDL_EVENT_SZ]; memset(e, 0, sizeof(e));
+    RD_PUT32(e, 0,  0x400);              // SDL_MOUSEMOTION
+    RD_PUT32(e, 8,  1);                  // windowID
+    RD_PUT32(e, 16, rd_mouse_btnmask);   // button state mask
+    RD_PUT32(e, 20, x);
+    RD_PUT32(e, 24, y);
+    rd_in_push(e);
+}
+
+void rd_input_mouse_button(int button, int down, int x, int y) {
+    rd_mouse_x = x; rd_mouse_y = y;
+    if (button >= 1) { if (down) rd_mouse_btnmask |= (1u << (button-1)); else rd_mouse_btnmask &= ~(1u << (button-1)); }
+    unsigned char e[RD_SDL_EVENT_SZ]; memset(e, 0, sizeof(e));
+    RD_PUT32(e, 0, down ? 0x401 : 0x402); // SDL_MOUSEBUTTONDOWN / UP
+    RD_PUT32(e, 8, 1);                    // windowID
+    e[16] = (unsigned char)button;        // 1=L,2=M,3=R
+    e[17] = down ? 1 : 0;                  // SDL_PRESSED=1
+    e[18] = 1;                            // clicks
+    RD_PUT32(e, 20, x);
+    RD_PUT32(e, 24, y);
+    rd_in_push(e);
+    LOGI("inject MOUSEBUTTON btn=%d down=%d @%d,%d", button, down, x, y);
+}
+
+// SDL_MOUSEWHEEL (0x403): y = +up / -down (RimWorld zoom). Set cursor first so the
+// game zooms toward that point.
+void rd_input_mouse_scroll(int dy) {
+    unsigned char e[RD_SDL_EVENT_SZ]; memset(e, 0, sizeof(e));
+    RD_PUT32(e, 0,  0x403);   // SDL_MOUSEWHEEL
+    RD_PUT32(e, 8,  1);       // windowID
+    RD_PUT32(e, 16, 0);       // x (horizontal)
+    RD_PUT32(e, 20, dy);      // y (vertical: +up/-down)
+    RD_PUT32(e, 24, 0);       // direction = SDL_MOUSEWHEEL_NORMAL
+    rd_in_push(e);
+    LOGI("inject MOUSEWHEEL dy=%d", dy);
+}
+
+// SDL_KEYDOWN(0x300)/KEYUP(0x301). Unity maps keysym.scancode (SDL_Scancode) to
+// its KeyCode, so the scancode is what matters (e.g. W=26,A=4,S=22,D=7, arrows
+// 79-82, Space=44, Esc=41, Return=40, digits 1-0 = 30-39).
+void rd_input_key(int scancode, int keycode, int down) {
+    unsigned char e[RD_SDL_EVENT_SZ]; memset(e, 0, sizeof(e));
+    RD_PUT32(e, 0, down ? 0x300 : 0x301);  // SDL_KEYDOWN / SDL_KEYUP
+    RD_PUT32(e, 8, 1);            // windowID
+    e[12] = down ? 1 : 0;         // state (SDL_PRESSED=1)
+    e[13] = 0;                    // repeat
+    RD_PUT32(e, 16, scancode);    // keysym.scancode
+    RD_PUT32(e, 20, keycode);     // keysym.sym
+    // keysym.mod @24 = 0
+    rd_in_push(e);
+    LOGI("inject KEY sc=%d kc=%d down=%d", scancode, keycode, down);
+}
+
+// SDL_TEXTINPUT(0x303): UTF-8 text the game reads for typing (names, search).
+void rd_input_text(const char* utf8) {
+    unsigned char e[RD_SDL_EVENT_SZ]; memset(e, 0, sizeof(e));
+    RD_PUT32(e, 0, 0x303);        // SDL_TEXTINPUT
+    RD_PUT32(e, 8, 1);            // windowID
+    int i = 0;                    // text[32] at offset 12
+    if (utf8) { while (utf8[i] && i < 31) { e[12 + i] = (unsigned char)utf8[i]; i++; } }
+    e[12 + i] = 0;
+    rd_in_push(e);
+    LOGI("inject TEXT '%s'", utf8 ? utf8 : "");
+}
+
+// Called (weakly) by box64's my2_SDL_PollEvent. Fills out (>=56 bytes) and
+// returns 1 if an event was dequeued, else 0.
+int rd_input_poll(unsigned char* out) {
+    int got = 0;
+    pthread_mutex_lock(&rd_in_mx);
+    if (rd_in_tail != rd_in_head) {
+        memcpy(out, rd_in_q[rd_in_tail], RD_SDL_EVENT_SZ);
+        rd_in_tail = (rd_in_tail + 1) % RD_IN_QCAP;
+        got = 1;
+    }
+    pthread_mutex_unlock(&rd_in_mx);
+    return got;
+}
+
+// Called (weakly) by box64's my2_SDL_GetMouseState. Fills the current injected
+// cursor position and returns the SDL button bitmask, so RimWorld's position/state
+// polling (selection drag, right-click target) matches our virtual cursor.
+unsigned int rd_input_get_mouse(int* x, int* y) {
+    if (x) *x = rd_mouse_x;
+    if (y) *y = rd_mouse_y;
+    return rd_mouse_btnmask;
+}
+// ============================================================================
 
 static int rimdroid_init_zfa(ANativeWindow* nativeWindow) {
     (void)nativeWindow;  // window is bound later via zfaMakeCurrent()
@@ -154,6 +299,7 @@ static int rimdroid_init_zfa(ANativeWindow* nativeWindow) {
     p_zfaMakeCurrent    = (PFN_zfaMakeCurrent)   dlsym(g_zfa_handle, "zfaMakeCurrent");
     p_zfaFlushFront     = (PFN_zfaFlushFront)    dlsym(g_zfa_handle, "zfaFlushFront");
     p_zfaDestroyContext = (PFN_zfaDestroyContext)dlsym(g_zfa_handle, "zfaDestroyContext");
+    p_zfaReleaseCurrent = (PFN_zfaReleaseCurrent)dlsym(g_zfa_handle, "zfaReleaseCurrent");  // NULL until libzfa rebuilt
     if (!p_zfaCreateContext || !p_zfaMakeCurrent || !p_zfaFlushFront) {
         LOGE("ZFA: missing entry points (create=%p makecur=%p flush=%p)",
              (void*)p_zfaCreateContext, (void*)p_zfaMakeCurrent, (void*)p_zfaFlushFront);
@@ -539,13 +685,18 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
     char binary_path[1024];
     snprintf(binary_path, sizeof(binary_path), "%s/RimWorldLinux", game_dir_path);
 
-    // RIMDROID: force WINDOWED at native size. The infinite SDL_GL_DeleteContext
-    // teardown loop is triggered by Unity switching to fullscreen on the bogus
-    // dummy-SDL mode "1024x768 @ 0 Hz". Starting windowed should avoid that mode-set.
-    static const char* extra_argv[] = {
+    // RIMDROID: windowed at the NATIVE surface size, so Unity's window == our GL
+    // surface == the ANativeWindow buffer == the physical surface (no scale, no
+    // tiny-corner). Built at runtime from the real surface dimensions.
+    static char rd_w_str[16], rd_h_str[16];
+    int nw = g_rimdroid_surface.width  > 0 ? g_rimdroid_surface.width  : 2340;
+    int nh = g_rimdroid_surface.height > 0 ? g_rimdroid_surface.height : 1080;
+    snprintf(rd_w_str, sizeof(rd_w_str), "%d", nw);
+    snprintf(rd_h_str, sizeof(rd_h_str), "%d", nh);
+    const char* extra_argv[] = {
         "-screen-fullscreen", "0",
-        "-screen-width",  "1024",   // match dummy-SDL display (1024x768) so the
-        "-screen-height", "768",    // whole pipeline is one consistent size
+        "-screen-width",  rd_w_str,
+        "-screen-height", rd_h_str,
     };
     const int extra_n = (int)(sizeof(extra_argv) / sizeof(extra_argv[0]));
 

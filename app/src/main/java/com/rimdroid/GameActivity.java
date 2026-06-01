@@ -27,7 +27,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private float renderScale = 0.72f;
     private android.view.ScaleGestureDetector scaleDetector;
     private boolean scaling = false;
-    private InputOverlayView overlay;
+    private com.rimdroid.input.InputControlsView controls;
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private float tapDownX, tapDownY; private long tapDownT; private boolean tapMoved;
 
@@ -46,15 +46,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         surfaceView.getHolder().addCallback(this);
 
         scaleDetector = new android.view.ScaleGestureDetector(this, new ScaleListener());
-        overlay = new InputOverlayView(this, renderScale);
+        controls = new com.rimdroid.input.InputControlsView(this, renderScale);
 
         FrameLayout root = new FrameLayout(this);
         root.addView(surfaceView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        root.addView(overlay, new FrameLayout.LayoutParams(
+        root.addView(controls, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        addRmbButton(root);
-        addDragButton(root);
         setContentView(root);
     }
 
@@ -98,52 +96,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     }
     private void safeScroll(int x, int y, int dy) { try { nativeScroll(x, y, dy); } catch (UnsatisfiedLinkError ignored) {} }
 
-    // RMB button (top-right): holds the right button at the mouse-stick cursor.
-    private void addRmbButton(FrameLayout root) {
-        float d = getResources().getDisplayMetrics().density;
-        Button rmb = new Button(this);
-        rmb.setText("RBC");
-        rmb.setAlpha(0.7f);
-        rmb.setOnTouchListener((v, ev) -> {
-            switch (ev.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    if (overlay != null) overlay.cursorButton(3, true); v.setPressed(true); return true;   // SDL btn 3 = right
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    if (overlay != null) overlay.cursorButton(3, false); v.setPressed(false); return true;
-            }
-            return false;
-        });
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) (120 * d), (int) (66 * d));
-        lp.gravity = Gravity.TOP | Gravity.END;
-        lp.topMargin = (int) (10 * d);
-        lp.rightMargin = (int) (10 * d);
-        root.addView(rmb, lp);
-    }
-
-    // Left-drag button (left of RBC): holds the LEFT button at the mouse-stick
-    // cursor, so moving the cursor while held draws a selection box / paints zones /
-    // drags in the Architect menu. Release ends the drag.
-    private void addDragButton(FrameLayout root) {
-        float d = getResources().getDisplayMetrics().density;
-        Button drag = new Button(this);
-        drag.setText("LBC");
-        drag.setAlpha(0.7f);
-        drag.setOnTouchListener((v, ev) -> {
-            switch (ev.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    if (overlay != null) overlay.cursorButton(1, true); v.setPressed(true); return true;   // SDL btn 1 = left
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    if (overlay != null) overlay.cursorButton(1, false); v.setPressed(false); return true;
-            }
-            return false;
-        });
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) (120 * d), (int) (66 * d));
-        lp.gravity = Gravity.TOP | Gravity.END;
-        lp.topMargin = (int) (10 * d);
-        lp.rightMargin = (int) (140 * d);   // sits to the left of the 120dp RBC button (+10dp gap)
-        root.addView(drag, lp);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (controls != null) controls.resetAll();   // release any held buttons/keys
     }
 
     @Override

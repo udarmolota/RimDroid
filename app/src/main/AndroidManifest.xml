@@ -37,6 +37,11 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|touchscreen"
             android:screenOrientation="landscape" />
 
+        <activity
+            android:name=".ControlsEditorActivity"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/AppTheme" />
+
         <service
             android:name=".InstallerService"
             android:exported="false"

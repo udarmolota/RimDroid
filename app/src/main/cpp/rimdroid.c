@@ -1175,8 +1175,6 @@ int rimdroid_run_standalone(const char* game_dir_path,
 }
 
 int rimdroid_init() {
-    FILE* f = fopen("/data/data/com.rimdroid/files/init_called.txt", "w");
-    if (f) { fprintf(f, "rimdroid_init called\n"); fclose(f); }
     const char* renderer_name = getenv("RIMDROID_RENDERER");
 
     if (renderer_name == NULL || strcmp(renderer_name, "GL4ES") == 0) {
@@ -1190,8 +1188,15 @@ int rimdroid_init() {
         g_rimdroid_renderer = RD_GL4ES;
     }
 
-    g_rimdroid_vulkan_driver_name = getenv("RIMDROID_VULKAN_DRIVER_NAME");
-    LOGI("rimdroid_init: renderer=%s", renderer_name ? renderer_name : "GL4ES");
+    // Empty / unset => use the phone's SYSTEM Vulkan driver (no bundled Turnip ICD):
+    // load_linker_hook() then skips the custom-driver injection and the loader resolves
+    // the device's default ICD. A non-empty value names a bundled driver to inject.
+    {
+        const char* vk = getenv("RIMDROID_VULKAN_DRIVER_NAME");
+        g_rimdroid_vulkan_driver_name = (vk && vk[0]) ? vk : NULL;
+    }
+    LOGI("rimdroid_init: renderer=%s vulkan_driver=%s", renderer_name ? renderer_name : "GL4ES",
+         g_rimdroid_vulkan_driver_name ? g_rimdroid_vulkan_driver_name : "(system)");
     return 0;
 }
 

@@ -3,8 +3,9 @@
 Run **RimWorld** (the native Linux x86_64 build, Unity 2019) on an Android phone via
 x86_64→ARM64 emulation, with **real GPU rendering** and **on-screen touch controls**.
 
-> **Status (v0.1.2): playable.** RimWorld 1.5 boots, renders at native resolution,
-> takes touch input (move/select, drag, orders, camera, zoom), and runs the Harmony mod.
+> **Status (v0.1.3): playable, with working mods.** RimWorld 1.5 boots, renders at native
+> resolution, takes touch input (move/select, drag, orders, camera, zoom), runs mods
+> (Harmony, RimHUD, Pick Up And Haul), and has an on-screen controls editor + a mod importer.
 
 ---
 
@@ -37,11 +38,17 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 - ✅ RimWorld **1.5 launches** in-process and **renders at native resolution** (landscape);
 - ✅ full GPU pipeline (Zink/Vulkan/Turnip, GL 4.3 Core);
 - ✅ **render-scale slider** in Settings (67–100%) — lower = bigger, more readable UI;
-- ✅ **selectable Vulkan/Turnip driver** in Settings (pick the one matching your GPU);
+- ✅ **selectable Vulkan/Turnip driver** in Settings, including a **System (phone driver)**
+  option for non-Adreno GPUs;
 - ✅ **input:** left-click (tap / mouse-stick), **right-click** (RBC button),
   **left-drag** (LBC button — selection box / zones / Architect), camera pan
   (WASD-stick → arrow keys), **pinch-to-zoom**;
-- ✅ the **Harmony** mod loads and applies;
+- ✅ **editable on-screen controls** — move / resize / opacity, add buttons bound to any
+  key or mouse action, circular or rectangular (Settings → Edit on-screen controls);
+- ✅ **mods work** — Harmony patching is functional (tested: Harmony, RimHUD, Pick Up And
+  Haul). Requires **Harmony 2.2.2** (see [Mods](#mods));
+- ✅ **smart mod importer** (menu → Import Mods (ZIP)) — finds each mod's root and strips
+  wrapper folders;
 - ✅ saving/loading.
 
 ## Key problems that were solved
@@ -57,6 +64,11 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 - **Clicks "selected everything of a type" / right-click misbehaved** — injected SDL events
   had `timestamp == 0`, so RimWorld read every click as a double/triple click. Fixed by
   stamping a real monotonic-ms timestamp on each injected event.
+- **Mods didn't patch (Harmony `NotImplementedException`)** — Harmony 2.3's MonoMod.Core read
+  `/proc/self/auxv`, saw `aarch64`, and picked an unimplemented ARM64 code-detour, so every
+  patch failed. Fixed two ways: box64 now reports `x86_64` in `/proc/self/auxv` (so arch
+  detection is correct), and RimDroid uses **Harmony 2.2.2** (older MonoMod) whose x86_64
+  detour works under emulation.
 
 ## Controls
 
@@ -66,6 +78,24 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 - **RBC** button (top-right): hold to right-click at the cursor (orders, context menus).
 - **LBC** button: hold to left-drag at the cursor (selection box, zone painting, Architect drag).
 - **Pinch**: zoom.
+
+The whole layout is editable in **Settings → Edit on-screen controls**: tap-select an
+element, drag to move, sliders for size and opacity, add/delete elements, and bind any
+button to a mouse action or a key (Space, Esc, digits, letters, arrows, …). Buttons are
+circular by default (compact) and can be switched to rectangular.
+
+## Mods
+
+Mods that patch the game use **Harmony**, and Harmony must be version **2.2.2** — **not** the
+latest 2.3.x. Under emulation the 2.3.x patch engine (MonoMod.Core) detects an
+`Android x86_64` environment and has no working code-detour, so every patch fails; the older
+2.2.2 engine works. Install the recommended **Harmony 2.2.2** build (`Harmony-2.2.2-RimDroid.zip`,
+packageId `brrainz.harmony`) instead of the Steam Workshop Harmony — don't install both
+(duplicate package id).
+
+Add mods (and Harmony itself) with **menu → Import Mods (ZIP)**: pick any mod zip and it
+finds the mod root, unwraps any extra/double folder, and drops it into the instance's `Mods`.
+Dragging a mod folder into `Mods` via **Manage Storage** still works too.
 
 ## Build
 
@@ -81,10 +111,13 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 - on-screen keyboard (text fields: colony/pawn names, search);
 - occasional black screen on launch (kill + relaunch);
 - audio (FMOD);
-- physical mouse/keyboard polish; broader on-screen controls pass.
+- make the latest Harmony 2.3 work, so users aren't pinned to 2.2.2;
+- physical mouse/keyboard polish.
 
 ---
 
 *Core logic: `app/src/main/cpp/rimdroid.c` (launch, ZFA/GPU, input ring),
 `box64/src/wrapped/wrappedsdl2.c` (SDL/GL/event intercepts + dynapi remap),
-`app/src/main/java/com/rimdroid/` (`GameActivity`, `InputOverlayView`).*
+`box64/src/wrapped/wrappedlibc.c` (`/proc/self/auxv` → x86_64),
+`app/src/main/java/com/rimdroid/input/` (`InputControlsView`, `ControlElement`,
+`ButtonElement` + sticks), `ControlsEditorActivity`, `ModImporter`, `GameActivity`.*

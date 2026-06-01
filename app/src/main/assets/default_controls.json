@@ -1,0 +1,41 @@
+[
+  {
+    "type": "MOUSE_STICK",
+    "centerXRelative": 0.84,
+    "centerYRelative": 0.74,
+    "scale": 1.0,
+    "alpha": 180,
+    "bindings": [],
+    "sensitivity": 2.0
+  },
+  {
+    "type": "WASD_STICK",
+    "centerXRelative": 0.16,
+    "centerYRelative": 0.74,
+    "scale": 1.0,
+    "alpha": 180,
+    "bindings": ["KEY_UP", "KEY_RIGHT", "KEY_DOWN", "KEY_LEFT"]
+  },
+  {
+    "type": "BUTTON",
+    "shape": "CIRCLE",
+    "text": "RBC",
+    "centerXRelative": 0.93,
+    "centerYRelative": 0.10,
+    "scale": 1.0,
+    "alpha": 180,
+    "bindings": ["MOUSE_RIGHT"],
+    "isToggle": false
+  },
+  {
+    "type": "BUTTON",
+    "shape": "CIRCLE",
+    "text": "LBC",
+    "centerXRelative": 0.82,
+    "centerYRelative": 0.10,
+    "scale": 1.0,
+    "alpha": 180,
+    "bindings": ["MOUSE_LEFT"],
+    "isToggle": false
+  }
+]

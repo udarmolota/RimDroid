@@ -74,6 +74,10 @@ public class SettingsFragment extends Fragment {
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
 
+        // --- Edit on-screen controls ---
+        view.findViewById(R.id.btn_edit_controls).setOnClickListener(v ->
+                startActivity(new android.content.Intent(requireContext(), com.rimdroid.ControlsEditorActivity.class)));
+
         // --- Render scale (UI size) seek bar: 30..100%, lower = bigger UI ---
         SeekBar sbScale  = view.findViewById(R.id.sb_render_scale);
         TextView tvScale = view.findViewById(R.id.tv_render_scale_label);

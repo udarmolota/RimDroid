@@ -122,8 +122,10 @@ public class GameLauncher {
                 // in the parent, before zfaCreateContext).  Bare name — resolved
                 // via the rimdroid namespace search path by linkernsbypass.
                 // Chosen in Settings (driver spinner); defaults to libvulkan_freedreno.so.
-                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME",
-                        LauncherPreferences.requireSingleton().getVulkanDriverSo(), true);
+                // Empty string = "System" option = use the phone's own Vulkan driver
+                // (rimdroid.c treats empty as NULL and skips the bundled Turnip ICD).
+                String vkDriver = LauncherPreferences.requireSingleton().getVulkanDriverSo();
+                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vkDriver == null ? "" : vkDriver, true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our
                 // my2_SDL_GL_CreateContext/SwapWindow route to ZFA.
                 Os.setenv("SDL_DYNAMIC_API",

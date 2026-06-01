@@ -44,12 +44,18 @@ public class LauncherPreferences {
     // The drivers bundled in assets/bundles/libs.tar.xz (android-arm64-v8a/).
     // The first string (soName) must match the archive member; the second is the
     // UI label shown in the settings spinner.
+    // soName "" is the special "System" option: do NOT inject a bundled Turnip ICD,
+    // let the phone's own Vulkan driver handle it (experimental; may work on Mali /
+    // Dimensity, or with ANGLE enabled in the phone's developer options).
+    public static final String SYSTEM_VULKAN_DRIVER_SO = "";
+
     public static final List<VulkanDriverOption> VULKAN_DRIVERS = Arrays.asList(
         new VulkanDriverOption("libvulkan_freedreno.so",     "Freedreno 7xx/8xx (Default)"),
         new VulkanDriverOption("libvulkan_freedreno_8xx.so", "Freedreno 8xx (newer)"),
         new VulkanDriverOption("libvulkan_freedreno.v25.so", "Turnip Adreno830/840 v25"),
         new VulkanDriverOption("libvulkan_freedreno_840.so", "Turnip Adreno 830/840"),
-        new VulkanDriverOption("libvulkan.ad07XX.so",        "Turnip Adreno 7xx")
+        new VulkanDriverOption("libvulkan.ad07XX.so",        "Turnip Adreno 7xx"),
+        new VulkanDriverOption(SYSTEM_VULKAN_DRIVER_SO,      "System (phone driver) — experimental")
     );
 
     public static final String DEFAULT_VULKAN_DRIVER_SO = "libvulkan_freedreno.so";
@@ -144,6 +150,21 @@ public class LauncherPreferences {
     }
 
     public float getRenderScale() { return getRenderScalePercent() / 100f; }
+
+    // --- On-screen controls layout (JSON, see com.rimdroid.input) ---
+
+    @Nullable
+    public String getControlsJson() {
+        return prefs.getString("input_controls", null);
+    }
+
+    public void setControlsJson(String json) {
+        prefs.edit().putString("input_controls", json).apply();
+    }
+
+    public void clearControlsJson() {
+        prefs.edit().remove("input_controls").apply();
+    }
 
     // --- Last instance ---
 

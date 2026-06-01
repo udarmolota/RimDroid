@@ -9,6 +9,10 @@
         android:icon="@android:drawable/ic_menu_add"
         android:title="@string/nav_new_instance" />
     <item
+        android:id="@+id/action_import_mods"
+        android:icon="@android:drawable/ic_menu_upload"
+        android:title="@string/nav_import_mods" />
+    <item
         android:id="@+id/action_manage_storage"
         android:icon="@android:drawable/ic_menu_manage"
         android:title="@string/nav_manage_storage" />

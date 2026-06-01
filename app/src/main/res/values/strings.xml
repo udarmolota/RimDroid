@@ -9,6 +9,15 @@
     <string name="renderer">Renderer</string>
     <string name="vulkan_driver">Vulkan driver</string>
     <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If the game crashes on launch, try another one.</string>
+    <string name="nav_import_mods">Import Mods (ZIP)…</string>
+    <string name="on_screen_controls">On-screen controls</string>
+    <string name="edit_controls">Edit on-screen controls…</string>
+    <string name="editor_add">Add</string>
+    <string name="editor_reset">Reset</string>
+    <string name="editor_done">Done</string>
+    <string name="editor_delete">Delete element</string>
+    <string name="editor_hint">Tap to select • drag to move</string>
+    <string name="editor_reset_confirm">Reset all on-screen controls to the default layout?</string>
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_new_instance">Add Instance</string>

@@ -3,8 +3,8 @@
 Run **RimWorld** (the native Linux x86_64 build, Unity 2019) on an Android phone via
 x86_64→ARM64 emulation, with **real GPU rendering** and **on-screen touch controls**.
 
-> **Status (v0.1.1): playable.** RimWorld 1.5 boots, renders at native resolution,
-> takes touch input (move/select, orders, camera, zoom), and runs mods (incl. Harmony).
+> **Status (v0.1.2): playable.** RimWorld 1.5 boots, renders at native resolution,
+> takes touch input (move/select, drag, orders, camera, zoom), and runs the Harmony mod.
 
 ---
 
@@ -37,9 +37,11 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 - ✅ RimWorld **1.5 launches** in-process and **renders at native resolution** (landscape);
 - ✅ full GPU pipeline (Zink/Vulkan/Turnip, GL 4.3 Core);
 - ✅ **render-scale slider** in Settings (67–100%) — lower = bigger, more readable UI;
-- ✅ **input:** left-click (tap / mouse-stick), **right-click** (RMB button), camera pan
+- ✅ **selectable Vulkan/Turnip driver** in Settings (pick the one matching your GPU);
+- ✅ **input:** left-click (tap / mouse-stick), **right-click** (RBC button),
+  **left-drag** (LBC button — selection box / zones / Architect), camera pan
   (WASD-stick → arrow keys), **pinch-to-zoom**;
-- ✅ **mods** load and apply (tested with **Harmony** + a large mod list);
+- ✅ the **Harmony** mod loads and applies;
 - ✅ saving/loading.
 
 ## Key problems that were solved
@@ -61,7 +63,8 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 - **Mouse-stick** (right): drag to move the cursor (white arrow); tap the stick = left-click.
 - **Direct tap** on the game = left-click.
 - **WASD-stick** (left): pan the camera (arrow keys).
-- **RMB** button (top-right): hold to right-click at the cursor (orders, context menus).
+- **RBC** button (top-right): hold to right-click at the cursor (orders, context menus).
+- **LBC** button: hold to left-drag at the cursor (selection box, zone painting, Architect drag).
 - **Pinch**: zoom.
 
 ## Build
@@ -75,10 +78,10 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 
 ## Remaining / TODO
 
-- left-drag (selection box / zone painting / Architect drag);
 - on-screen keyboard (text fields: colony/pawn names, search);
 - occasional black screen on launch (kill + relaunch);
-- physical mouse/keyboard polish; audio (FMOD).
+- audio (FMOD);
+- physical mouse/keyboard polish; broader on-screen controls pass.
 
 ---
 

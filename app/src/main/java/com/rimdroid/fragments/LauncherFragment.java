@@ -53,6 +53,7 @@ public class LauncherFragment extends Fragment {
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private int logLineCount = 0;
+    private boolean receiverRegistered = false;
 
     private final ActivityResultLauncher<String[]> zipPicker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
@@ -82,9 +83,6 @@ public class LauncherFragment extends Fragment {
         // Hook up the log callback from GameLauncher
         GameLauncher.setLogCallback(line -> appendLog(line));
 
-        refreshInstances();
-        registerInstallerReceiver();
-
         if (!LauncherPreferences.requireSingleton().areDependenciesInstalled()) {
             appendLog("Installing renderer libraries...");
             InstallerService.startInstallDeps(requireContext());
@@ -92,10 +90,28 @@ public class LauncherFragment extends Fragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        // Re-register the installer receiver and re-read disk state every time the
+        // fragment becomes visible. This is what makes the Launch button switch to
+        // enabled right after an instance finishes installing — without it, the
+        // button only refreshed in onViewCreated and stayed disabled until the app
+        // was restarted (no onResume = no refresh on return from other screens).
+        registerInstallerReceiver();
+        refreshInstances();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        unregisterInstallerReceiver();
+    }
+
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
         GameLauncher.setLogCallback(null);
-        requireContext().unregisterReceiver(installerReceiver);
+        unregisterInstallerReceiver();
     }
 
     // ---- Instances ----------------------------------------------------------
@@ -204,11 +220,23 @@ public class LauncherFragment extends Fragment {
     };
 
     private void registerInstallerReceiver() {
+        if (receiverRegistered) return;
         IntentFilter f = new IntentFilter();
         f.addAction(InstallerService.BROADCAST_PROGRESS);
         f.addAction(InstallerService.BROADCAST_DONE);
         f.addAction(InstallerService.BROADCAST_ERROR);
         requireContext().registerReceiver(installerReceiver, f, Context.RECEIVER_NOT_EXPORTED);
+        receiverRegistered = true;
+    }
+
+    private void unregisterInstallerReceiver() {
+        if (!receiverRegistered) return;
+        try {
+            requireContext().unregisterReceiver(installerReceiver);
+        } catch (IllegalArgumentException ignored) {
+            // Already unregistered — safe to ignore.
+        }
+        receiverRegistered = false;
     }
 
     // ---- Log ----------------------------------------------------------------

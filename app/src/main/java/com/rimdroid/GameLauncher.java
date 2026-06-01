@@ -121,7 +121,9 @@ public class GameLauncher {
                 // Custom Turnip Vulkan ICD for Adreno (loaded by load_linker_hook
                 // in the parent, before zfaCreateContext).  Bare name — resolved
                 // via the rimdroid namespace search path by linkernsbypass.
-                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", "libvulkan_freedreno.v25.so", true);
+                // Chosen in Settings (driver spinner); defaults to libvulkan_freedreno.so.
+                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME",
+                        LauncherPreferences.requireSingleton().getVulkanDriverSo(), true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our
                 // my2_SDL_GL_CreateContext/SwapWindow route to ZFA.
                 Os.setenv("SDL_DYNAMIC_API",

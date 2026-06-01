@@ -6,6 +6,9 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class LauncherPreferences {
 
     // Must match names used in rimdroid.c / rimdroid_globals.h
@@ -27,6 +30,29 @@ public class LauncherPreferences {
         @Nullable public final String libName;
         VulkanDriver(@Nullable String libName) { this.libName = libName; }
     }
+
+    /** One selectable Vulkan/Turnip driver: the .so file name in the deps dir + a UI label. */
+    public static final class VulkanDriverOption {
+        public final String soName;   // file in dependencies/android-arm64-v8a/
+        public final String label;    // shown in the settings spinner
+        public VulkanDriverOption(String soName, String label) {
+            this.soName = soName; this.label = label;
+        }
+        @NonNull @Override public String toString() { return label; }
+    }
+
+    // The drivers bundled in assets/bundles/libs.tar.xz (android-arm64-v8a/).
+    // The first string (soName) must match the archive member; the second is the
+    // UI label shown in the settings spinner.
+    public static final List<VulkanDriverOption> VULKAN_DRIVERS = Arrays.asList(
+        new VulkanDriverOption("libvulkan_freedreno.so",     "Freedreno 7xx/8xx (Default)"),
+        new VulkanDriverOption("libvulkan_freedreno_8xx.so", "Freedreno 8xx (newer)"),
+        new VulkanDriverOption("libvulkan_freedreno.v25.so", "Turnip Adreno830/840 v25"),
+        new VulkanDriverOption("libvulkan_freedreno_840.so", "Turnip Adreno 830/840"),
+        new VulkanDriverOption("libvulkan.ad07XX.so",        "Turnip Adreno 7xx")
+    );
+
+    public static final String DEFAULT_VULKAN_DRIVER_SO = "libvulkan_freedreno.so";
 
     private final SharedPreferences prefs;
     private static LauncherPreferences singleton;
@@ -80,6 +106,24 @@ public class LauncherPreferences {
 
     public void setVulkanDriver(VulkanDriver driver) {
         prefs.edit().putString("vulkan_driver", driver.name()).apply();
+    }
+
+    /** Selected driver .so file name (used by the ZINK_ZFA path). */
+    public String getVulkanDriverSo() {
+        return prefs.getString("vulkan_driver_so", DEFAULT_VULKAN_DRIVER_SO);
+    }
+
+    public void setVulkanDriverSo(String soName) {
+        prefs.edit().putString("vulkan_driver_so", soName).apply();
+    }
+
+    /** Index of the currently selected driver in {@link #VULKAN_DRIVERS} (0 if unknown). */
+    public int getVulkanDriverIndex() {
+        String so = getVulkanDriverSo();
+        for (int i = 0; i < VULKAN_DRIVERS.size(); i++) {
+            if (VULKAN_DRIVERS.get(i).soName.equals(so)) return i;
+        }
+        return 0;
     }
 
     // --- Render scale (UI size) ---

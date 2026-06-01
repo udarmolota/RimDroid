@@ -54,6 +54,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         root.addView(overlay, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         addRmbButton(root);
+        addDragButton(root);
         setContentView(root);
     }
 
@@ -101,7 +102,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private void addRmbButton(FrameLayout root) {
         float d = getResources().getDisplayMetrics().density;
         Button rmb = new Button(this);
-        rmb.setText("ПКМ");
+        rmb.setText("RBC");
         rmb.setAlpha(0.7f);
         rmb.setOnTouchListener((v, ev) -> {
             switch (ev.getActionMasked()) {
@@ -118,6 +119,31 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         lp.topMargin = (int) (10 * d);
         lp.rightMargin = (int) (10 * d);
         root.addView(rmb, lp);
+    }
+
+    // Left-drag button (left of RBC): holds the LEFT button at the mouse-stick
+    // cursor, so moving the cursor while held draws a selection box / paints zones /
+    // drags in the Architect menu. Release ends the drag.
+    private void addDragButton(FrameLayout root) {
+        float d = getResources().getDisplayMetrics().density;
+        Button drag = new Button(this);
+        drag.setText("LBC");
+        drag.setAlpha(0.7f);
+        drag.setOnTouchListener((v, ev) -> {
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    if (overlay != null) overlay.cursorButton(1, true); v.setPressed(true); return true;   // SDL btn 1 = left
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (overlay != null) overlay.cursorButton(1, false); v.setPressed(false); return true;
+            }
+            return false;
+        });
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) (120 * d), (int) (66 * d));
+        lp.gravity = Gravity.TOP | Gravity.END;
+        lp.topMargin = (int) (10 * d);
+        lp.rightMargin = (int) (140 * d);   // sits to the left of the 120dp RBC button (+10dp gap)
+        root.addView(drag, lp);
     }
 
     @Override

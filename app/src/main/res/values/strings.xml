@@ -7,6 +7,8 @@
     <string name="no_instances">No instances installed</string>
     <string name="log">Log</string>
     <string name="renderer">Renderer</string>
+    <string name="vulkan_driver">Vulkan driver</string>
+    <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If the game crashes on launch, try another one.</string>
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_new_instance">Add Instance</string>

@@ -27,6 +27,9 @@ public class InputOverlayView extends View {
     private float curX = -1, curY = -1;
 
     private float stickR, knobR;
+    // Mouse-stick uses a bigger inner knob so the touch target nearly fills the
+    // outer ring (easier to grab); the wasd-stick keeps the smaller knobR.
+    private float msKnobR;
 
     // mouse stick (right)
     private float msCx, msCy, msKnobX, msKnobY;
@@ -62,6 +65,7 @@ public class InputOverlayView extends View {
     protected void onSizeChanged(int w, int h, int ow, int oh) {
         stickR = 47 * density;
         knobR  = 23 * density;
+        msKnobR = 40 * density;   // mouse-stick inner circle (fills most of the outer ring)
         wsCx = 0.16f * w; wsCy = 0.74f * h; wsKnobX = wsCx; wsKnobY = wsCy;
         msCx = 0.84f * w; msCy = 0.74f * h; msKnobX = msCx; msKnobY = msCy;
         if (curX < 0) { curX = w / 2f; curY = h / 2f; }
@@ -97,7 +101,7 @@ public class InputOverlayView extends View {
         float cx = mouse ? msCx : wsCx, cy = mouse ? msCy : wsCy;
         float dx = x - cx, dy = y - cy;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
-        float max = stickR - knobR;
+        float max = stickR - (mouse ? msKnobR : knobR);
         if (len > max && len > 0.001f) { float k = max / len; dx *= k; dy *= k; }
         if (mouse) { msKnobX = cx + dx; msKnobY = cy + dy; }
         else       { wsKnobX = cx + dx; wsKnobY = cy + dy; }
@@ -180,8 +184,8 @@ public class InputOverlayView extends View {
     @Override
     protected void onDraw(Canvas c) {
         // sticks
-        drawStick(c, wsCx, wsCy, wsKnobX, wsKnobY);
-        drawStick(c, msCx, msCy, msKnobX, msKnobY);
+        drawStick(c, wsCx, wsCy, wsKnobX, wsKnobY, knobR);
+        drawStick(c, msCx, msCy, msKnobX, msKnobY, msKnobR);
         // cursor arrow
         if (curX >= 0) {
             float s = density, w = 17 * s, h = 25 * s;
@@ -195,10 +199,10 @@ public class InputOverlayView extends View {
             c.drawPath(p, curFill);
         }
     }
-    private void drawStick(Canvas c, float cx, float cy, float kx, float ky) {
+    private void drawStick(Canvas c, float cx, float cy, float kx, float ky, float kr) {
         c.drawCircle(cx, cy, stickR, fill);
         c.drawCircle(cx, cy, stickR, stroke);
-        c.drawCircle(kx, ky, knobR, fill);
-        c.drawCircle(kx, ky, knobR, stroke);
+        c.drawCircle(kx, ky, kr, fill);
+        c.drawCircle(kx, ky, kr, stroke);
     }
 }

@@ -121,3 +121,15 @@ Dragging a mod folder into `Mods` via **Manage Storage** still works too.
 `box64/src/wrapped/wrappedlibc.c` (`/proc/self/auxv` → x86_64),
 `app/src/main/java/com/rimdroid/input/` (`InputControlsView`, `ControlElement`,
 `ButtonElement` + sticks), `ControlsEditorActivity`, `ModImporter`, `GameActivity`.*
+
+## Credits & Third-Party Sources
+
+* [box64](https://github.com/ptitSeb/box64) — x86_64→ARM64 emulation backend
+* [Mesa / Zink / ZFA](https://gitlab.freedesktop.org/mesa/mesa) — GPU rendering (OpenGL→Vulkan)
+* [Turnip / libvulkan_freedreno](https://gitlab.freedesktop.org/mesa/mesa) — Adreno Vulkan driver
+* [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access
+* [Zomdroid](https://github.com/udarmolota/zomdroid) — architecture reference and inspiration
+* [Harmony](https://github.com/pardeike/Harmony) — required by mods (MIT)
+
+> RimDroid is not affiliated with Ludeon Studios.
+> RimWorld must be purchased separately.

@@ -22,6 +22,14 @@ public class GameInstance {
     }
 
     /**
+     * RimWorld persistentDataPath inside this instance — holds {@code Saves/} and
+     * {@code Config/} (used by save/settings backup &amp; restore).
+     */
+    public File getUserDataDir() {
+        return new File(getGamePath(), "unity3d/Ludeon Studios/RimWorld by Ludeon Studios");
+    }
+
+    /**
      * x86_64 library search path for box64 (BOX64_LD_LIBRARY_PATH).
      * Contains ONLY x86_64 libraries — game libs and Linux system libs.
      * ARM64 renderer libs do NOT belong here.

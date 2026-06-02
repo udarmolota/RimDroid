@@ -40,7 +40,14 @@ public class GameLauncher {
         Os.setenv("BOX64_DYNAREC_BIGBLOCK", "0", true);  // 0 for Unity/Mono JIT
         Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", true);
         Os.setenv("BOX64_DYNAREC_STRONGMEM", "3", true);    // TSO full emulation — fix memory ordering SIGSEGV
-        Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "1", true); // Extra barriers in dynarec
+        // BOX64_DYNAREC_WEAKBARRIER: 0 = regular (safe) barriers, 1 = weak (faster,
+        // box64 default), 2 = weakest. The "Strict memory barriers" test toggle forces 0
+        // (safe) to probe SAVE CORRUPTION on CPUs (e.g. MediaTek/Cortex) where the weak
+        // model appears to mis-order Mono's GC atomic write-barrier: Verse.Thing.ExposeData
+        // throws NRE while saving and every pawn serializes as an empty <li/> (colonists
+        // vanish after reload). Off by default — weak barriers give more FPS.
+        boolean strictBarriers = LauncherPreferences.requireSingleton().isStrictBarriers();
+        Os.setenv("BOX64_DYNAREC_WEAKBARRIER", strictBarriers ? "0" : "1", true);
         // BOX64_PREFER_EMULATED intentionally NOT set:
         // with prefer_emulated=1 box64 skips initWrappedLib for all non-essential libs,
         // including SDL2 — our my2_SDL_DYNAPI_entry never fires.
@@ -56,12 +63,15 @@ public class GameLauncher {
         // Library path for box64 to find x86_64 .so files
         Os.setenv("BOX64_LD_LIBRARY_PATH", gameInstance.getLdLibraryPathForEmulation(), true);
 
-        // Renderer selection — read by rimdroid.c on init
-        Os.setenv("RIMDROID_RENDERER", LauncherPreferences.requireSingleton().getRenderer().name(), true);
-        Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
-
         // Renderer-specific env vars
         LauncherPreferences.Renderer renderer = LauncherPreferences.requireSingleton().getRenderer();
+        // SOFTPIPE reuses the ZFA window/present path natively (only the Mesa gallium
+        // driver differs: softpipe vs zink), so the native side is told "ZINK_ZFA".
+        String nativeRenderer = (renderer == LauncherPreferences.Renderer.SOFTPIPE)
+                ? "ZINK_ZFA" : renderer.name();
+        Os.setenv("RIMDROID_RENDERER", nativeRenderer, true);  // read by rimdroid.c on init
+        Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
+
         switch (renderer) {
             case GL4ES:
                 // Absolute path, not bare soname: libgl4es.so lives in the app's
@@ -88,12 +98,19 @@ public class GameLauncher {
                     AppStorage.requireSingleton().getLibsLinuxX86Path() + "/libSDL2-2.0.so.0",
                     true);
                 break;
-            case ZINK_ZFA: {
+            case ZINK_ZFA:
+            case SOFTPIPE: {
+                // Software (softpipe) reuses the exact same libzfa window/present path as
+                // Zink — only the Mesa gallium driver differs. softpipe = CPU rasterizer:
+                // works on ANY GPU (no Vulkan needed), supports all texture formats incl. BC
+                // (fixes black textures on Mali/PowerVR), but is slower. Requires libzfa.so
+                // built with -Dgallium-drivers=zink,softpipe.
+                boolean soft = (renderer == LauncherPreferences.Renderer.SOFTPIPE);
                 // Absolute path so host dlopen() in the parent finds libzfa.so
                 // (the isolated namespace does not resolve it by bare soname).
                 String arm64Dir = AppStorage.requireSingleton().getGl4esLibsPath();
                 Os.setenv("BOX64_LIBGL", arm64Dir + "/libzfa.so", true);
-                Os.setenv("GALLIUM_DRIVER", "zink", true);
+                Os.setenv("GALLIUM_DRIVER", soft ? "softpipe" : "zink", true);
                 Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", true);
                 Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", true);
                 // DEBUG: surface Zink/Mesa shader compile/link errors + GL errors
@@ -101,7 +118,7 @@ public class GameLauncher {
                 // the GfxDevice device-lost teardown loop (SDL_GL_DeleteContext loop).
                 Os.setenv("MESA_DEBUG", "1", true);          // GL errors + warnings to stderr
                 Os.setenv("MESA_GLSL", "errors", true);      // GLSL compile/link errors
-                Os.setenv("ZINK_DEBUG", "compact", true);    // Zink-level diagnostics
+                if (!soft) Os.setenv("ZINK_DEBUG", "compact", true);    // Zink-level diagnostics
                 // libzfa.so exports a fixed classic-GL symbol set but is MISSING the
                 // entry points for several advertised extensions (whole DSA family,
                 // internalformat_query, timer_query, sparse_texture, blend_equation_
@@ -130,7 +147,8 @@ public class GameLauncher {
                 // Chosen in Settings (driver spinner); defaults to libvulkan_freedreno.so.
                 // Empty string = "System" option = use the phone's own Vulkan driver
                 // (rimdroid.c treats empty as NULL and skips the bundled Turnip ICD).
-                String vkDriver = LauncherPreferences.requireSingleton().getVulkanDriverSo();
+                // Software path needs no Vulkan ICD; GPU (Zink) path uses the chosen driver.
+                String vkDriver = soft ? "" : LauncherPreferences.requireSingleton().getVulkanDriverSo();
                 Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vkDriver == null ? "" : vkDriver, true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our
                 // my2_SDL_GL_CreateContext/SwapWindow route to ZFA.

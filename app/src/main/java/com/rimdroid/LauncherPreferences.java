@@ -14,8 +14,9 @@ public class LauncherPreferences {
     // Must match names used in rimdroid.c / rimdroid_globals.h
     public enum Renderer {
         GL4ES("libGL.so.1"),
-        ZINK_ZFA("libGL.so.1"),       // Mesa Zink via ZFA window
-        ZINK_OSMESA("libGL.so.1");    // Mesa Zink via OSMesa (fallback)
+        ZINK_ZFA("libGL.so.1"),       // Mesa Zink via ZFA window (GPU, Vulkan)
+        ZINK_OSMESA("libGL.so.1"),    // Mesa Zink via OSMesa (unused fallback)
+        SOFTPIPE("libGL.so.1");       // Mesa softpipe (CPU) via the ZFA window — works on any GPU
 
         public final String libName;
         Renderer(String libName) { this.libName = libName; }
@@ -50,15 +51,18 @@ public class LauncherPreferences {
     public static final String SYSTEM_VULKAN_DRIVER_SO = "";
 
     public static final List<VulkanDriverOption> VULKAN_DRIVERS = Arrays.asList(
-        new VulkanDriverOption("libvulkan_freedreno.so",     "Freedreno 7xx/8xx (Default)"),
-        new VulkanDriverOption("libvulkan_freedreno_8xx.so", "Freedreno 8xx (newer)"),
+        new VulkanDriverOption(SYSTEM_VULKAN_DRIVER_SO,      "System (phone driver) — default"),
         new VulkanDriverOption("libvulkan_freedreno.v25.so", "Turnip Adreno830/840 v25"),
+        new VulkanDriverOption("libvulkan_freedreno_8xx.so", "Freedreno 8xx (newer)"),
         new VulkanDriverOption("libvulkan_freedreno_840.so", "Turnip Adreno 830/840"),
-        new VulkanDriverOption("libvulkan.ad07XX.so",        "Turnip Adreno 7xx"),
-        new VulkanDriverOption(SYSTEM_VULKAN_DRIVER_SO,      "System (phone driver) — experimental")
+        new VulkanDriverOption("libvulkan_freedreno.so",     "Freedreno 7xx/8xx"),
+        new VulkanDriverOption("libvulkan.ad07XX.so",        "Turnip Adreno 7xx")
     );
 
-    public static final String DEFAULT_VULKAN_DRIVER_SO = "libvulkan_freedreno.so";
+    // Default = the phone's own Vulkan driver: works on any GPU (Adreno=Qualcomm driver,
+    // Mali/MediaTek=Mali driver). The bundled Turnip "freedreno" base hangs on the newest
+    // Adreno (a8xx), so it's no longer the default; advanced users can pick a Turnip variant.
+    public static final String DEFAULT_VULKAN_DRIVER_SO = SYSTEM_VULKAN_DRIVER_SO;
 
     private final SharedPreferences prefs;
     private static LauncherPreferences singleton;
@@ -132,24 +136,52 @@ public class LauncherPreferences {
         return 0;
     }
 
-    // --- Render scale (UI size) ---
-    // RimWorld scales its UI with resolution, so rendering at a LOWER fraction of
-    // the native surface makes on-screen UI BIGGER (and is lighter on the GPU).
-    // RimWorld's UI has a ~1280x720 minimum, so below ~67% on a 1080-tall surface the
-    // layout overflows (the colony START button falls off the bottom). Clamp 67..100,
-    // default 72.
-    public static final int RENDER_SCALE_MIN = 67;
+    // --- Render scale (UI size / GPU load) ---
+    // RimWorld scales its UI with resolution: rendering at a LOWER fraction of the
+    // native surface makes the on-screen UI BIGGER and is lighter on the GPU.
+    // RimWorld's UI has a ~1280x720 minimum — below that the layout overflows (the
+    // colony START button falls off the bottom). The minimum USABLE scale therefore
+    // depends on the screen: a 1080p panel floors at ~67% (720/1080), a 1440p panel
+    // can go down to ~50% (720/1440). A fixed percentage floor would force a high-res
+    // "potato" to render needlessly many pixels (→ 5 FPS), so the real floor is
+    // computed per device by minRenderScalePercent(); the stored value is only clamped
+    // to a sane absolute range. Default 72.
+    public static final int RENDER_SCALE_ABS_MIN = 25;
 
     public int getRenderScalePercent() {
         int v = prefs.getInt("render_scale_pct", 72);
-        return Math.max(RENDER_SCALE_MIN, Math.min(100, v));
+        return Math.max(RENDER_SCALE_ABS_MIN, Math.min(100, v));
     }
 
     public void setRenderScalePercent(int pct) {
-        prefs.edit().putInt("render_scale_pct", Math.max(RENDER_SCALE_MIN, Math.min(100, pct))).apply();
+        prefs.edit().putInt("render_scale_pct",
+                Math.max(RENDER_SCALE_ABS_MIN, Math.min(100, pct))).apply();
     }
 
     public float getRenderScale() { return getRenderScalePercent() / 100f; }
+
+    /**
+     * Lowest render-scale percent that still yields a &gt;=1280x720 internal resolution
+     * for the given physical surface, so high-res phones can scale further down than
+     * low-res ones. Pass landscape dimensions (the larger value as width). Clamped to
+     * [RENDER_SCALE_ABS_MIN, 100].
+     */
+    public static int minRenderScalePercent(int surfaceW, int surfaceH) {
+        if (surfaceW <= 0 || surfaceH <= 0) return 67;   // safe fallback (1080p floor)
+        double need = Math.max(1280.0 / surfaceW, 720.0 / surfaceH);
+        int pct = (int) Math.ceil(need * 100.0);
+        return Math.max(RENDER_SCALE_ABS_MIN, Math.min(100, pct));
+    }
+
+    /**
+     * The render scale actually applied for a given physical surface: the stored value
+     * raised to the per-device floor (so RimWorld's UI never drops below 1280x720).
+     * Used by both the game and the controls editor so the two always agree.
+     */
+    public float getEffectiveRenderScale(int surfaceW, int surfaceH) {
+        int eff = Math.max(getRenderScalePercent(), minRenderScalePercent(surfaceW, surfaceH));
+        return Math.min(100, eff) / 100f;
+    }
 
     // --- On-screen controls layout (JSON, see com.rimdroid.input) ---
 
@@ -180,6 +212,17 @@ public class LauncherPreferences {
 
     public boolean isDebug() {
         return prefs.getBoolean("debug_mode", false);
+    }
+
+    // --- Strict memory barriers (test) ---
+    // When on, GameLauncher sets BOX64_DYNAREC_WEAKBARRIER=0 (strongest barriers,
+    // slower). Test lever for save corruption on some CPUs (MediaTek/Cortex): under
+    // the default weaker barriers, Mono's GC atomic write-barrier may be mis-ordered,
+    // corrupting object graphs so Verse.Thing.ExposeData() throws NRE while saving and
+    // pawns serialize as empty <li/>. Off by default (the cost is FPS).
+
+    public boolean isStrictBarriers() {
+        return prefs.getBoolean("strict_barriers", false);
     }
 
     // --- Custom env vars (advanced) ---

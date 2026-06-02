@@ -29,6 +29,7 @@ import com.rimdroid.game.GameInstanceManager;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 
 public class LauncherActivity extends AppCompatActivity {
@@ -41,6 +42,18 @@ public class LauncherActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String[]> modZipPicker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
                     uri -> { if (uri != null) importModsFromZip(uri); });
+
+    private final ActivityResultLauncher<String> exportDataLauncher =
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
+                    uri -> { if (uri != null) exportGameData(uri); });
+
+    private final ActivityResultLauncher<String[]> importDataLauncher =
+            registerForActivityResult(new ActivityResultContracts.OpenDocument(),
+                    uri -> { if (uri != null) importGameData(uri); });
+
+    private final ActivityResultLauncher<String> exportLogsLauncher =
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
+                    uri -> { if (uri != null) exportLogs(uri); });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +92,16 @@ public class LauncherActivity extends AppCompatActivity {
                 modZipPicker.launch(new String[]{
                         "application/zip", "application/x-zip-compressed", "application/octet-stream"});
                 return true;
+            } else if (id == R.id.action_export_saves) {
+                exportDataLauncher.launch("rimdroid_backup.zip");
+                return true;
+            } else if (id == R.id.action_import_saves) {
+                importDataLauncher.launch(new String[]{
+                        "application/zip", "application/x-zip-compressed", "application/octet-stream"});
+                return true;
+            } else if (id == R.id.action_export_logs) {
+                exportLogsLauncher.launch("rimdroid_logs_" + timestamp() + ".zip");
+                return true;
             } else if (id == R.id.action_manage_storage) {
                 Uri rootUri = DocumentsContract.buildRootsUri(C.STORAGE_PROVIDER_AUTHORITY);
                 Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -102,17 +125,9 @@ public class LauncherActivity extends AppCompatActivity {
 
     /** Import mods from a picked .zip into the selected instance's Mods folder. */
     private void importModsFromZip(Uri uri) {
-        GameInstanceManager mgr = GameInstanceManager.requireSingleton();
-        mgr.reload();
-        String last = LauncherPreferences.requireSingleton().getLastInstanceName();
-        GameInstance gi = (last != null && !last.isEmpty()) ? mgr.getByName(last) : null;
-        if (gi == null) {
-            List<GameInstance> all = mgr.getInstances();
-            if (!all.isEmpty()) gi = all.get(0);
-        }
-        if (gi == null) { toast("Create a game instance first, then import mods."); return; }
+        final GameInstance instance = currentInstance();
+        if (instance == null) { toast("Create a game instance first, then import mods."); return; }
 
-        final GameInstance instance = gi;
         final File modsDir = new File(instance.getGamePath(), "Mods");
         final String fallback = guessZipName(uri);
         toast("Importing mods…");
@@ -141,6 +156,102 @@ public class LauncherActivity extends AppCompatActivity {
                 }
             });
         }).start();
+    }
+
+    /** The instance to act on: the last-launched one, else the first available, else null. */
+    private GameInstance currentInstance() {
+        GameInstanceManager mgr = GameInstanceManager.requireSingleton();
+        mgr.reload();
+        String last = LauncherPreferences.requireSingleton().getLastInstanceName();
+        GameInstance gi = (last != null && !last.isEmpty()) ? mgr.getByName(last) : null;
+        if (gi == null) {
+            List<GameInstance> all = mgr.getInstances();
+            if (!all.isEmpty()) gi = all.get(0);
+        }
+        return gi;
+    }
+
+    // ---- Save / settings backup & restore -------------------------------------
+
+    /** Export the selected instance's saves + settings into a picked .zip. */
+    private void exportGameData(Uri uri) {
+        final GameInstance instance = currentInstance();
+        if (instance == null) { toast("Create a game instance first."); return; }
+        final File userDir = instance.getUserDataDir();
+        toast("Exporting saves + settings…");
+
+        new Thread(() -> {
+            GameDataTransfer.Result res;
+            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
+                res = GameDataTransfer.export(userDir, out);
+            } catch (Exception ex) {
+                ui.post(() -> toast("Export failed: " + ex.getMessage()));
+                return;
+            }
+            final GameDataTransfer.Result fr = res;
+            ui.post(() -> toast(fr.ok()
+                    ? "Exported " + android.text.TextUtils.join(" + ", fr.items)
+                        + " (" + (fr.bytes / 1024) + " KB)"
+                    : "Export failed: " + fr.error));
+        }).start();
+    }
+
+    /** Restore saves + settings from a picked .zip into the selected instance. */
+    private void importGameData(Uri uri) {
+        final GameInstance instance = currentInstance();
+        if (instance == null) { toast("Create a game instance first."); return; }
+        final File userDir = instance.getUserDataDir();
+        toast("Importing saves + settings…");
+
+        new Thread(() -> {
+            File cacheZip = new File(getCacheDir(), "import_data.zip");
+            try (InputStream in = getContentResolver().openInputStream(uri);
+                 FileOutputStream out = new FileOutputStream(cacheZip)) {
+                byte[] buf = new byte[65536];
+                int n;
+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            } catch (Exception ex) {
+                ui.post(() -> toast("Read failed: " + ex.getMessage()));
+                return;
+            }
+            GameDataTransfer.Result res = GameDataTransfer.importZip(cacheZip, userDir);
+            //noinspection ResultOfMethodCallIgnored
+            cacheZip.delete();
+            final GameDataTransfer.Result fr = res;
+            ui.post(() -> toast(fr.ok()
+                    ? "Restored " + android.text.TextUtils.join(" + ", fr.items) + " → " + instance.getName()
+                    : "Import failed: " + fr.error));
+        }).start();
+    }
+
+    /** Export the selected instance's diagnostic logs into a picked, date-stamped .zip. */
+    private void exportLogs(Uri uri) {
+        final GameInstance instance = currentInstance();
+        if (instance == null) { toast("Create a game instance first."); return; }
+        toast("Exporting logs…");
+
+        new Thread(() -> {
+            LogExporter.Result res;
+            try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
+                res = LogExporter.export(instance, out);
+            } catch (Exception ex) {
+                ui.post(() -> toast("Export failed: " + ex.getMessage()));
+                return;
+            }
+            final LogExporter.Result fr = res;
+            ui.post(() -> toast(fr.ok()
+                    ? "Logs: " + android.text.TextUtils.join(", ", fr.items)
+                        + " (" + (fr.bytes / 1024) + " KB)"
+                    : "Export failed: " + fr.error));
+        }).start();
+    }
+
+    /** yyyyMMdd_HHmmss — keeps each exported log zip uniquely named (no overwrite). */
+    private static String timestamp() {
+        return new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+                .format(new java.util.Date());
     }
 
     private String guessZipName(Uri uri) {

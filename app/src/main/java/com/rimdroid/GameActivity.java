@@ -36,7 +36,15 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         super.onCreate(savedInstanceState);
 
         LauncherPreferences lp = LauncherPreferences.getSingleton();
-        if (lp != null) renderScale = lp.getRenderScale();
+        if (lp != null) {
+            // Effective render scale = stored value raised to the per-device floor, so
+            // RimWorld's UI never drops below 1280x720 even on high-res panels. Use the
+            // window bounds via max/min so it's correct regardless of current rotation.
+            android.graphics.Rect b = getWindowManager().getCurrentWindowMetrics().getBounds();
+            int sLong  = Math.max(b.width(), b.height());
+            int sShort = Math.min(b.width(), b.height());
+            renderScale = lp.getEffectiveRenderScale(sLong, sShort);
+        }
 
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -141,6 +149,32 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged: " + width + "x" + height);
         GameLauncher.setSurface(holder.getSurface(), width, height);
+        // Pin RimWorld's Prefs.xml to fullscreen at EXACTLY the buffer resolution we
+        // pass the game here (= surface * render scale). RimWorld re-applies its saved
+        // Prefs resolution shortly after launch, overriding -screen-width; if that saved
+        // value is the Unity default 1024x768 (4:3) the game renders stretched into our
+        // surface. Writing the matching size + fullscreen=True before RimWorld reads
+        // Prefs (during its init, seconds later) keeps the render 1:1 with correct aspect.
+        pinGamePrefs(width, height);
+    }
+
+    /** Force the selected instance's Config/Prefs.xml to fullscreen at the render
+     *  resolution we use, so RimWorld doesn't override us with its 4:3 default. */
+    private void pinGamePrefs(int width, int height) {
+        try {
+            LauncherPreferences lp = LauncherPreferences.getSingleton();
+            if (lp == null) return;
+            String name = lp.getLastInstanceName();
+            if (name == null || name.isEmpty()) return;
+            com.rimdroid.game.GameInstanceManager mgr =
+                    com.rimdroid.game.GameInstanceManager.requireSingleton();
+            mgr.reload();
+            com.rimdroid.game.GameInstance gi = mgr.getByName(name);
+            if (gi == null) return;
+            PrefsXml.forceFullscreen(new java.io.File(gi.getUserDataDir(), "Config"), width, height);
+        } catch (Throwable t) {
+            Log.w(TAG, "pinGamePrefs failed: " + t.getMessage());
+        }
     }
 
     @Override

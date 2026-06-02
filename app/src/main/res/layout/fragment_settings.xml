@@ -36,6 +36,12 @@
             android:layout_height="wrap_content"
             android:text="@string/zink_osmesa_label" />
 
+        <RadioButton
+            android:id="@+id/rb_softpipe"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/softpipe_label" />
+
     </RadioGroup>
 
     <TextView
@@ -86,6 +92,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/debug_mode" />
+
+    <Switch
+        android:id="@+id/sw_strict_barriers"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/strict_barriers" />
 
     <TextView
         android:layout_width="wrap_content"

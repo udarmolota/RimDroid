@@ -58,7 +58,14 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
 
         float renderScale = 0.72f;
         LauncherPreferences lp = LauncherPreferences.getSingleton();
-        if (lp != null) renderScale = lp.getRenderScale();
+        if (lp != null) {
+            // Match the game's effective scale (stored value raised to the per-device
+            // floor) so edited element positions line up with the running game.
+            android.graphics.Rect b = getWindowManager().getCurrentWindowMetrics().getBounds();
+            int sLong  = Math.max(b.width(), b.height());
+            int sShort = Math.min(b.width(), b.height());
+            renderScale = lp.getEffectiveRenderScale(sLong, sShort);
+        }
 
         FrameLayout host = findViewById(R.id.controls_host);
         controls = new InputControlsView(this, renderScale);

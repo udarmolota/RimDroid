@@ -13,6 +13,18 @@
         android:icon="@android:drawable/ic_menu_upload"
         android:title="@string/nav_import_mods" />
     <item
+        android:id="@+id/action_export_saves"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="@string/nav_export_saves" />
+    <item
+        android:id="@+id/action_import_saves"
+        android:icon="@android:drawable/ic_menu_revert"
+        android:title="@string/nav_import_saves" />
+    <item
+        android:id="@+id/action_export_logs"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="@string/nav_export_logs" />
+    <item
         android:id="@+id/action_manage_storage"
         android:icon="@android:drawable/ic_menu_manage"
         android:title="@string/nav_manage_storage" />

@@ -37,20 +37,30 @@ public class SettingsFragment extends Fragment {
         RadioButton rbGl4es   = view.findViewById(R.id.rb_gl4es);
         RadioButton rbZinkZfa = view.findViewById(R.id.rb_zink_zfa);
         RadioButton rbZinkOsmesa = view.findViewById(R.id.rb_zink_osmesa);
+        RadioButton rbSoftpipe = view.findViewById(R.id.rb_softpipe);
         Switch swDebug        = view.findViewById(R.id.sw_debug);
+        Switch swStrict       = view.findViewById(R.id.sw_strict_barriers);
 
-        // Only ZINK_ZFA works right now — hide GL4ES / ZINK_OSMESA and force ZFA.
+        // Usable renderers: ZINK_ZFA (GPU, default) and SOFTPIPE (CPU fallback for
+        // non-Adreno GPUs). Hide the non-working GL4ES / ZINK_OSMESA options.
         rbGl4es.setVisibility(View.GONE);
         rbZinkOsmesa.setVisibility(View.GONE);
+        // "Software" hidden for now: the zfa frontend hardcodes a Zink screen and ignores
+        // GALLIUM_DRIVER, so softpipe isn't actually wired yet (needs an OSMesa+blit path).
+        // Showing it would just mislabel a Zink run. Force ZINK_ZFA.
+        rbSoftpipe.setVisibility(View.GONE);
         rbZinkZfa.setChecked(true);
         prefs.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
         swDebug.setChecked(prefs.isDebug());
+        swStrict.setChecked(prefs.isStrictBarriers());
 
         rgRenderer.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.rb_gl4es) {
-                prefs.setRenderer(LauncherPreferences.Renderer.GL4ES);
-            } else if (checkedId == R.id.rb_zink_zfa) {
+            if (checkedId == R.id.rb_zink_zfa) {
                 prefs.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
+            } else if (checkedId == R.id.rb_softpipe) {
+                prefs.setRenderer(LauncherPreferences.Renderer.SOFTPIPE);
+            } else if (checkedId == R.id.rb_gl4es) {
+                prefs.setRenderer(LauncherPreferences.Renderer.GL4ES);
             } else if (checkedId == R.id.rb_zink_osmesa) {
                 prefs.setRenderer(LauncherPreferences.Renderer.ZINK_OSMESA);
             }
@@ -58,6 +68,9 @@ public class SettingsFragment extends Fragment {
 
         swDebug.setOnCheckedChangeListener((btn, checked) ->
                 prefs.getSharedPrefs().edit().putBoolean("debug_mode", checked).apply());
+
+        swStrict.setOnCheckedChangeListener((btn, checked) ->
+                prefs.getSharedPrefs().edit().putBoolean("strict_barriers", checked).apply());
 
         // --- Vulkan driver picker ---
         Spinner spDriver = view.findViewById(R.id.spinner_vulkan_driver);
@@ -78,11 +91,19 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.btn_edit_controls).setOnClickListener(v ->
                 startActivity(new android.content.Intent(requireContext(), com.rimdroid.ControlsEditorActivity.class)));
 
-        // --- Render scale (UI size) seek bar: 30..100%, lower = bigger UI ---
+        // --- Render scale (UI size / GPU load) seek bar: device-floor..100% ---
+        // The floor keeps the internal resolution >=1280x720 (RimWorld UI minimum) and
+        // is per-device: a 1080p screen floors at ~67%, a 1440p screen at ~50%, so weak
+        // high-res phones can scale further down for more FPS. Lower = bigger UI, lighter.
         SeekBar sbScale  = view.findViewById(R.id.sb_render_scale);
         TextView tvScale = view.findViewById(R.id.tv_render_scale_label);
-        final int MIN = LauncherPreferences.RENDER_SCALE_MIN;   // 67; seek max=33 → 67..100
-        int pct = prefs.getRenderScalePercent();
+        android.graphics.Rect bounds =
+                requireActivity().getWindowManager().getCurrentWindowMetrics().getBounds();
+        int sLong  = Math.max(bounds.width(), bounds.height());
+        int sShort = Math.min(bounds.width(), bounds.height());
+        final int MIN = LauncherPreferences.minRenderScalePercent(sLong, sShort);
+        int pct = Math.max(MIN, prefs.getRenderScalePercent());
+        sbScale.setMax(100 - MIN);
         sbScale.setProgress(pct - MIN);
         tvScale.setText("Render scale: " + pct + "%");
         sbScale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {

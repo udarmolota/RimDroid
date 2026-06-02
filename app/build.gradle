@@ -5,18 +5,24 @@ plugins {
 android {
     namespace 'com.rimdroid'
     compileSdk 35
+    // Pin the exact NDK the working build used; r27 supports 16 KB page size when
+    // opted in via ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES below (Android 15+ requirement).
+    ndkVersion "27.0.12077973"
 
     defaultConfig {
         applicationId "com.rimdroid"
         minSdk = 30
         targetSdk = 35
-        versionCode 13
-        versionName "0.1.3"
+        versionCode 14
+        versionName "0.1.4"
 
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17"
-                arguments "-DANDROID_STL=c++_shared"
+                // ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON => link with
+                // -Wl,-z,max-page-size=16384 so our libs load on 16 KB-page devices.
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
         }
         ndk {

@@ -6,8 +6,11 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
@@ -49,6 +52,12 @@ public class InstallerService extends Service {
 
     private AppStorage storage;
     private LauncherPreferences prefs;
+    private final Handler ui = new Handler(Looper.getMainLooper());
+
+    /** Screen-independent completion feedback (works regardless of which screen is open). */
+    private void toast(String msg) {
+        ui.post(() -> Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show());
+    }
 
     @Override
     public void onCreate() {
@@ -134,7 +143,7 @@ public class InstallerService extends Service {
         prefs.setDependenciesInstalled(true);
 
         broadcastProgress("Instance installed.");
-        broadcastDone(true, "Instance '" + instanceName + "' installed successfully");
+        broadcastDone(true, "Instance '" + instanceName + "' installed — ready to launch");
     }
 
     // =========================================================================
@@ -260,13 +269,16 @@ public class InstallerService extends Service {
     private void broadcastProgress(String msg) {
         Log.d(TAG, msg);
         Intent i = new Intent(BROADCAST_PROGRESS);
+        i.setPackage(getPackageName());   // explicit target so RECEIVER_NOT_EXPORTED receivers get it
         i.putExtra(EXTRA_MESSAGE, msg);
         sendBroadcast(i);
     }
 
     private void broadcastDone(boolean success, String msg) {
         Log.i(TAG, msg);
+        toast("✓ " + msg);   // ✓ — always visible, even on other screens
         Intent i = new Intent(BROADCAST_DONE);
+        i.setPackage(getPackageName());
         i.putExtra(EXTRA_SUCCESS, success);
         i.putExtra(EXTRA_MESSAGE, msg);
         sendBroadcast(i);
@@ -274,7 +286,9 @@ public class InstallerService extends Service {
 
     private void broadcastError(String msg) {
         Log.e(TAG, "ERROR: " + msg);
+        toast("Install failed: " + (msg != null ? msg : "unknown error"));
         Intent i = new Intent(BROADCAST_ERROR);
+        i.setPackage(getPackageName());
         i.putExtra(EXTRA_MESSAGE, msg);
         sendBroadcast(i);
     }

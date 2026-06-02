@@ -40,7 +40,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        // True immersive fullscreen: hide BOTH status and navigation bars. The old
+        // FLAG_FULLSCREEN only hid the status bar, so on devices with a 3-button
+        // navigation bar (e.g. tablets) it stayed visible and ate the bottom of the game.
+        getWindow().setDecorFitsSystemWindows(false);
 
         surfaceView = new SurfaceView(this);
         surfaceView.getHolder().addCallback(this);
@@ -54,6 +57,23 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         root.addView(controls, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        hideSystemBars();   // after setContentView — the decor view / insets controller now exist
+    }
+
+    private void hideSystemBars() {
+        android.view.WindowInsetsController c = getWindow().getInsetsController();
+        if (c != null) {
+            c.hide(android.view.WindowInsets.Type.systemBars());
+            // Keep them hidden; a swipe shows them transiently, then they auto-hide again.
+            c.setSystemBarsBehavior(
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideSystemBars();   // re-hide after dialogs / focus regain
     }
 
     // Pinch-zoom: only non-stick touches reach here (overlay returns false for them).

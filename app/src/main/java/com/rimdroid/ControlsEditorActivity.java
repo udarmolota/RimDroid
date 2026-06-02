@@ -48,8 +48,12 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        // Immersive fullscreen (hide status + nav bars) so the editing area matches the
+        // game's fullscreen surface — otherwise element positions would be off on devices
+        // with a visible navigation bar.
+        getWindow().setDecorFitsSystemWindows(false);
         setContentView(R.layout.activity_controls_editor);
+        hideSystemBars();   // after setContentView — the decor view / insets controller now exist
         density = getResources().getDisplayMetrics().density;
 
         float renderScale = 0.72f;
@@ -68,6 +72,21 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
         ((Button) findViewById(R.id.btn_add)).setOnClickListener(v -> showAddDialog());
         ((Button) findViewById(R.id.btn_reset)).setOnClickListener(v -> showResetDialog());
         ((Button) findViewById(R.id.btn_done)).setOnClickListener(v -> { controls.saveToPrefs(); finish(); });
+    }
+
+    private void hideSystemBars() {
+        android.view.WindowInsetsController c = getWindow().getInsetsController();
+        if (c != null) {
+            c.hide(android.view.WindowInsets.Type.systemBars());
+            c.setSystemBarsBehavior(
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideSystemBars();
     }
 
     @Override protected void onPause() { super.onPause(); if (controls != null) controls.saveToPrefs(); }

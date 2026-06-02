@@ -111,7 +111,13 @@ public class GameLauncher {
                 // → jump to 0x0 → crash.  Disable these extensions so Unity routes
                 // through the classic GL paths libzfa DOES export.
                 Os.setenv("MESA_EXTENSION_OVERRIDE",
-                    "-GL_ARB_direct_state_access"
+                    // Force-advertise BC/S3TC texture compression. RimWorld textures are
+                    // DXT/BC; Adreno/Turnip exposes these (no-op here), but the Mali Vulkan
+                    // driver lacks textureCompressionBC, so Zink hides s3tc and DXT textures
+                    // load as BLACK. Forcing them on lets Mesa's built-in software BC
+                    // decoder handle uploads, so textures render on Mali too.
+                    "+GL_EXT_texture_compression_s3tc +GL_EXT_texture_compression_rgtc +GL_ARB_texture_compression_bptc"
+                    + " -GL_ARB_direct_state_access"
                     + " -GL_ARB_internalformat_query -GL_ARB_internalformat_query2"
                     + " -GL_ARB_timer_query"
                     + " -GL_ARB_sparse_texture -GL_ARB_sparse_texture2 -GL_ARB_sparse_texture_clamp"

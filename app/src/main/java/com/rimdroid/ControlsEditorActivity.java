@@ -115,6 +115,16 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
                 v -> { el.setScale(v / 100f); controls.invalidate(); });
         addSlider("Opacity", 5, 100, Math.round(el.getAlpha() / 2.55f), "%",
                 v -> { el.setAlpha(Math.round(v * 2.55f)); controls.invalidate(); });
+        // "Opacity → all": copy THIS element's opacity to every element at once
+        // (Zomdroid-style), instead of adjusting each one separately.
+        Button toAll = new Button(this);
+        toAll.setText("Opacity → all elements");
+        toAll.setOnClickListener(v -> {
+            controls.applyAlphaToAll(el.getAlpha());
+            android.widget.Toast.makeText(this, "Opacity applied to all elements",
+                    android.widget.Toast.LENGTH_SHORT).show();
+        });
+        panelContainer.addView(toAll, rowParams());
 
         if (el instanceof ButtonElement) {
             ButtonElement b = (ButtonElement) el;

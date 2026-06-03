@@ -38,6 +38,20 @@ public enum Binding {
     KEY_BACKSPACE(Kind.KEY, 42, 8, null, "Backspace"),
     KEY_DELETE(Kind.KEY, 76, 127, null, "Delete"),
 
+    // --- Function keys (scancode SDL_SCANCODE_F1..F12 = 58..69; keycode = scancode | 0x40000000) ---
+    KEY_F1(Kind.KEY, 58, 0x4000003A, null, "F1"),
+    KEY_F2(Kind.KEY, 59, 0x4000003B, null, "F2"),
+    KEY_F3(Kind.KEY, 60, 0x4000003C, null, "F3"),
+    KEY_F4(Kind.KEY, 61, 0x4000003D, null, "F4"),
+    KEY_F5(Kind.KEY, 62, 0x4000003E, null, "F5"),
+    KEY_F6(Kind.KEY, 63, 0x4000003F, null, "F6"),
+    KEY_F7(Kind.KEY, 64, 0x40000040, null, "F7"),
+    KEY_F8(Kind.KEY, 65, 0x40000041, null, "F8"),
+    KEY_F9(Kind.KEY, 66, 0x40000042, null, "F9"),
+    KEY_F10(Kind.KEY, 67, 0x40000043, null, "F10"),
+    KEY_F11(Kind.KEY, 68, 0x40000044, null, "F11"),
+    KEY_F12(Kind.KEY, 69, 0x40000045, null, "F12"),
+
     // --- Letters (scancode SDL_SCANCODE_A..Z = 4..29; keycode = lowercase ASCII) ---
     KEY_A(Kind.KEY, 4, 97, "a", "A"),
     KEY_B(Kind.KEY, 5, 98, "b", "B"),

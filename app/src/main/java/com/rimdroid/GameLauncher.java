@@ -41,14 +41,14 @@ public class GameLauncher {
         Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", true);
         Os.setenv("BOX64_DYNAREC_STRONGMEM", "3", true);    // TSO emulation (level 3 = barrier every 3rd store)
         Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "1", true);  // box64 default; WEAKBARRIER=0 was tested, did NOT fix save corruption
-        // "Compatibility mode" test toggle → disable deferred-flags optimisation
-        // (BOX64_DYNAREC_DF, default 1). Deferred flags compute EFLAGS lazily; if a
-        // flag-dependent branch in the deep Pawn.ExposeData chain is miscomputed on
-        // MediaTek/Cortex, fields are silently skipped and every pawn serializes as an
-        // empty <li/> (colonists vanish after reload, with NO logged exception). DF=0
-        // forces exact flags (slower). Probing whether this fixes the save corruption.
+        // "Interpreter mode" test toggle → disable box64 dynarec entirely (BOX64_DYNAREC=0,
+        // run x86_64 via the interpreter). VERY slow, but the DECISIVE diagnostic for the save
+        // corruption: if pawns serialize correctly with the dynarec OFF, the bug is a dynarec
+        // codegen miscompile (fixable via a box64 flag/patch); if they're STILL empty, it's in
+        // box64's wrapper / atomic emulation (common to both paths). Earlier this toggle tried
+        // WEAKBARRIER=0 and DF=0 — neither fixed the save, so we go to the interpreter.
         if (LauncherPreferences.requireSingleton().isStrictBarriers()) {
-            Os.setenv("BOX64_DYNAREC_DF", "0", true);
+            Os.setenv("BOX64_DYNAREC", "0", true);
         }
         // BOX64_PREFER_EMULATED intentionally NOT set:
         // with prefer_emulated=1 box64 skips initWrappedLib for all non-essential libs,

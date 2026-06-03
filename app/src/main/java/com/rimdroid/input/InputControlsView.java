@@ -43,6 +43,12 @@ public class InputControlsView extends View {
     private ControlElement selected;
     private ControlElement dragging;
     private float lastTouchX, lastTouchY;
+    private float editDownX, editDownY;
+    private long editDownTime;
+    private boolean editMoved;
+    // Hold an element this long (without dragging) to open its settings panel. A light tap
+    // just selects/moves it — so quick drags don't pop the panel.
+    private static final long EDIT_PANEL_TAP_MS = 350;
     private EditorListener editorListener;
 
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -143,6 +149,13 @@ public class InputControlsView extends View {
 
     // ============================== edit mode =================================
 
+    /** Editor: set every element's opacity to the given alpha (0-255), then redraw.
+     *  Used by the "Opacity → all" button so the whole layout can match one element. */
+    public void applyAlphaToAll(int alpha) {
+        for (ControlElement el : elements) el.setAlpha(alpha);
+        invalidate();
+    }
+
     public void setEditMode(boolean edit, EditorListener listener) {
         this.editMode = edit;
         this.editorListener = listener;
@@ -160,13 +173,23 @@ public class InputControlsView extends View {
             case MotionEvent.ACTION_DOWN: {
                 float x = e.getX(), y = e.getY();
                 lastTouchX = x; lastTouchY = y;
+                editDownX = x; editDownY = y;
+                editDownTime = System.currentTimeMillis();
+                editMoved = false;
                 ControlElement hit = pickAt(x, y);
-                select(hit);
-                dragging = hit;
+                if (hit != null) {
+                    selectQuiet(hit);   // highlight for dragging — do NOT open the panel yet
+                    dragging = hit;
+                } else {
+                    select(null);       // tap on empty space clears selection + closes the panel
+                    dragging = null;
+                }
                 break;
             }
             case MotionEvent.ACTION_MOVE: {
                 if (dragging != null) {
+                    if (Math.abs(e.getX() - editDownX) + Math.abs(e.getY() - editDownY) > 10 * density)
+                        editMoved = true;
                     dragging.moveCenterPx(e.getX() - lastTouchX, e.getY() - lastTouchY);
                     lastTouchX = e.getX(); lastTouchY = e.getY();
                     invalidate();
@@ -174,10 +197,28 @@ public class InputControlsView extends View {
                 break;
             }
             case MotionEvent.ACTION_UP:
+                // Open the settings panel only on a deliberate, slightly longer tap that didn't
+                // drag — so a light touch just moves the element instead of popping the panel.
+                if (dragging != null && !editMoved && selected != null
+                        && System.currentTimeMillis() - editDownTime >= EDIT_PANEL_TAP_MS
+                        && editorListener != null) {
+                    editorListener.onElementSelected(selected);
+                }
+                dragging = null;
+                break;
             case MotionEvent.ACTION_CANCEL:
                 dragging = null;
                 break;
         }
+    }
+
+    /** Select + highlight an element WITHOUT opening the editor panel (used on touch-down so
+     *  dragging doesn't pop the panel; the panel opens on a deliberate hold, see handleEditTouch). */
+    private void selectQuiet(ControlElement el) {
+        if (selected != null) selected.setHighlighted(false);
+        selected = el;
+        if (selected != null) selected.setHighlighted(true);
+        invalidate();
     }
 
     private ControlElement pickAt(float x, float y) {

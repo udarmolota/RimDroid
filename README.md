@@ -3,9 +3,11 @@
 Run **RimWorld** (the native Linux x86_64 build, Unity 2019) on an Android phone via
 x86_64→ARM64 emulation, with **real GPU rendering** and **on-screen touch controls**.
 
-> **Status (v0.1.3): playable, with working mods.** RimWorld 1.5 boots, renders at native
-> resolution, takes touch input (move/select, drag, orders, camera, zoom), runs mods
-> (Harmony, RimHUD, Pick Up And Haul), and has an on-screen controls editor + a mod importer.
+> **Status (v0.1.4): playable on Snapdragon/Adreno, with working mods.** RimWorld 1.5 boots,
+> renders at native resolution, takes touch input (move/select, drag, orders, camera, zoom),
+> runs mods (Harmony, RimHUD, Pick Up And Haul), and has an on-screen controls editor, a mod
+> importer, save/settings backup, and one-tap log export. Mali/MediaTek is **experimental** —
+> it launches and new colonies are playable, but loading a save currently loses colonists.
 
 ---
 
@@ -37,19 +39,26 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 
 - ✅ RimWorld **1.5 launches** in-process and **renders at native resolution** (landscape);
 - ✅ full GPU pipeline (Zink/Vulkan/Turnip, GL 4.3 Core);
-- ✅ **render-scale slider** in Settings (67–100%) — lower = bigger, more readable UI;
-- ✅ **selectable Vulkan/Turnip driver** in Settings, including a **System (phone driver)**
-  option for non-Adreno GPUs;
+- ✅ **render-scale slider** in Settings — lower = bigger, more readable UI; the minimum
+  adapts to the screen so the UI never drops below RimWorld's usable size;
+- ✅ **selectable Vulkan/Turnip driver** in Settings — **System (phone driver) by default**
+  (works across GPUs), with Turnip variants for Adreno;
 - ✅ **input:** left-click (tap / mouse-stick), **right-click** (RBC button),
   **left-drag** (LBC button — selection box / zones / Architect), camera pan
   (WASD-stick → arrow keys), **pinch-to-zoom**;
-- ✅ **editable on-screen controls** — move / resize / opacity, add buttons bound to any
-  key or mouse action, circular or rectangular (Settings → Edit on-screen controls);
+- ✅ **editable on-screen controls** — move / resize / opacity (with "Opacity → all"), add
+  buttons bound to any key or mouse action (incl. **F1–F12**), circular or rectangular, and
+  **export/import the layout** (Settings → Edit on-screen controls; menu → Export/Import
+  controls layout);
 - ✅ **mods work** — Harmony patching is functional (tested: Harmony, RimHUD, Pick Up And
   Haul). Requires **Harmony 2.2.2** (see [Mods](#mods));
 - ✅ **smart mod importer** (menu → Import Mods (ZIP)) — finds each mod's root and strips
   wrapper folders;
-- ✅ saving/loading.
+- ✅ **save/settings backup** (menu → Export/Import saves + settings) and **one-tap log
+  export** (menu → Export logs);
+- ✅ **Community / new-versions links** in the menu (Reddit, GitHub releases);
+- ✅ saving/loading on Adreno (on Mali/MediaTek a save currently loads without colonists —
+  see [Remaining](#remaining--todo)).
 
 ## Key problems that were solved
 
@@ -79,10 +88,12 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 - **LBC** button: hold to left-drag at the cursor (selection box, zone painting, Architect drag).
 - **Pinch**: zoom.
 
-The whole layout is editable in **Settings → Edit on-screen controls**: tap-select an
-element, drag to move, sliders for size and opacity, add/delete elements, and bind any
-button to a mouse action or a key (Space, Esc, digits, letters, arrows, …). Buttons are
-circular by default (compact) and can be switched to rectangular.
+The whole layout is editable in **Settings → Edit on-screen controls**: drag to move, **hold
+an element briefly to open its settings**, sliders for size and opacity (with **"Opacity →
+all"** to copy one element's opacity to every element), add/delete elements, and bind any
+button to a mouse action or a key (Space, Tab, Esc, digits, letters, arrows, **F1–F12**, …).
+Buttons are circular by default and can be switched to rectangular. **Export/Import controls
+layout** from the menu to back up or share your setup.
 
 ## Mods
 
@@ -108,8 +119,12 @@ Dragging a mod folder into `Mods` via **Manage Storage** still works too.
 
 ## Remaining / TODO
 
+- **Mali/MediaTek: colonists missing after loading a save** — a low-level box64 emulation bug
+  on those CPUs (Snapdragon/Adreno unaffected);
+- **software (CPU) renderer** for GPUs where Zink/Vulkan won't run (in progress);
 - on-screen keyboard (text fields: colony/pawn names, search);
-- occasional black screen on launch (kill + relaunch);
+- occasional black screen / stuck loading on launch — kill + relaunch (usually works on the
+  second try);
 - audio (FMOD);
 - make the latest Harmony 2.3 work, so users aren't pinned to 2.2.2;
 - physical mouse/keyboard polish.
@@ -120,7 +135,8 @@ Dragging a mod folder into `Mods` via **Manage Storage** still works too.
 `box64/src/wrapped/wrappedsdl2.c` (SDL/GL/event intercepts + dynapi remap),
 `box64/src/wrapped/wrappedlibc.c` (`/proc/self/auxv` → x86_64),
 `app/src/main/java/com/rimdroid/input/` (`InputControlsView`, `ControlElement`,
-`ButtonElement` + sticks), `ControlsEditorActivity`, `ModImporter`, `GameActivity`.*
+`ButtonElement` + sticks), `ControlsEditorActivity`, `ModImporter`, `GameDataTransfer`
+(save/settings backup), `LogExporter` (log zip), `GameActivity`.*
 
 ## Credits & Third-Party Sources
 

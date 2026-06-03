@@ -10,9 +10,15 @@
     <string name="vulkan_driver">Vulkan driver</string>
     <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If the game crashes on launch, try another one.</string>
     <string name="nav_import_mods">Import Mods (ZIP)…</string>
-    <string name="nav_export_saves">Export saves + settings (ZIP)…</string>
-    <string name="nav_import_saves">Import saves + settings (ZIP)…</string>
+    <string name="nav_export_saves">Export saves/settings</string>
+    <string name="nav_import_saves">Import saves/settings</string>
     <string name="nav_export_logs">Export logs (ZIP)…</string>
+    <string name="nav_export_layout">Export controls layout…</string>
+    <string name="nav_import_layout">Import controls layout…</string>
+    <string name="nav_reddit">Community (Reddit)</string>
+    <string name="nav_updates">New versions (GitHub)</string>
+    <string name="url_reddit" translatable="false">https://www.reddit.com/r/RimDroid/</string>
+    <string name="url_github_releases" translatable="false">https://github.com/udarmolota/rimdroid/releases</string>
     <string name="on_screen_controls">On-screen controls</string>
     <string name="edit_controls">Edit on-screen controls…</string>
     <string name="editor_add">Add</string>
@@ -29,7 +35,7 @@
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, fallback)</string>
     <string name="softpipe_label">Software (slow, any GPU — for Mali/PowerVR)</string>
     <string name="debug_mode">Debug mode (verbose log)</string>
-    <string name="strict_barriers">Compatibility mode (test — slower, may fix save corruption on some CPUs)</string>
+    <string name="strict_barriers">Interpreter mode (test — VERY slow, diagnostic for save corruption)</string>
     <string name="pick_zip">Pick ZIP file…</string>
     <string name="install">Install</string>
     <string name="installing">Installing…</string>

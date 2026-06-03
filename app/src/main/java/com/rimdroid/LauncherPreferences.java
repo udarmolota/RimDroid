@@ -214,13 +214,13 @@ public class LauncherPreferences {
         return prefs.getBoolean("debug_mode", false);
     }
 
-    // --- Compatibility mode (test) ---
-    // When on, GameLauncher sets BOX64_DYNAREC_DF=0 (disable deferred-flags optimisation;
-    // default 1). Test lever for SAVE CORRUPTION on some CPUs (MediaTek/Cortex): a
-    // flag-dependent branch in the deep Pawn.ExposeData chain may be miscomputed under
-    // deferred flags, silently skipping fields so pawns serialize as empty <li/>. DF=0
-    // forces exact flags. Off by default (the cost is FPS). (Pref key kept as
-    // "strict_barriers" for back-compat; the earlier WEAKBARRIER=0 lever did NOT help.)
+    // --- Interpreter mode (test) ---
+    // When on, GameLauncher sets BOX64_DYNAREC=0 (disable the dynarec, interpret x86_64).
+    // VERY slow — a one-off DECISIVE diagnostic for the save corruption on MediaTek/Cortex:
+    // pawns serialize as empty <li/> (colonists vanish on reload). If the interpreter saves
+    // them correctly → dynarec codegen bug; if still empty → box64 wrapper/atomic emulation.
+    // (Pref key kept as "strict_barriers" for back-compat; earlier WEAKBARRIER=0 and DF=0
+    // levers both did NOT fix the save.) HIDE this toggle before any public release.
 
     public boolean isStrictBarriers() {
         return prefs.getBoolean("strict_barriers", false);

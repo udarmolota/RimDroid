@@ -53,6 +53,9 @@ public class SettingsFragment extends Fragment {
         prefs.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
         swDebug.setChecked(prefs.isDebug());
         swStrict.setChecked(prefs.isStrictBarriers());
+        // Interpreter mode is a developer/tester diagnostic (very slow). Show it only when
+        // Debug mode is on, so public users never see it.
+        swStrict.setVisibility(prefs.isDebug() ? View.VISIBLE : View.GONE);
 
         rgRenderer.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_zink_zfa) {
@@ -66,8 +69,10 @@ public class SettingsFragment extends Fragment {
             }
         });
 
-        swDebug.setOnCheckedChangeListener((btn, checked) ->
-                prefs.getSharedPrefs().edit().putBoolean("debug_mode", checked).apply());
+        swDebug.setOnCheckedChangeListener((btn, checked) -> {
+            prefs.getSharedPrefs().edit().putBoolean("debug_mode", checked).apply();
+            swStrict.setVisibility(checked ? View.VISIBLE : View.GONE);   // reveal/hide the tester-only Interpreter toggle
+        });
 
         swStrict.setOnCheckedChangeListener((btn, checked) ->
                 prefs.getSharedPrefs().edit().putBoolean("strict_barriers", checked).apply());

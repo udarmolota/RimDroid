@@ -55,6 +55,14 @@ public class LauncherActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
                     uri -> { if (uri != null) exportLogs(uri); });
 
+    private final ActivityResultLauncher<String> exportLayoutLauncher =
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/json"),
+                    uri -> { if (uri != null) exportLayout(uri); });
+
+    private final ActivityResultLauncher<String[]> importLayoutLauncher =
+            registerForActivityResult(new ActivityResultContracts.OpenDocument(),
+                    uri -> { if (uri != null) importLayout(uri); });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
@@ -101,6 +109,19 @@ public class LauncherActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.action_export_logs) {
                 exportLogsLauncher.launch("rimdroid_logs_" + timestamp() + ".zip");
+                return true;
+            } else if (id == R.id.action_export_layout) {
+                exportLayoutLauncher.launch("rimdroid_controls.json");
+                return true;
+            } else if (id == R.id.action_import_layout) {
+                importLayoutLauncher.launch(new String[]{
+                        "application/json", "text/plain", "application/octet-stream"});
+                return true;
+            } else if (id == R.id.action_updates) {
+                openUrl(getString(R.string.url_github_releases));
+                return true;
+            } else if (id == R.id.action_reddit) {
+                openUrl(getString(R.string.url_reddit));
                 return true;
             } else if (id == R.id.action_manage_storage) {
                 Uri rootUri = DocumentsContract.buildRootsUri(C.STORAGE_PROVIDER_AUTHORITY);
@@ -248,10 +269,68 @@ public class LauncherActivity extends AppCompatActivity {
         }).start();
     }
 
+    // ---- On-screen controls layout backup --------------------------------------
+
+    /** Export the current on-screen controls layout (JSON) to a picked file. Falls back
+     *  to the bundled default layout if the user has never customized it. */
+    private void exportLayout(Uri uri) {
+        new Thread(() -> {
+            String json = LauncherPreferences.requireSingleton().getControlsJson();
+            try {
+                if (json == null || json.trim().isEmpty()) {
+                    try (InputStream in = getAssets().open(
+                            com.rimdroid.input.InputControlsView.DEFAULT_ASSET);
+                         java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
+                        byte[] b = new byte[8192]; int n;
+                        while ((n = in.read(b)) > 0) bos.write(b, 0, n);
+                        json = bos.toString("UTF-8");
+                    }
+                }
+                try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                    if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
+                    out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                }
+                ui.post(() -> toast("Controls layout exported"));
+            } catch (Exception ex) {
+                ui.post(() -> toast("Export failed: " + ex.getMessage()));
+            }
+        }).start();
+    }
+
+    /** Import an on-screen controls layout (JSON) from a picked file. */
+    private void importLayout(Uri uri) {
+        new Thread(() -> {
+            try (InputStream in = getContentResolver().openInputStream(uri);
+                 java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream()) {
+                byte[] b = new byte[8192]; int n;
+                while ((n = in.read(b)) > 0) bos.write(b, 0, n);
+                String json = bos.toString("UTF-8");
+                // Validate it parses as JSON before saving (rejects garbage files).
+                new com.google.gson.Gson().fromJson(json, com.google.gson.JsonElement.class);
+                LauncherPreferences.requireSingleton().setControlsJson(json);
+                ui.post(() -> toast("Controls layout imported — reopen the game to apply"));
+            } catch (Exception ex) {
+                ui.post(() -> toast("Import failed: "
+                        + (ex.getMessage() == null ? "invalid layout file" : ex.getMessage())));
+            }
+        }).start();
+    }
+
     /** yyyyMMdd_HHmmss — keeps each exported log zip uniquely named (no overwrite). */
     private static String timestamp() {
         return new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
                 .format(new java.util.Date());
+    }
+
+    /** Open a URL in the user's browser (community / updates links). */
+    private void openUrl(String url) {
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            toast("Couldn't open link: " + url);
+        }
     }
 
     private String guessZipName(Uri uri) {

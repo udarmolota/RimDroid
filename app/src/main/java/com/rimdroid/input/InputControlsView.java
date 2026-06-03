@@ -130,7 +130,7 @@ public class InputControlsView extends View {
     }
 
     private void drawCursor(Canvas c) {
-        float s = density, w = 17 * s, h = 25 * s;
+        float s = density, w = 17 * s / 1.5f, h = 25 * s / 1.5f;   // 1.5x smaller cursor
         Path p = new Path();
         p.moveTo(curX, curY);
         p.lineTo(curX + w, curY + h * 0.85f);

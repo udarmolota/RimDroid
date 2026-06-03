@@ -29,7 +29,7 @@
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, fallback)</string>
     <string name="softpipe_label">Software (slow, any GPU — for Mali/PowerVR)</string>
     <string name="debug_mode">Debug mode (verbose log)</string>
-    <string name="strict_barriers">Strict memory barriers (test — slower, may fix save corruption on some CPUs)</string>
+    <string name="strict_barriers">Compatibility mode (test — slower, may fix save corruption on some CPUs)</string>
     <string name="pick_zip">Pick ZIP file…</string>
     <string name="install">Install</string>
     <string name="installing">Installing…</string>

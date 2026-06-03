@@ -214,12 +214,13 @@ public class LauncherPreferences {
         return prefs.getBoolean("debug_mode", false);
     }
 
-    // --- Strict memory barriers (test) ---
-    // When on, GameLauncher sets BOX64_DYNAREC_WEAKBARRIER=0 (strongest barriers,
-    // slower). Test lever for save corruption on some CPUs (MediaTek/Cortex): under
-    // the default weaker barriers, Mono's GC atomic write-barrier may be mis-ordered,
-    // corrupting object graphs so Verse.Thing.ExposeData() throws NRE while saving and
-    // pawns serialize as empty <li/>. Off by default (the cost is FPS).
+    // --- Compatibility mode (test) ---
+    // When on, GameLauncher sets BOX64_DYNAREC_DF=0 (disable deferred-flags optimisation;
+    // default 1). Test lever for SAVE CORRUPTION on some CPUs (MediaTek/Cortex): a
+    // flag-dependent branch in the deep Pawn.ExposeData chain may be miscomputed under
+    // deferred flags, silently skipping fields so pawns serialize as empty <li/>. DF=0
+    // forces exact flags. Off by default (the cost is FPS). (Pref key kept as
+    // "strict_barriers" for back-compat; the earlier WEAKBARRIER=0 lever did NOT help.)
 
     public boolean isStrictBarriers() {
         return prefs.getBoolean("strict_barriers", false);

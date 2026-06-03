@@ -25,6 +25,12 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     public static native void nativeText(String text);
 
     private float renderScale = 0.72f;
+    // Auto-pin RimWorld's Prefs.xml to fullscreen at our render resolution.
+    // DISABLED for now: forcing fullscreen at surface*scale raised the internal
+    // resolution on weak GPUs (e.g. 1024x768 → ~1953x878 on Mali) and broke
+    // boot-without-Debug — the heavier load flips a fragile box64 startup timing
+    // into a hang. Keep the code; re-enable once it's made safe for weak devices.
+    private static final boolean PIN_GAME_PREFS = false;
     private android.view.ScaleGestureDetector scaleDetector;
     private boolean scaling = false;
     private com.rimdroid.input.InputControlsView controls;
@@ -155,7 +161,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // value is the Unity default 1024x768 (4:3) the game renders stretched into our
         // surface. Writing the matching size + fullscreen=True before RimWorld reads
         // Prefs (during its init, seconds later) keeps the render 1:1 with correct aspect.
-        pinGamePrefs(width, height);
+        //noinspection ConstantValue
+        if (PIN_GAME_PREFS) pinGamePrefs(width, height);
     }
 
     /** Force the selected instance's Config/Prefs.xml to fullscreen at the render

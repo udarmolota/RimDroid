@@ -39,15 +39,17 @@ public class GameLauncher {
         Os.setenv("BOX64_DYNAREC", "1", true);
         Os.setenv("BOX64_DYNAREC_BIGBLOCK", "0", true);  // 0 for Unity/Mono JIT
         Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", true);
-        Os.setenv("BOX64_DYNAREC_STRONGMEM", "3", true);    // TSO full emulation — fix memory ordering SIGSEGV
-        // BOX64_DYNAREC_WEAKBARRIER: 0 = regular (safe) barriers, 1 = weak (faster,
-        // box64 default), 2 = weakest. The "Strict memory barriers" test toggle forces 0
-        // (safe) to probe SAVE CORRUPTION on CPUs (e.g. MediaTek/Cortex) where the weak
-        // model appears to mis-order Mono's GC atomic write-barrier: Verse.Thing.ExposeData
-        // throws NRE while saving and every pawn serializes as an empty <li/> (colonists
-        // vanish after reload). Off by default — weak barriers give more FPS.
-        boolean strictBarriers = LauncherPreferences.requireSingleton().isStrictBarriers();
-        Os.setenv("BOX64_DYNAREC_WEAKBARRIER", strictBarriers ? "0" : "1", true);
+        Os.setenv("BOX64_DYNAREC_STRONGMEM", "3", true);    // TSO emulation (level 3 = barrier every 3rd store)
+        Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "1", true);  // box64 default; WEAKBARRIER=0 was tested, did NOT fix save corruption
+        // "Compatibility mode" test toggle → disable deferred-flags optimisation
+        // (BOX64_DYNAREC_DF, default 1). Deferred flags compute EFLAGS lazily; if a
+        // flag-dependent branch in the deep Pawn.ExposeData chain is miscomputed on
+        // MediaTek/Cortex, fields are silently skipped and every pawn serializes as an
+        // empty <li/> (colonists vanish after reload, with NO logged exception). DF=0
+        // forces exact flags (slower). Probing whether this fixes the save corruption.
+        if (LauncherPreferences.requireSingleton().isStrictBarriers()) {
+            Os.setenv("BOX64_DYNAREC_DF", "0", true);
+        }
         // BOX64_PREFER_EMULATED intentionally NOT set:
         // with prefer_emulated=1 box64 skips initWrappedLib for all non-essential libs,
         // including SDL2 — our my2_SDL_DYNAPI_entry never fires.

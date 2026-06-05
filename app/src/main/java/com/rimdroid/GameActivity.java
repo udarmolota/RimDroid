@@ -311,34 +311,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             }
         } catch (Throwable ignored) {}
         //noinspection ConstantValue
-        if (PIN_GAME_PREFS || softpipe) {
-            pinGamePrefs(width, height);   // full pin (resolution + fullscreen) — softpipe needs the size match
-        } else {
-            // GPU path: don't force a resolution (broke weak GPUs), but DO keep fullscreen=True every
-            // launch — otherwise an in-game resolution change (saved as fullscreen=False) windowizes
-            // the next launch into a black sub-rectangle.
-            pinFullscreenOnly();
-        }
-    }
-
-    /** Re-pin only fullscreen=True on the selected instance's Prefs.xml (resolution untouched). */
-    private void pinFullscreenOnly() {
-        try {
-            String name = instanceName;
-            if (name == null || name.isEmpty()) {
-                LauncherPreferences lp = LauncherPreferences.getSingleton();
-                name = lp != null ? lp.getLastInstanceName() : null;
-            }
-            if (name == null || name.isEmpty()) return;
-            com.rimdroid.game.GameInstanceManager mgr =
-                    com.rimdroid.game.GameInstanceManager.requireSingleton();
-            mgr.reload();
-            com.rimdroid.game.GameInstance gi = mgr.getByName(name);
-            if (gi == null) return;
-            PrefsXml.forceFullscreenOnly(new java.io.File(gi.getUserDataDir(), "Config"));
-        } catch (Throwable t) {
-            Log.w(TAG, "pinFullscreenOnly failed: " + t.getMessage());
-        }
+        if (PIN_GAME_PREFS || softpipe) pinGamePrefs(width, height);
     }
 
     /** Force the selected instance's Config/Prefs.xml to fullscreen at the render

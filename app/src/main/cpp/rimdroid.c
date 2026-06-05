@@ -62,18 +62,6 @@ static PFN_zfaFlushFront     p_zfaFlushFront     = NULL;
 static PFN_zfaDestroyContext p_zfaDestroyContext = NULL;
 static PFN_zfaReleaseCurrent p_zfaReleaseCurrent = NULL;
 
-// ZFA swapchain-image lifecycle (anti-artifact). Each zfaMakeCurrent() re-acquires a NEW Vulkan
-// swapchain image and DISCARDS whatever was rendered into the previous one — so calling it again
-// mid-frame (Unity does SDL_GL_MakeCurrent several times per frame) corrupts the frame. We track
-// the bound state and SKIP redundant binds; on a fresh bind we CLEAR the image (recycled swapchain
-// images have UNDEFINED contents → coloured-rectangle artifacts, esp. on PowerVR/legacy Adreno).
-// Flag reset on swap + on release so the next frame re-acquires correctly. (glFinish-before-swap
-// is available behind RD_ZFA_FINISH_BEFORE_SWAP but OFF — it forces a full CPU↔GPU sync per frame
-// = big FPS cost; enable only if torn frames appear.)
-#define RD_ZFA_FINISH_BEFORE_SWAP 0
-static volatile int g_zfa_context_bound = 0;
-static int g_zfa_bound_w = 0, g_zfa_bound_h = 0;
-
 RimDroidSurface g_rimdroid_surface = {
     .mutex = PTHREAD_MUTEX_INITIALIZER,
     .ready_for_destroy_cond = PTHREAD_COND_INITIALIZER
@@ -136,46 +124,10 @@ int rimdroid_zfa_make_current(void) {
     int rh = g_rimdroid_surface.height > 0 ? g_rimdroid_surface.height : 1080;
     int ww = w ? rw : 1;
     int hh = w ? rh : 1;
-
-    // Already bound at this size? Do NOT re-bind — a fresh zfaMakeCurrent would acquire a new
-    // swapchain image and throw away the frame Unity is mid-way through rendering (artifacts).
-    if (g_zfa_context_bound && g_zfa_bound_w == ww && g_zfa_bound_h == hh) {
-        return 1;
-    }
-
     if (!p_zfaMakeCurrent(g_zfa_context, w, ww, hh)) {
         LOGE("ZFA: zfaMakeCurrent failed (%dx%d)", ww, hh);
         return 0;
     }
-    g_zfa_context_bound = 1;
-    g_zfa_bound_w = ww;
-    g_zfa_bound_h = hh;
-
-    // Clear the freshly-acquired swapchain image to opaque black. Recycled Vulkan images have
-    // UNDEFINED contents; without this, leftover GPU memory shows as coloured-rectangle artifacts
-    // across the frame (PowerVR / legacy Adreno especially). glClear forces renderpass loadOp=CLEAR
-    // so Unity always paints onto a clean slate. Symbols resolved lazily from libzfa (present once
-    // zfaMakeCurrent succeeded), so we need no separate GL loader.
-    {
-        static void (*p_glClear)(unsigned int) = NULL;
-        static void (*p_glClearColor)(float, float, float, float) = NULL;
-        static void (*p_glClearDepthf)(float) = NULL;
-        static int gl_clear_checked = 0;
-        if (!gl_clear_checked) {
-            gl_clear_checked = 1;
-            if (g_zfa_handle) {
-                p_glClear       = (void (*)(unsigned int))            dlsym(g_zfa_handle, "glClear");
-                p_glClearColor  = (void (*)(float,float,float,float)) dlsym(g_zfa_handle, "glClearColor");
-                p_glClearDepthf = (void (*)(float))                  dlsym(g_zfa_handle, "glClearDepthf");
-            }
-        }
-        if (p_glClear) {
-            if (p_glClearColor)  p_glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            if (p_glClearDepthf) p_glClearDepthf(1.0f);
-            p_glClear(0x4000u /* GL_COLOR_BUFFER_BIT */ | 0x0100u /* GL_DEPTH_BUFFER_BIT */);
-        }
-    }
-
     // Force the device-orientation transform to IDENTITY. With the landscape lock,
     // this cancels the system's portrait pre-rotation → the frame stays HORIZONTAL
     // (this is the pair that produced yesterday's good horizontal screen). API 26+,
@@ -196,20 +148,7 @@ int rimdroid_zfa_make_current(void) {
 }
 
 void rimdroid_zfa_swap(void) {
-    if (!p_zfaFlushFront) return;
-#if RD_ZFA_FINISH_BEFORE_SWAP
-    // Optional: drain all pending GPU work before presenting (no torn frames), at the cost of a
-    // full CPU↔GPU stall every frame. OFF by default — enable only if frames tear.
-    {
-        static void (*p_glFinish)(void) = NULL;
-        static int finish_checked = 0;
-        if (!finish_checked) { finish_checked = 1; if (g_zfa_handle) p_glFinish = (void (*)(void))dlsym(g_zfa_handle, "glFinish"); }
-        if (p_glFinish) p_glFinish();
-    }
-#endif
-    p_zfaFlushFront();
-    // Frame presented → mark unbound so the next make_current acquires a fresh swapchain image.
-    g_zfa_context_bound = 0;
+    if (p_zfaFlushFront) p_zfaFlushFront();
 }
 
 // ---- OSMesa (softpipe) software-renderer SMOKE TEST -------------------------
@@ -504,7 +443,6 @@ void rimdroid_osmesa_swap(void) {
 // success, 0 if libzfa doesn't export zfaReleaseCurrent yet (then it's a no-op and
 // behaviour is unchanged).  Called from wrappedsdl2.c on SDL_GL_MakeCurrent(NULL).
 int rimdroid_zfa_release_current(void) {
-    g_zfa_context_bound = 0;   // context released → next make_current must rebind (not skip)
     if (p_zfaReleaseCurrent) return p_zfaReleaseCurrent();
     return 0;
 }

@@ -3,11 +3,13 @@
 Run **RimWorld** (the native Linux x86_64 build, Unity 2019) on an Android phone via
 x86_64→ARM64 emulation, with **real GPU rendering** and **on-screen touch controls**.
 
-> **Status (v0.1.4): playable on Snapdragon/Adreno, with working mods.** RimWorld 1.5 boots,
-> renders at native resolution, takes touch input (move/select, drag, orders, camera, zoom),
-> runs mods (Harmony, RimHUD, Pick Up And Haul), and has an on-screen controls editor, a mod
-> importer, save/settings backup, and one-tap log export. Mali/MediaTek is **experimental** —
-> it launches and new colonies are playable, but loading a save currently loses colonists.
+> **Status (v0.1.5): playable on Snapdragon/Adreno, with working mods.** RimWorld 1.5 boots,
+> renders at native resolution, takes touch input (tap/select, **drag-to-pan the map**, orders,
+> camera, zoom), and runs mods (Harmony, RimHUD, Pick Up And Haul). The launcher now manages
+> **multiple instances** (each with its own settings), can **download the game, DLC, and mods
+> from Steam in-app**, **auto-picks a Vulkan driver for your GPU** (or import your own), and has a
+> Material 3 UI with **night mode**. Mali/MediaTek is **experimental** — it launches and new
+> colonies are playable, but loading a save can lose colonists (an experimental fix is in this build).
 
 ---
 
@@ -39,13 +41,18 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 
 - ✅ RimWorld **1.5 launches** in-process and **renders at native resolution** (landscape);
 - ✅ full GPU pipeline (Zink/Vulkan/Turnip, GL 4.3 Core);
-- ✅ **render-scale slider** in Settings — lower = bigger, more readable UI; the minimum
-  adapts to the screen so the UI never drops below RimWorld's usable size;
-- ✅ **selectable Vulkan/Turnip driver** in Settings — **System (phone driver) by default**
-  (works across GPUs), with Turnip variants for Adreno;
+- ✅ **multiple instances** — each install is a card with its own **Play** + settings; renderer,
+  Vulkan driver, debug and controls are **per instance**;
+- ✅ **in-app downloads** — get the game, DLC, and Workshop mods straight from Steam in the
+  launcher (sign in with your own account; mods can also be fetched without login via a browser);
+- ✅ **per-GPU Vulkan driver** — the launcher **auto-detects your GPU and picks a matching driver**
+  (new instances get it automatically); a picker offers System + Turnip variants for Adreno
+  8xx/7xx/6xx, and you can **import your own driver** (`.so` or AdrenoTools `.zip`);
+- ✅ **Material 3 UI** with **night mode** (System / Light / Dark) and a **Russian translation**
+  (auto-selected by device language);
 - ✅ **input:** left-click (tap / mouse-stick), **right-click** (RBC button),
   **left-drag** (LBC button — selection box / zones / Architect), camera pan
-  (WASD-stick → arrow keys), **pinch-to-zoom**;
+  (**drag the map with a finger**, or the WASD-stick → arrow keys), **pinch-to-zoom**;
 - ✅ **editable on-screen controls** — move / resize / opacity (with "Opacity → all"), add
   buttons bound to any key or mouse action (incl. **F1–F12**), circular or rectangular, and
   **export/import the layout** (Settings → Edit on-screen controls; menu → Export/Import
@@ -83,6 +90,7 @@ Reference device: **Snapdragon 8 Elite, Adreno 830**.
 
 - **Mouse-stick** (right): drag to move the cursor (white arrow); tap the stick = left-click.
 - **Direct tap** on the game = left-click.
+- **Drag the map** with one finger to pan the camera (a quick tap stays a left-click).
 - **WASD-stick** (left): pan the camera (arrow keys).
 - **RBC** button (top-right): hold to right-click at the cursor (orders, context menus).
 - **LBC** button: hold to left-drag at the cursor (selection box, zone painting, Architect drag).
@@ -106,7 +114,8 @@ packageId `brrainz.harmony`) instead of the Steam Workshop Harmony — don't ins
 
 Add mods (and Harmony itself) with **menu → Import Mods (ZIP)**: pick any mod zip and it
 finds the mod root, unwraps any extra/double folder, and drops it into the instance's `Mods`.
-Dragging a mod folder into `Mods` via **Manage Storage** still works too.
+You can also **download Workshop mods from Steam in-app** (Steam Downloads → Mods). Dragging a
+mod folder into `Mods` via **Manage Storage** still works too.
 
 ## Build
 
@@ -119,8 +128,9 @@ Dragging a mod folder into `Mods` via **Manage Storage** still works too.
 
 ## Remaining / TODO
 
-- **Mali/MediaTek: colonists missing after loading a save** — a low-level box64 emulation bug
-  on those CPUs (Snapdragon/Adreno unaffected);
+- **Mali/MediaTek: colonists missing after loading a save** — a low-level box64 emulation bug on
+  those CPUs (Snapdragon/Adreno unaffected); **0.1.5 ships an experimental memory-model fix
+  attempt** — please report whether saves keep your colonists;
 - **software (CPU) renderer** for GPUs where Zink/Vulkan won't run (in progress);
 - on-screen keyboard (text fields: colony/pawn names, search);
 - occasional black screen / stuck loading on launch — kill + relaunch (usually works on the

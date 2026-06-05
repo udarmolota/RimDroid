@@ -31,6 +31,26 @@ void rimdroid_start_game(const char* game_dir_path,
 void rimdroid_surface_init(ANativeWindow* wnd, int width, int height);
 void rimdroid_surface_deinit();
 
+/**
+ * Software-renderer smoke test (OSMesa + softpipe). Renders a test frame into a CPU
+ * buffer via libOSMesa.so and blits it to the current surface. Proves the CPU GL path
+ * works before the box64 SDL interception is wired. Returns 0 on success.
+ * @param osmesa_lib_path absolute path to libOSMesa.so (in the deps dir)
+ */
+int rimdroid_osmesa_smoketest(const char* osmesa_lib_path);
+
+/**
+ * OSMesa (softpipe) PERSISTENT software-renderer path (Milestone 2). Wired into
+ * the game: box64's my2_SDL_GL_* handlers drive these when RD_SOFTPIPE is active.
+ * rimdroid_init_osmesa() loads libOSMesa + creates a CORE 3.3 context (call once
+ * at launch). make_current binds the context + CPU buffer to the calling thread;
+ * swap blits the buffer to the surface. The g_osmesa_context / g_osmesa_handle
+ * globals are weak-referenced by box64 (wrappedsdl2.c) to select the softpipe path.
+ */
+int  rimdroid_init_osmesa(void);
+int  rimdroid_osmesa_make_current(void);
+void rimdroid_osmesa_swap(void);
+
 /* Phase A input injection (defined in rimdroid.c). The Android touch handler
  * pushes mouse events; box64's my2_SDL_PollEvent drains them via rd_input_poll. */
 void rd_input_mouse_motion(int x, int y);

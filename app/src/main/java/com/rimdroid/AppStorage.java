@@ -69,6 +69,25 @@ public class AppStorage {
         return new File(getInstancesDir(), name);
     }
 
+    /**
+     * Shared library for DLC and Workshop mods, in the PUBLIC Android "Download" folder
+     * (/storage/emulated/0/Download/RimDroid) so the user can see/move/share/delete them with any
+     * file manager — portable content, NOT tied to a single instance.
+     *
+     * NOTE: writing here on Android 11+ requires All-files access (MANAGE_EXTERNAL_STORAGE), granted
+     * once by the user in system settings. RimDroid is sideloaded (no Play Store review), so this is
+     * acceptable. DepotDownloader writes raw file paths (staging + many files), which MediaStore
+     * can't model — hence the broad permission rather than the MediaStore Downloads API.
+     */
+    public File getDownloadsDir() {
+        return new File(android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS), "RimDroid");
+    }
+
+    public File getDownloadDir(String name) {
+        return new File(getDownloadsDir(), name);
+    }
+
     public File getRimWorldBin(String instanceName) {
         return new File(getInstanceDir(instanceName), C.files.RIMWORLD_BIN);
     }

@@ -1,6 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="rd_primary">#8B3A2A</color>
-    <color name="rd_primary_dark">#5C1E10</color>
-    <color name="rd_secondary">#C4A35A</color>
+    <!-- RimDroid brand accent: GREEN (the logo's star/robot). Silver = the neutral surfaces below. -->
+    <color name="rd_primary">#2E7D32</color>
+    <color name="rd_primary_dark">#1B5E20</color>
+    <color name="rd_primary_container">#B4F0B6</color>
+    <color name="rd_on_primary_container">#00210A</color>
+    <color name="rd_secondary">#9AA3A0</color>
+
+    <!-- Material 3 light scheme — cool SILVER-grey neutrals (the logo's metal ring). -->
+    <color name="md_theme_secondary">#4F6354</color>
+    <color name="md_theme_onSecondary">#FFFFFF</color>
+    <color name="md_theme_secondaryContainer">#D2E8D6</color>
+    <color name="md_theme_onSecondaryContainer">#0E1F14</color>
+    <color name="md_theme_tertiary">#3A656E</color>
+    <color name="md_theme_onTertiary">#FFFFFF</color>
+    <color name="md_theme_tertiaryContainer">#BEEAF5</color>
+    <color name="md_theme_onTertiaryContainer">#001F25</color>
+    <color name="md_theme_error">#BA1A1A</color>
+    <color name="md_theme_onError">#FFFFFF</color>
+    <color name="md_theme_errorContainer">#FFDAD6</color>
+    <color name="md_theme_onErrorContainer">#410002</color>
+    <color name="md_theme_background">#F5F8F4</color>
+    <color name="md_theme_onBackground">#181D18</color>
+    <color name="md_theme_surface">#F5F8F4</color>
+    <color name="md_theme_onSurface">#181D18</color>
+    <color name="md_theme_surfaceVariant">#DCE5DC</color>
+    <color name="md_theme_onSurfaceVariant">#414942</color>
+    <color name="md_theme_outline">#717971</color>
+    <color name="md_theme_outlineVariant">#C0C9C0</color>
+    <color name="md_theme_inverseSurface">#2D322E</color>
+    <color name="md_theme_inverseOnSurface">#EFF1EB</color>
+    <color name="md_theme_inversePrimary">#86D88A</color>
+    <color name="md_theme_surfaceDim">#D5DBD3</color>
+    <color name="md_theme_surfaceBright">#F5F8F4</color>
+    <color name="md_theme_surfaceContainerLowest">#FFFFFF</color>
+    <color name="md_theme_surfaceContainerLow">#EFF2EC</color>
+    <color name="md_theme_surfaceContainer">#E9ECE6</color>
+    <color name="md_theme_surfaceContainerHigh">#E4E7E1</color>
+    <color name="md_theme_surfaceContainerHighest">#DEE1DB</color>
 </resources>

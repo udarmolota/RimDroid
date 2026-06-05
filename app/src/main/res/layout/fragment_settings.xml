@@ -62,30 +62,48 @@
         android:id="@+id/spinner_vulkan_driver"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:id="@+id/tv_render_scale_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Render scale: 60%"
-        android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Lower % = bigger UI. RimWorld needs ≥67% or its menus overflow."
-        android:textAppearance="?attr/textAppearanceBodySmall"
         android:layout_marginBottom="4dp" />
 
-    <SeekBar
-        android:id="@+id/sb_render_scale"
+    <Button
+        android:id="@+id/btn_recommend_driver"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:max="33"
-        android:progress="5"
+        android:text="@string/driver_recommend"
+        android:textSize="14dp"
         android:layout_marginBottom="16dp" />
+
+    <!-- Render scale HIDDEN for now: it's currently a no-op (PIN_GAME_PREFS disabled → the game
+         renders at native surface resolution regardless of this slider). Kept (ids intact, code still
+         binds it) so we can re-enable once render-scale actually changes the internal resolution. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_render_scale_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Render scale: 60%"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lower % = bigger UI. RimWorld needs ≥67% or its menus overflow."
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="4dp" />
+
+        <SeekBar
+            android:id="@+id/sb_render_scale"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="33"
+            android:progress="5"
+            android:layout_marginBottom="16dp" />
+    </LinearLayout>
 
     <Switch
         android:id="@+id/sw_debug"
@@ -100,6 +118,36 @@
         android:layout_marginTop="8dp"
         android:text="@string/strict_barriers" />
 
+    <Button
+        android:id="@+id/btn_smoketest"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/smoketest_label" />
+
+    <Button
+        android:id="@+id/btn_steam_spike"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/steam_spike_label" />
+
+    <Button
+        android:id="@+id/btn_steam_dl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/steam_dl_label" />
+
+    <TextView
+        android:id="@+id/tv_steam_dl_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textIsSelectable="true"
+        android:visibility="gone"
+        android:textSize="12sp" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -113,5 +161,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/edit_controls" />
+
+    <Switch
+        android:id="@+id/sw_drag_pan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/drag_pan_label" />
 
 </LinearLayout>

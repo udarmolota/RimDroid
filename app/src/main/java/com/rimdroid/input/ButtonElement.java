@@ -46,13 +46,19 @@ public class ButtonElement extends ControlElement {
     private float halfW() { return dp((shape == Shape.RECT ? RECT_W_DP : CIRCLE_D_DP) / 2f) * scale; }
     private float halfH() { return dp((shape == Shape.RECT ? RECT_H_DP : CIRCLE_D_DP) / 2f) * scale; }
 
+    // Touch-slop padding around the visible button: a finger landing just outside still counts as a
+    // hit, so the overlay claims the touch (instead of it falling through to the map-pan gesture,
+    // which made buttons feel hard to press). Affects hit-testing only, not drawing.
+    private static final float TOUCH_SLOP_DP = 12f;
+
     @Override public boolean isPointOver(float x, float y) {
         float cx = centerX(), cy = centerY();
+        float slop = dp(TOUCH_SLOP_DP);
         if (shape == Shape.CIRCLE) {
-            float r = halfW(); float dx = x - cx, dy = y - cy;
+            float r = halfW() + slop; float dx = x - cx, dy = y - cy;
             return dx * dx + dy * dy <= r * r;
         }
-        return Math.abs(x - cx) <= halfW() && Math.abs(y - cy) <= halfH();
+        return Math.abs(x - cx) <= halfW() + slop && Math.abs(y - cy) <= halfH() + slop;
     }
 
     @Override public boolean handleTouch(MotionEvent e) {

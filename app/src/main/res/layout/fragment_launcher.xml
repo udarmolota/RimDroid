@@ -1,31 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp">
 
-    <Spinner
-        android:id="@+id/spinner_instances"
+    <!-- Instances + the install button scroll together; the button sits right under the last card
+         and descends as more instances are added (no longer pinned above the log). -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-    <Button
-        android:id="@+id/btn_launch"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/launch"
-        android:layout_marginBottom="8dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-    <Button
-        android:id="@+id/btn_install_instance"
-        style="@style/Widget.Material3.Button.OutlinedButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/install_instance"
-        android:textSize="15dp"
-        android:layout_marginBottom="8dp" />
+            <!-- One card per instance, each with its own Launch + settings (gear) button. -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_instances"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tv_no_instances"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/no_instances"
+                android:gravity="center"
+                android:padding="12dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_install_instance"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/install_instance"
+                android:textSize="15dp" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
     <!-- Log header row -->
     <LinearLayout
@@ -33,6 +53,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="4dp">
 
         <TextView
@@ -58,9 +79,8 @@
     <ScrollView
         android:id="@+id/scroll_log"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#111111">
+        android:layout_height="64dp"
+        android:background="#14000000">
 
         <TextView
             android:id="@+id/tv_log"
@@ -68,7 +88,6 @@
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
             android:textSize="11sp"
-            android:textColor="#CCCCCC"
             android:padding="8dp" />
 
     </ScrollView>

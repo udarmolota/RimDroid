@@ -29,7 +29,12 @@ target_link_libraries(rimdroid
 
 # ---------------------------------------------------------------------------
 # box64 — root-level submodule (path: <project_root>/box64)
-# CMAKE_CURRENT_SOURCE_DIR is app/src/main/cpp, so go up 4 levels
+# CMAKE_CURRENT_SOURCE_DIR is app/src/main/cpp, so go up 4 levels.
+#
+# ⚠️  THIS root-level <project_root>/box64 IS THE box64 THAT GETS COMPILED INTO THE APK.
+#     .gitmodules also registers a SECOND checkout at app/src/main/cpp/box64 — that one is an
+#     UNUSED DUPLICATE (same fork, never built). Make ALL box64 source edits in <project_root>/box64.
+#     Editing app/src/main/cpp/box64 has NO effect on the build.
 # ---------------------------------------------------------------------------
 set(BOX64_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../../box64)
 set(NOGIT ON)

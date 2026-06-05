@@ -2,7 +2,6 @@ package com.rimdroid.game;
 
 import com.rimdroid.AppStorage;
 import com.rimdroid.C;
-import com.rimdroid.LauncherPreferences;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -16,6 +15,11 @@ public class GameInstance {
     }
 
     public String getName() { return name; }
+
+    /** Per-instance launch settings (renderer, Vulkan driver, debug, interpreter). */
+    public com.rimdroid.InstanceSettings settings() {
+        return new com.rimdroid.InstanceSettings(name);
+    }
 
     public String getGamePath() {
         return AppStorage.requireSingleton().getInstanceDir(name).getAbsolutePath();
@@ -67,7 +71,6 @@ public class GameInstance {
      */
     public String getNativeLibraryPath() {
         AppStorage storage = AppStorage.requireSingleton();
-        LauncherPreferences prefs = LauncherPreferences.requireSingleton();
 
         ArrayList<String> paths = new ArrayList<>();
 
@@ -75,14 +78,21 @@ public class GameInstance {
         paths.add(storage.getLibraryPath());
         paths.add("/system/lib64");
 
-        // ARM64 renderer libs
-        switch (prefs.getRenderer()) {
+        // ARM64 renderer libs — per this instance's renderer choice
+        switch (settings().getRenderer()) {
             case GL4ES:
                 paths.add(storage.getGl4esLibsPath());
                 break;
             case ZINK_ZFA:
             case ZINK_OSMESA:
                 paths.add(storage.getZinkLibsPath());
+                break;
+            case SOFTPIPE:
+                // libOSMesa.so (softpipe CPU renderer) lives in the deps dir alongside libzfa.so.
+                // This dir MUST be in the search path or rimdroid_ns can't resolve "libOSMesa.so"
+                // by soname → rimdroid_init_osmesa()'s namespace dlopen returns NULL.
+                paths.add(storage.getGl4esLibsPath());
+                paths.add(storage.getZinkLibsPath());   // same deps dir; harmless if duplicate
                 break;
         }
 

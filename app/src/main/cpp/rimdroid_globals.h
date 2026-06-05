@@ -9,7 +9,8 @@
 typedef enum {
     RD_GL4ES,
     RD_ZINK_ZFA,
-    RD_ZINK_OSMESA
+    RD_ZINK_OSMESA,
+    RD_SOFTPIPE      // CPU software renderer: OSMesa + Mesa softpipe, no GPU/Vulkan
 } RimDroidRenderer;
 
 extern RimDroidRenderer g_rimdroid_renderer;

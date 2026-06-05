@@ -39,6 +39,9 @@ import java.util.function.IntConsumer;
  */
 public class ControlsEditorActivity extends Activity implements InputControlsView.EditorListener {
 
+    /** Which instance's controls layout to edit (null → global). */
+    public static final String EXTRA_INSTANCE_NAME = "instance_name";
+
     private InputControlsView controls;
     private ScrollView panel;
     private LinearLayout panelContainer;
@@ -56,19 +59,24 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
         hideSystemBars();   // after setContentView — the decor view / insets controller now exist
         density = getResources().getDisplayMetrics().density;
 
+        final String instanceName = getIntent().getStringExtra(EXTRA_INSTANCE_NAME);
+
+        // Match the game's effective scale (stored value raised to the per-device floor) so edited
+        // element positions line up with the running game. Per-instance when opened from an
+        // instance's settings; global as a fallback.
         float renderScale = 0.72f;
-        LauncherPreferences lp = LauncherPreferences.getSingleton();
-        if (lp != null) {
-            // Match the game's effective scale (stored value raised to the per-device
-            // floor) so edited element positions line up with the running game.
-            android.graphics.Rect b = getWindowManager().getCurrentWindowMetrics().getBounds();
-            int sLong  = Math.max(b.width(), b.height());
-            int sShort = Math.min(b.width(), b.height());
-            renderScale = lp.getEffectiveRenderScale(sLong, sShort);
+        android.graphics.Rect b = getWindowManager().getCurrentWindowMetrics().getBounds();
+        int sLong  = Math.max(b.width(), b.height());
+        int sShort = Math.min(b.width(), b.height());
+        if (instanceName != null) {
+            renderScale = new com.rimdroid.InstanceSettings(instanceName).getEffectiveRenderScale(sLong, sShort);
+        } else {
+            LauncherPreferences lp = LauncherPreferences.getSingleton();
+            if (lp != null) renderScale = lp.getEffectiveRenderScale(sLong, sShort);
         }
 
         FrameLayout host = findViewById(R.id.controls_host);
-        controls = new InputControlsView(this, renderScale);
+        controls = new InputControlsView(this, renderScale, instanceName);
         host.addView(controls, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         controls.setEditMode(true, this);

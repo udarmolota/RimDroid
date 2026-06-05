@@ -1,0 +1,63 @@
+RimDroid
+Copyright (c) 2026 udarmolota
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See the LICENSE file for the full GPL-3.0 text.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+RimDroid does NOT include or distribute RimWorld, Unity, or any of their assets.
+RimWorld is a proprietary game by Ludeon Studios; users must supply their own
+legally obtained copy. RimDroid only launches/translates an x86_64 build the user
+already owns.
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+RimDroid's own source code is licensed under GPL-3.0 (see LICENSE). It bundles
+and/or links the third-party components below, each of which remains under its
+own (permissive, GPL-compatible) license. Their copyright notices are retained
+here as required; the GPL-3.0 of RimDroid does not relicense them.
+
+--- Native (bundled .so / linked / git submodules) ---
+
+box64                  MIT License          Copyright (c) 2020 ptitSeb
+                       (RimDroid uses a fork: github.com/udarmolota/rimdroid-box64,
+                        which remains MIT, same as upstream.)
+
+liblinkernsbypass      BSD 2-Clause License Copyright (c) 2021 Billy Laws
+
+Mesa (libOSMesa,       MIT License          Copyright (c) The Mesa 3D Graphics
+libzfa / Zink,                              Library contributors
+softpipe, freedreno)
+
+SDL2                   zlib License         Copyright (c) 1997-2024 Sam Lantinga
+                       (statically linked inside the user-supplied game)
+
+GL4ES                  MIT License          Copyright (c) 2016-2024 Sebastien Chevalier
+
+--- Java / Gradle dependencies ---
+
+AndroidX libraries     Apache License 2.0   Copyright (c) The Android Open Source Project
+Material Components     Apache License 2.0   Copyright (c) Google LLC
+Apache Commons Compress Apache License 2.0   Copyright (c) The Apache Software Foundation
+Gson                   Apache License 2.0   Copyright (c) Google LLC
+protobuf-java          BSD 3-Clause License Copyright (c) Google LLC
+XZ for Java            Public Domain (0BSD)  by Lasse Collin and contributors
+Bouncy Castle (bcprov) Bouncy Castle License Copyright (c) The Legion of the Bouncy
+                       (MIT-style)           Castle Inc.
+JavaSteam              MIT License          Copyright (c) Lossy / JavaSteam contributors
+javasteam-depotdownloader  MIT License      Copyright (c) JavaSteam contributors
+zstd-jni               BSD 2-Clause License Copyright (c) 2015-2024 Luben Karavelov
+
+================================================================================
+Full license texts for the above are available from each project's repository.
+All are permissive licenses compatible with GPL-3.0; AndroidX/Material/Commons/
+Gson are Apache-2.0, which is why RimDroid uses GPL version 3 (Apache-2.0 is
+compatible with GPLv3, not GPLv2).
+================================================================================

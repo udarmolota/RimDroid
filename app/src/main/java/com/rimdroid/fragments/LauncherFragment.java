@@ -14,15 +14,18 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ScrollView;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.rimdroid.AppStorage;
 import com.rimdroid.GameActivity;
@@ -44,12 +47,15 @@ public class LauncherFragment extends Fragment {
     private static final String TAG = "RimDroid/LauncherFrag";
     private static final int MAX_LOG_LINES = 500;
 
-    private Spinner spinnerInstances;
-    private Button btnLaunch;
+    private RecyclerView rvInstances;
+    private TextView tvNoInstances;
     private Button btnInstallInstance;
     private Button btnClearLog;
     private TextView tvLog;
     private ScrollView scrollLog;
+
+    private final List<GameInstance> instances = new ArrayList<>();
+    private RecyclerView.Adapter<RecyclerView.ViewHolder> instanceAdapter;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private int logLineCount = 0;
@@ -68,14 +74,17 @@ public class LauncherFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        spinnerInstances   = view.findViewById(R.id.spinner_instances);
-        btnLaunch          = view.findViewById(R.id.btn_launch);
+        rvInstances        = view.findViewById(R.id.rv_instances);
+        tvNoInstances      = view.findViewById(R.id.tv_no_instances);
         btnInstallInstance = view.findViewById(R.id.btn_install_instance);
         btnClearLog        = view.findViewById(R.id.btn_clear_log);
         tvLog              = view.findViewById(R.id.tv_log);
         scrollLog          = view.findViewById(R.id.scroll_log);
 
-        btnLaunch.setOnClickListener(v -> onLaunchClicked());
+        rvInstances.setLayoutManager(new LinearLayoutManager(requireContext()));
+        instanceAdapter = buildInstanceAdapter();
+        rvInstances.setAdapter(instanceAdapter);
+
         btnInstallInstance.setOnClickListener(v ->
                 zipPicker.launch(new String[]{"application/zip", "application/x-zip-compressed"}));
         btnClearLog.setOnClickListener(v -> clearLog());
@@ -118,39 +127,136 @@ public class LauncherFragment extends Fragment {
 
     private void refreshInstances() {
         GameInstanceManager.requireSingleton().reload();
-        List<GameInstance> instances = GameInstanceManager.requireSingleton().getInstances();
-
-        List<String> names = new ArrayList<>();
-        for (GameInstance gi : instances) names.add(gi.getName());
-
-        if (names.isEmpty()) {
-            names.add(getString(R.string.no_instances));
-            btnLaunch.setEnabled(false);
-        } else {
-            btnLaunch.setEnabled(true);
-            String last = LauncherPreferences.requireSingleton().getLastInstanceName();
-            int idx = names.indexOf(last);
-            if (idx >= 0) spinnerInstances.setSelection(idx);
+        instances.clear();
+        instances.addAll(GameInstanceManager.requireSingleton().getInstances());
+        if (instanceAdapter != null) instanceAdapter.notifyDataSetChanged();
+        if (tvNoInstances != null) {
+            tvNoInstances.setVisibility(instances.isEmpty() ? View.VISIBLE : View.GONE);
         }
+    }
 
-        spinnerInstances.setAdapter(new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_spinner_item, names));
+    /** One card per instance: name + a settings (gear) button + a Launch button. */
+    private RecyclerView.Adapter<RecyclerView.ViewHolder> buildInstanceAdapter() {
+        return new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            @NonNull
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                View v = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.game_instance_item, parent, false);
+                return new RecyclerView.ViewHolder(v) {};
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                GameInstance gi = instances.get(position);
+                View v = holder.itemView;
+                TextView name = v.findViewById(R.id.instance_item_name);
+                ImageButton settings = v.findViewById(R.id.instance_item_settings);
+                ImageButton launch = v.findViewById(R.id.instance_item_launch);
+
+                name.setText(gi.getName());
+                // (renderer subtitle is commented out in the layout — keep the binding out too)
+
+                launch.setOnClickListener(x -> launchInstance(gi));
+                settings.setOnClickListener(x -> showInstanceMenu(settings, gi));
+            }
+
+            @Override
+            public int getItemCount() { return instances.size(); }
+        };
+    }
+
+    /** Gear button → a small menu: Settings / Delete (Zomdroid-style). */
+    private void showInstanceMenu(View anchor, GameInstance gi) {
+        android.widget.PopupMenu pm = new android.widget.PopupMenu(requireContext(), anchor);
+        pm.getMenuInflater().inflate(R.menu.menu_game_instance, pm.getMenu());
+        pm.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.action_instance_settings) { openInstanceSettings(gi); return true; }
+            if (id == R.id.action_instance_delete)   { confirmDeleteInstance(gi); return true; }
+            return false;
+        });
+        pm.show();
+    }
+
+    private void openInstanceSettings(GameInstance gi) {
+        Bundle b = new Bundle();
+        b.putString(SettingsFragment.ARG_INSTANCE, gi.getName());
+        Navigation.findNavController(requireView()).navigate(R.id.action_settings, b);
+    }
+
+    private void confirmDeleteInstance(GameInstance gi) {
+        new android.app.AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.delete_instance))
+                .setMessage(getString(R.string.delete_instance_confirm, gi.getName()))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.delete_instance, (d, w) -> deleteInstance(gi))
+                .show();
+    }
+
+    private void deleteInstance(GameInstance gi) {
+        final String name = gi.getName();
+        final java.io.File dir = AppStorage.requireSingleton().getInstanceDir(name);
+        appendLog("Deleting instance: " + name + "…");
+        new Thread(() -> {
+            java.util.List<String> failed = new java.util.ArrayList<>();
+            deleteRecursive(dir, failed);
+            final boolean gone = !dir.exists();
+            com.rimdroid.InstanceSettings.delete(name);   // drop its per-instance settings keys
+            LauncherPreferences lp = LauncherPreferences.requireSingleton();
+            if (name.equals(lp.getLastInstanceName())) lp.setLastInstanceName("");
+            mainHandler.post(() -> {
+                if (gone && failed.isEmpty()) {
+                    appendLog("Deleted instance: " + name);
+                } else {
+                    appendLog("Deleted instance: " + name + " — WARNING: " + failed.size()
+                            + " item(s) could not be removed (left in " + dir.getAbsolutePath() + ")");
+                    int show = Math.min(failed.size(), 8);
+                    for (int i = 0; i < show; i++) appendLog("  ! " + failed.get(i));
+                    if (failed.size() > show) appendLog("  … and " + (failed.size() - show) + " more");
+                }
+                refreshInstances();
+            });
+        }, "rd-delete-instance").start();
+    }
+
+    /**
+     * Recursively delete {@code f}, collecting paths that could not be removed into {@code failed}.
+     * Symlinks are deleted as links (we never follow them into their target — RimWorld depots
+     * contain symlinks, and following them both wastes work and could touch files outside the
+     * instance). Read-only entries are force-made-writable first. We attempt EVERY entry even if
+     * some fail, so one stubborn file no longer strands its whole parent subtree.
+     */
+    private static void deleteRecursive(java.io.File f, java.util.List<String> failed) {
+        if (f == null) return;
+        java.nio.file.Path p = f.toPath();
+        boolean isLink = java.nio.file.Files.isSymbolicLink(p);
+        if (!isLink && f.isDirectory()) {
+            java.io.File[] kids = f.listFiles();
+            if (kids != null) for (java.io.File k : kids) deleteRecursive(k, failed);
+        }
+        try {
+            //noinspection ResultOfMethodCallIgnored
+            f.setWritable(true);
+        } catch (Exception ignored) { /* best effort */ }
+        try {
+            java.nio.file.Files.deleteIfExists(p);   // removes the link itself for symlinks
+        } catch (Exception e) {
+            failed.add(f.getAbsolutePath() + " (" + e.getClass().getSimpleName()
+                    + ": " + e.getMessage() + ")");
+        }
     }
 
     // ---- Launch -------------------------------------------------------------
 
-    private void onLaunchClicked() {
-        String name = (String) spinnerInstances.getSelectedItem();
-        if (name == null || name.equals(getString(R.string.no_instances))) return;
-
-        GameInstance gi = GameInstanceManager.requireSingleton().getByName(name);
-        if (gi == null) { appendLog("Instance not found: " + name); return; }
-
-        LauncherPreferences.requireSingleton().setLastInstanceName(name);
+    private void launchInstance(GameInstance gi) {
+        if (gi == null) return;
+        LauncherPreferences.requireSingleton().setLastInstanceName(gi.getName());
         clearLog();
 
-        requireContext().startActivity(
-                new android.content.Intent(requireContext(), GameActivity.class));
+        android.content.Intent gameIntent = new android.content.Intent(requireContext(), GameActivity.class);
+        gameIntent.putExtra(GameActivity.EXTRA_INSTANCE_NAME, gi.getName());   // per-instance scale + controls
+        requireContext().startActivity(gameIntent);
 
         new Thread(() -> {
             try {

@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/download_game_title"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Login privacy note: relevant to ALL tabs (login is never stored). -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/download_login_note"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Game / DLC / Mods selector -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggle_dl_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_type_game"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/download_tab_game" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_type_dlc"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/download_tab_dlc" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_type_mods"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/download_tab_mods" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- ============ shared Steam login (Game + DLC) ============ -->
+        <LinearLayout
+            android:id="@+id/block_login"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/download_user_hint"
+                android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_dl_user"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textNoSuggestions" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/download_pass_hint"
+                app:passwordToggleEnabled="true"
+                android:layout_marginBottom="4dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_dl_pass"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- ============ GAME ============ -->
+        <LinearLayout
+            android:id="@+id/section_game"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Game-version note: only relevant to the game download. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_version_note"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/download_instance_hint"
+                android:layout_marginBottom="12dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_dl_instance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/download_manifest_hint"
+                android:layout_marginBottom="16dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_dl_manifest"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/btn_dl_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_start" />
+        </LinearLayout>
+
+        <!-- ============ DLC ============ -->
+        <LinearLayout
+            android:id="@+id/section_dlc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_dlc_note"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="8dp" />
+
+            <CheckBox
+                android:id="@+id/cb_dlc_royalty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Royalty" />
+            <CheckBox
+                android:id="@+id/cb_dlc_ideology"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ideology" />
+            <CheckBox
+                android:id="@+id/cb_dlc_biotech"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Biotech" />
+            <CheckBox
+                android:id="@+id/cb_dlc_anomaly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Anomaly" />
+
+            <Button
+                android:id="@+id/btn_dlc_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/download_dlc_start" />
+        </LinearLayout>
+
+        <!-- ============ MODS ============ -->
+        <LinearLayout
+            android:id="@+id/section_mods"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Part A: with Steam login (uses the login fields above) — direct download. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_mods_login_head"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:layout_marginBottom="4dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_mods_note"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/download_mods_hint"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_mods_ids"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textNoSuggestions" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/btn_mods_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_mods_start" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="12dp"
+                android:background="?android:attr/listDivider" />
+
+            <!-- Part B: without login — via the ggntw.com third-party service, opened in the browser. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_mods_browser_head"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:layout_marginBottom="4dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_mods_browser_note"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/download_mods_hint_single"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_mods_browser_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <Button
+                android:id="@+id/btn_mods_browser"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/download_mods_browser_start" />
+        </LinearLayout>
+
+        <!-- ============ shared progress + console log ============ -->
+        <ProgressBar
+            android:id="@+id/progress_dl"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:max="100"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <!-- Compact ~3-line scrolling console (scrolls internally; auto-scrolls to newest). -->
+        <TextView
+            android:id="@+id/tv_dl_status"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="8dp"
+            android:padding="8dp"
+            android:background="#14000000"
+            android:fontFamily="monospace"
+            android:textSize="11sp"
+            android:scrollbars="vertical"
+            android:textIsSelectable="true" />
+
+        <!-- Install a downloaded DLC/mod (from /Download/RimDroid) into an instance. -->
+        <Button
+            android:id="@+id/btn_install_content"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/download_install_content" />
+
+    </LinearLayout>
+</ScrollView>

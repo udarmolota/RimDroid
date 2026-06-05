@@ -35,6 +35,7 @@ public class NewInstanceFragment extends Fragment {
     private TextView tvSelectedZip;
 
     private Uri selectedZipUri;
+    private String lastInstanceName;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -43,7 +44,7 @@ public class NewInstanceFragment extends Fragment {
         public void onReceive(Context ctx, Intent intent) {
             String action = intent.getAction();
             if (InstallerService.BROADCAST_DONE.equals(action)) {
-                Navigation.findNavController(requireView()).popBackStack();
+                adviseDriverThenLeave();
             } else if (InstallerService.BROADCAST_ERROR.equals(action)) {
                 mainHandler.post(() -> {
                     btnInstall.setEnabled(true);
@@ -103,6 +104,28 @@ public class NewInstanceFragment extends Fragment {
         requireContext().unregisterReceiver(installerReceiver);
     }
 
+    /** On install success: detect the GPU, set the recommended driver on the new instance, show a
+     *  one-time dialog, then return to the launcher. */
+    private void adviseDriverThenLeave() {
+        final String inst = lastInstanceName;
+        if (inst == null) { Navigation.findNavController(requireView()).popBackStack(); return; }
+        new Thread(() -> {
+            final com.rimdroid.GpuDriverAdvisor.Result r =
+                    com.rimdroid.GpuDriverAdvisor.applyRecommendedDriver(inst);
+            mainHandler.post(() -> {
+                if (!isAdded() || getView() == null) return;
+                if (!r.applied) { Navigation.findNavController(requireView()).popBackStack(); return; }
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                        .setTitle(R.string.driver_auto_set_title)
+                        .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
+                        .setCancelable(false)
+                        .setPositiveButton(android.R.string.ok,
+                                (d, w) -> Navigation.findNavController(requireView()).popBackStack())
+                        .show();
+            });
+        }, "rd-gpu-advise").start();
+    }
+
     private void startInstall() {
         if (selectedZipUri == null) return;
         String instanceName = etInstanceName.getText().toString().trim();
@@ -111,6 +134,7 @@ public class NewInstanceFragment extends Fragment {
             return;
         }
 
+        lastInstanceName = instanceName;
         btnInstall.setEnabled(false);
         btnInstall.setText(R.string.installing);
 

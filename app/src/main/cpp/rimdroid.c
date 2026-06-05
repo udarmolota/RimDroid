@@ -62,6 +62,18 @@ static PFN_zfaFlushFront     p_zfaFlushFront     = NULL;
 static PFN_zfaDestroyContext p_zfaDestroyContext = NULL;
 static PFN_zfaReleaseCurrent p_zfaReleaseCurrent = NULL;
 
+// ZFA swapchain-image lifecycle (anti-artifact). Each zfaMakeCurrent() re-acquires a NEW Vulkan
+// swapchain image and DISCARDS whatever was rendered into the previous one — so calling it again
+// mid-frame (Unity does SDL_GL_MakeCurrent several times per frame) corrupts the frame. We track
+// the bound state and SKIP redundant binds; on a fresh bind we CLEAR the image (recycled swapchain
+// images have UNDEFINED contents → coloured-rectangle artifacts, esp. on PowerVR/legacy Adreno).
+// Flag reset on swap + on release so the next frame re-acquires correctly. (glFinish-before-swap
+// is available behind RD_ZFA_FINISH_BEFORE_SWAP but OFF — it forces a full CPU↔GPU sync per frame
+// = big FPS cost; enable only if torn frames appear.)
+#define RD_ZFA_FINISH_BEFORE_SWAP 0
+static volatile int g_zfa_context_bound = 0;
+static int g_zfa_bound_w = 0, g_zfa_bound_h = 0;
+
 RimDroidSurface g_rimdroid_surface = {
     .mutex = PTHREAD_MUTEX_INITIALIZER,
     .ready_for_destroy_cond = PTHREAD_COND_INITIALIZER
@@ -124,10 +136,46 @@ int rimdroid_zfa_make_current(void) {
     int rh = g_rimdroid_surface.height > 0 ? g_rimdroid_surface.height : 1080;
     int ww = w ? rw : 1;
     int hh = w ? rh : 1;
+
+    // Already bound at this size? Do NOT re-bind — a fresh zfaMakeCurrent would acquire a new
+    // swapchain image and throw away the frame Unity is mid-way through rendering (artifacts).
+    if (g_zfa_context_bound && g_zfa_bound_w == ww && g_zfa_bound_h == hh) {
+        return 1;
+    }
+
     if (!p_zfaMakeCurrent(g_zfa_context, w, ww, hh)) {
         LOGE("ZFA: zfaMakeCurrent failed (%dx%d)", ww, hh);
         return 0;
     }
+    g_zfa_context_bound = 1;
+    g_zfa_bound_w = ww;
+    g_zfa_bound_h = hh;
+
+    // Clear the freshly-acquired swapchain image to opaque black. Recycled Vulkan images have
+    // UNDEFINED contents; without this, leftover GPU memory shows as coloured-rectangle artifacts
+    // across the frame (PowerVR / legacy Adreno especially). glClear forces renderpass loadOp=CLEAR
+    // so Unity always paints onto a clean slate. Symbols resolved lazily from libzfa (present once
+    // zfaMakeCurrent succeeded), so we need no separate GL loader.
+    {
+        static void (*p_glClear)(unsigned int) = NULL;
+        static void (*p_glClearColor)(float, float, float, float) = NULL;
+        static void (*p_glClearDepthf)(float) = NULL;
+        static int gl_clear_checked = 0;
+        if (!gl_clear_checked) {
+            gl_clear_checked = 1;
+            if (g_zfa_handle) {
+                p_glClear       = (void (*)(unsigned int))            dlsym(g_zfa_handle, "glClear");
+                p_glClearColor  = (void (*)(float,float,float,float)) dlsym(g_zfa_handle, "glClearColor");
+                p_glClearDepthf = (void (*)(float))                  dlsym(g_zfa_handle, "glClearDepthf");
+            }
+        }
+        if (p_glClear) {
+            if (p_glClearColor)  p_glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            if (p_glClearDepthf) p_glClearDepthf(1.0f);
+            p_glClear(0x4000u /* GL_COLOR_BUFFER_BIT */ | 0x0100u /* GL_DEPTH_BUFFER_BIT */);
+        }
+    }
+
     // Force the device-orientation transform to IDENTITY. With the landscape lock,
     // this cancels the system's portrait pre-rotation → the frame stays HORIZONTAL
     // (this is the pair that produced yesterday's good horizontal screen). API 26+,
@@ -148,7 +196,307 @@ int rimdroid_zfa_make_current(void) {
 }
 
 void rimdroid_zfa_swap(void) {
-    if (p_zfaFlushFront) p_zfaFlushFront();
+    if (!p_zfaFlushFront) return;
+#if RD_ZFA_FINISH_BEFORE_SWAP
+    // Optional: drain all pending GPU work before presenting (no torn frames), at the cost of a
+    // full CPU↔GPU stall every frame. OFF by default — enable only if frames tear.
+    {
+        static void (*p_glFinish)(void) = NULL;
+        static int finish_checked = 0;
+        if (!finish_checked) { finish_checked = 1; if (g_zfa_handle) p_glFinish = (void (*)(void))dlsym(g_zfa_handle, "glFinish"); }
+        if (p_glFinish) p_glFinish();
+    }
+#endif
+    p_zfaFlushFront();
+    // Frame presented → mark unbound so the next make_current acquires a fresh swapchain image.
+    g_zfa_context_bound = 0;
+}
+
+// ---- OSMesa (softpipe) software-renderer SMOKE TEST -------------------------
+// Milestone 1 of the CPU/software renderer: prove libOSMesa.so (built with
+// softpipe) renders natively on the device AND that we can blit its CPU buffer to
+// the ANativeWindow — BEFORE wiring the box64 SDL interception. Draws a dark-blue
+// background with a centered green rectangle (scissor clears, no shaders needed)
+// and presents it to the current surface. Returns 0 on success.
+//
+// OSMesa / GL tokens are hard-coded so we don't pull in GL/osmesa headers.
+#define RD_OSMESA_RGBA          0x1908
+#define RD_OSMESA_Y_UP          0x11
+#define RD_GL_UNSIGNED_BYTE     0x1401
+#define RD_GL_COLOR_BUFFER_BIT  0x4000
+#define RD_GL_SCISSOR_TEST      0x0C11
+#define RD_GL_RENDERER          0x1F01
+#define RD_GL_VERSION           0x1F02
+
+typedef void* (*PFN_OSMesaCreateContext)(unsigned int format, void* sharelist);
+typedef int   (*PFN_OSMesaMakeCurrent)(void* ctx, void* buffer, unsigned int type, int width, int height);
+typedef void  (*PFN_OSMesaDestroyContext)(void* ctx);
+typedef void  (*PFN_OSMesaPixelStore)(int pname, int value);
+
+// Attribute-list context creation for a CORE profile (Unity rejects the legacy
+// compatibility-profile context that plain OSMesaCreateContext yields). Tokens
+// from Mesa's osmesa.h — VERIFY against the built osmesa.h if context creation
+// fails (values have been stable across Mesa releases, but confirm on mismatch).
+typedef void* (*PFN_OSMesaCreateContextAttribs)(const int* attribList, void* sharelist);
+#define RD_OSMESA_FORMAT                 0x22
+#define RD_OSMESA_DEPTH_BITS             0x30
+#define RD_OSMESA_STENCIL_BITS           0x31
+#define RD_OSMESA_PROFILE                0x33
+#define RD_OSMESA_CORE_PROFILE           0x34
+#define RD_OSMESA_CONTEXT_MAJOR_VERSION  0x36
+#define RD_OSMESA_CONTEXT_MINOR_VERSION  0x37
+
+int rimdroid_osmesa_smoketest(const char* osmesa_lib_path) {
+    if (!osmesa_lib_path || !osmesa_lib_path[0]) { LOGE("OSMesa smoke: no lib path"); return -1; }
+
+    ANativeWindow* win = g_rimdroid_surface.native_window;
+    int w = g_rimdroid_surface.width;
+    int h = g_rimdroid_surface.height;
+    if (!win || w <= 0 || h <= 0) {
+        LOGE("OSMesa smoke: no surface (win=%p %dx%d)", (void*)win, w, h);
+        return -1;
+    }
+
+    // libOSMesa.so depends on platform libs (libcutils, liblog, libnativewindow, …) that the
+    // app's default (restricted) linker namespace can't resolve. Load it through a SHARED
+    // linkernsbypass namespace — the same mechanism libzfa uses — whose search path includes
+    // /system/lib64. Reuse the game's rimdroid_ns if a launch set it up; otherwise (this smoke
+    // test runs WITHOUT launching the game) build a minimal SHARED namespace rooted at the deps
+    // dir + /system/lib64.
+    struct android_namespace_t* ns = rimdroid_ns;
+    if (!ns) {
+        // Cached so repeated surfaceChanged calls don't recreate the namespace.
+        static struct android_namespace_t* s_osmesa_ns = NULL;
+        if (!s_osmesa_ns) {
+            if (!linkernsbypass_load_status()) {
+                LOGE("OSMesa smoke: linkernsbypass not loaded"); return -1;
+            }
+            char dir[1024];
+            strncpy(dir, osmesa_lib_path, sizeof(dir) - 1);
+            dir[sizeof(dir) - 1] = '\0';
+            char* slash = strrchr(dir, '/');
+            if (slash) *slash = '\0';
+            char paths[1200];
+            snprintf(paths, sizeof(paths), "%s:/system/lib64", dir);
+            s_osmesa_ns = android_create_namespace("rimdroid-osmesa-ns", paths, paths,
+                                                   ANDROID_NAMESPACE_TYPE_SHARED, NULL, NULL);
+        }
+        ns = s_osmesa_ns;
+        if (!ns) { LOGE("OSMesa smoke: android_create_namespace failed"); return -1; }
+    }
+    void* lib = linkernsbypass_namespace_dlopen("libOSMesa.so", RTLD_NOW | RTLD_LOCAL, ns);
+    if (!lib) { LOGE("OSMesa smoke: namespace dlopen('libOSMesa.so') failed: %s", dlerror()); return -1; }
+
+    PFN_OSMesaCreateContext  fCreate  = (PFN_OSMesaCreateContext)  dlsym(lib, "OSMesaCreateContext");
+    PFN_OSMesaMakeCurrent    fCurrent = (PFN_OSMesaMakeCurrent)    dlsym(lib, "OSMesaMakeCurrent");
+    PFN_OSMesaDestroyContext fDestroy = (PFN_OSMesaDestroyContext) dlsym(lib, "OSMesaDestroyContext");
+    PFN_OSMesaPixelStore     fPixel   = (PFN_OSMesaPixelStore)     dlsym(lib, "OSMesaPixelStore");
+    if (!fCreate || !fCurrent) {
+        LOGE("OSMesa smoke: missing OSMesa API (create=%p current=%p)", (void*)fCreate, (void*)fCurrent);
+        dlclose(lib); return -1;
+    }
+    // GL entry points are exported by libOSMesa itself.
+    void (*p_glViewport)(int,int,int,int)           = (void(*)(int,int,int,int))           dlsym(lib, "glViewport");
+    void (*p_glClearColor)(float,float,float,float) = (void(*)(float,float,float,float))   dlsym(lib, "glClearColor");
+    void (*p_glClear)(unsigned int)                 = (void(*)(unsigned int))              dlsym(lib, "glClear");
+    void (*p_glEnable)(unsigned int)                = (void(*)(unsigned int))              dlsym(lib, "glEnable");
+    void (*p_glDisable)(unsigned int)               = (void(*)(unsigned int))              dlsym(lib, "glDisable");
+    void (*p_glScissor)(int,int,int,int)            = (void(*)(int,int,int,int))           dlsym(lib, "glScissor");
+    void (*p_glFinish)(void)                        = (void(*)(void))                      dlsym(lib, "glFinish");
+    const unsigned char* (*p_glGetString)(unsigned int) =
+        (const unsigned char*(*)(unsigned int)) dlsym(lib, "glGetString");
+    if (!p_glViewport || !p_glClearColor || !p_glClear || !p_glFinish) {
+        LOGE("OSMesa smoke: missing GL entry points in libOSMesa"); dlclose(lib); return -1;
+    }
+
+    int rc = -1;
+    void* buf = malloc((size_t)w * (size_t)h * 4);
+    void* ctx = NULL;
+    if (!buf) { LOGE("OSMesa smoke: OOM (%dx%d)", w, h); dlclose(lib); return -1; }
+
+    ctx = fCreate(RD_OSMESA_RGBA, NULL);
+    if (!ctx) { LOGE("OSMesa smoke: OSMesaCreateContext failed"); free(buf); dlclose(lib); return -1; }
+    if (!fCurrent(ctx, buf, RD_GL_UNSIGNED_BYTE, w, h)) {
+        LOGE("OSMesa smoke: OSMesaMakeCurrent failed");
+        if (fDestroy) fDestroy(ctx);
+        free(buf); dlclose(lib); return -1;
+    }
+    if (fPixel) fPixel(RD_OSMESA_Y_UP, 0);   // top-down rows → match ANativeWindow origin
+
+    const unsigned char* ren = p_glGetString ? p_glGetString(RD_GL_RENDERER) : NULL;
+    const unsigned char* ver = p_glGetString ? p_glGetString(RD_GL_VERSION)  : NULL;
+    LOGI("OSMesa smoke: context ok %dx%d GL_RENDERER='%s' GL_VERSION='%s'",
+         w, h, ren ? (const char*)ren : "(null)", ver ? (const char*)ver : "(null)");
+
+    // Render (scissor clears — no shaders/VBOs): blue background + green centre rect.
+    p_glViewport(0, 0, w, h);
+    p_glClearColor(0.05f, 0.07f, 0.15f, 1.0f);
+    p_glClear(RD_GL_COLOR_BUFFER_BIT);
+    if (p_glEnable && p_glScissor && p_glDisable) {
+        p_glEnable(RD_GL_SCISSOR_TEST);
+        p_glScissor(w / 4, h / 4, w / 2, h / 2);
+        p_glClearColor(0.10f, 0.80f, 0.20f, 1.0f);
+        p_glClear(RD_GL_COLOR_BUFFER_BIT);
+        p_glDisable(RD_GL_SCISSOR_TEST);
+    }
+    p_glFinish();
+
+    // Present the CPU buffer to the surface.
+    ANativeWindow_acquire(win);
+    if (ANativeWindow_setBuffersGeometry(win, w, h, WINDOW_FORMAT_RGBA_8888) == 0) {
+        ANativeWindow_Buffer wb;
+        if (ANativeWindow_lock(win, &wb, NULL) == 0) {
+            const unsigned char* src = (const unsigned char*)buf;
+            unsigned char* dst = (unsigned char*)wb.bits;
+            int cw = wb.width  < w ? wb.width  : w;
+            int ch = wb.height < h ? wb.height : h;
+            for (int y = 0; y < ch; y++) {
+                memcpy(dst + (size_t)y * (size_t)wb.stride * 4,
+                       src + (size_t)y * (size_t)w * 4,
+                       (size_t)cw * 4);
+            }
+            ANativeWindow_unlockAndPost(win);
+            rc = 0;
+            LOGI("OSMesa smoke: PRESENTED %dx%d (win %dx%d stride %d) — softpipe works!",
+                 w, h, wb.width, wb.height, wb.stride);
+        } else {
+            LOGE("OSMesa smoke: ANativeWindow_lock failed");
+        }
+    } else {
+        LOGE("OSMesa smoke: setBuffersGeometry failed");
+    }
+    ANativeWindow_release(win);
+
+    fCurrent(ctx, NULL, RD_GL_UNSIGNED_BYTE, 0, 0);   // unbind (best effort)
+    if (fDestroy) fDestroy(ctx);
+    free(buf);
+    dlclose(lib);
+    return rc;
+}
+
+// ---- OSMesa (softpipe) PERSISTENT software-renderer path --------------------
+// Milestone 2: wire softpipe into the actual game. OSMesa is an OFFSCREEN GL
+// context (no winsys), so unlike ZFA/Zink (which auto-presents via its kopper
+// Vulkan swapchain) NOTHING presents our frame automatically — box64's
+// my2_SDL_GL_SwapWindow must call rimdroid_osmesa_swap() to blit our CPU buffer
+// to the ANativeWindow. These globals/functions mirror the ZFA ones: box64
+// (wrappedsdl2.c) weak-references g_osmesa_context (non-NULL ⇒ softpipe active),
+// g_osmesa_handle (GL proc source), rimdroid_osmesa_make_current and
+// rimdroid_osmesa_swap. Default visibility (librimdroid is built without
+// -fvisibility=hidden) so librimdroidlinker.so resolves them at link time.
+void* g_osmesa_handle  = NULL;   // libOSMesa.so dlopen handle (box64 resolves GL procs from it)
+void* g_osmesa_context = NULL;   // OSMesaCreateContext* — non-NULL selects the softpipe path
+static void* g_osmesa_buffer = NULL;        // persistent RGBA8888 CPU render target
+static int   g_osmesa_w = 0, g_osmesa_h = 0; // current buffer dimensions
+static PFN_OSMesaMakeCurrent g_osmesa_make_current_fn = NULL;
+static PFN_OSMesaPixelStore  g_osmesa_pixel_store_fn  = NULL;
+static void (*g_osmesa_glFinish_fn)(void)             = NULL;
+
+// Load libOSMesa.so (via rimdroid_ns so libcutils/liblog resolve) and create a
+// CORE 3.3 softpipe context. Called once at launch for RD_SOFTPIPE. Returns 0 ok.
+int rimdroid_init_osmesa(void) {
+    if (g_osmesa_context) return 0;  // already initialised
+    if (!rimdroid_ns) { LOGE("OSMesa init: rimdroid_ns not ready"); return -1; }
+    // RTLD_LOCAL: box64 resolves GL procs by dlsym(g_osmesa_handle, name), so the
+    // softpipe GL symbols need NOT be in the global scope (keeps them from
+    // colliding with the system GLES). The smoke test proved this works.
+    void* lib = linkernsbypass_namespace_dlopen("libOSMesa.so", RTLD_NOW | RTLD_LOCAL, rimdroid_ns);
+    if (!lib) { LOGE("OSMesa init: dlopen('libOSMesa.so') failed: %s", dlerror()); return -1; }
+
+    PFN_OSMesaCreateContextAttribs fAttribs =
+        (PFN_OSMesaCreateContextAttribs) dlsym(lib, "OSMesaCreateContextAttribs");
+    PFN_OSMesaCreateContext fCreate =
+        (PFN_OSMesaCreateContext) dlsym(lib, "OSMesaCreateContext");
+    g_osmesa_make_current_fn = (PFN_OSMesaMakeCurrent) dlsym(lib, "OSMesaMakeCurrent");
+    g_osmesa_pixel_store_fn  = (PFN_OSMesaPixelStore)  dlsym(lib, "OSMesaPixelStore");
+    g_osmesa_glFinish_fn     = (void(*)(void))         dlsym(lib, "glFinish");
+    if (!g_osmesa_make_current_fn || (!fAttribs && !fCreate)) {
+        LOGE("OSMesa init: missing API (attribs=%p create=%p makecur=%p)",
+             (void*)fAttribs, (void*)fCreate, (void*)g_osmesa_make_current_fn);
+        dlclose(lib); return -1;
+    }
+
+    // Prefer a CORE 3.3 context (Unity's renderer detection rejects the legacy
+    // compatibility profile). Fall back to plain RGBA create if attribs missing.
+    void* ctx = NULL;
+    if (fAttribs) {
+        const int attribs[] = {
+            RD_OSMESA_FORMAT,                RD_OSMESA_RGBA,
+            RD_OSMESA_DEPTH_BITS,            24,
+            RD_OSMESA_STENCIL_BITS,          8,
+            RD_OSMESA_PROFILE,               RD_OSMESA_CORE_PROFILE,
+            RD_OSMESA_CONTEXT_MAJOR_VERSION, 3,
+            RD_OSMESA_CONTEXT_MINOR_VERSION, 3,
+            0
+        };
+        ctx = fAttribs(attribs, NULL);
+        if (!ctx) LOGW("OSMesa init: CORE 3.3 attribs context failed — trying legacy create");
+    }
+    if (!ctx && fCreate) ctx = fCreate(RD_OSMESA_RGBA, NULL);
+    if (!ctx) { LOGE("OSMesa init: context creation failed"); dlclose(lib); return -1; }
+
+    g_osmesa_handle  = lib;
+    g_osmesa_context = ctx;   // publish LAST: box64 keys the softpipe path on this
+    LOGI("OSMesa init: softpipe context ready (ctx=%p handle=%p)", ctx, lib);
+    return 0;
+}
+
+// Bind the OSMesa context to the CALLING thread and (re)size the CPU buffer to the
+// current surface. Called by box64 on SDL_GL_CreateContext / MakeCurrent. The
+// buffer is sized to g_rimdroid_surface (= the game's drawable, since PrefsXml
+// pins screenWidth/Height = surface dims for softpipe → glViewport matches);
+// SurfaceFlinger upscales the posted buffer to the physical display. Returns 1 ok.
+int rimdroid_osmesa_make_current(void) {
+    if (!g_osmesa_context || !g_osmesa_make_current_fn) return 0;
+    int w = g_rimdroid_surface.width;
+    int h = g_rimdroid_surface.height;
+    if (w <= 0 || h <= 0) { LOGE("OSMesa make_current: bad surface %dx%d", w, h); return 0; }
+    if (!g_osmesa_buffer || w != g_osmesa_w || h != g_osmesa_h) {
+        void* nb = realloc(g_osmesa_buffer, (size_t)w * (size_t)h * 4);
+        if (!nb) { LOGE("OSMesa make_current: OOM %dx%d", w, h); return 0; }
+        g_osmesa_buffer = nb; g_osmesa_w = w; g_osmesa_h = h;
+    }
+    if (!g_osmesa_make_current_fn(g_osmesa_context, g_osmesa_buffer,
+                                  RD_GL_UNSIGNED_BYTE, w, h)) {
+        LOGE("OSMesa make_current: OSMesaMakeCurrent failed (%dx%d)", w, h);
+        return 0;
+    }
+    // Top-down rows so buffer origin matches ANativeWindow's top-left.
+    if (g_osmesa_pixel_store_fn) g_osmesa_pixel_store_fn(RD_OSMESA_Y_UP, 0);
+    return 1;
+}
+
+// Present: finish CPU rendering, then blit the OSMesa buffer to the surface.
+// This IS the only present path for softpipe (OSMesa has no winsys). Mirrors the
+// proven smoke-test blit. Called by box64 on SDL_GL_SwapWindow.
+void rimdroid_osmesa_swap(void) {
+    if (!g_osmesa_context || !g_osmesa_buffer) return;
+    if (g_osmesa_glFinish_fn) g_osmesa_glFinish_fn();
+    ANativeWindow* win = g_rimdroid_surface.native_window;
+    int w = g_osmesa_w, h = g_osmesa_h;
+    if (!win || w <= 0 || h <= 0) return;
+    ANativeWindow_acquire(win);
+    if (ANativeWindow_setBuffersGeometry(win, w, h, WINDOW_FORMAT_RGBA_8888) == 0) {
+        ANativeWindow_Buffer wb;
+        if (ANativeWindow_lock(win, &wb, NULL) == 0) {
+            const unsigned char* src = (const unsigned char*)g_osmesa_buffer;
+            unsigned char* dst = (unsigned char*)wb.bits;
+            int cw = wb.width  < w ? wb.width  : w;
+            int ch = wb.height < h ? wb.height : h;
+            // Copy each row AND force alpha=0xFF: Unity leaves a non-opaque alpha in
+            // the default framebuffer, and SurfaceFlinger blends the SurfaceView by
+            // that per-pixel alpha over black → the whole frame looks dim/washed out.
+            // Force opaque (RGBA byte order → A is the high byte of the LE u32, so OR
+            // 0xFF000000) so the composited image shows at full brightness. One pass.
+            for (int y = 0; y < ch; y++) {
+                unsigned int* drow = (unsigned int*)(dst + (size_t)y * (size_t)wb.stride * 4);
+                const unsigned int* srow = (const unsigned int*)(src + (size_t)y * (size_t)w * 4);
+                for (int x = 0; x < cw; x++) drow[x] = srow[x] | 0xFF000000u;
+            }
+            ANativeWindow_unlockAndPost(win);
+        }
+    }
+    ANativeWindow_release(win);
 }
 
 // Release the ZFA/Zink GL context from the CALLING thread (Plan A: serialize the
@@ -156,6 +504,7 @@ void rimdroid_zfa_swap(void) {
 // success, 0 if libzfa doesn't export zfaReleaseCurrent yet (then it's a no-op and
 // behaviour is unchanged).  Called from wrappedsdl2.c on SDL_GL_MakeCurrent(NULL).
 int rimdroid_zfa_release_current(void) {
+    g_zfa_context_bound = 0;   // context released → next make_current must rebind (not skip)
     if (p_zfaReleaseCurrent) return p_zfaReleaseCurrent();
     return 0;
 }
@@ -726,6 +1075,13 @@ void rimdroid_start_game(const char* game_dir_path,
     if (g_rimdroid_log_file) {
         setvbuf(g_rimdroid_log_file, NULL, _IOLBF, 0);
         fprintf(g_rimdroid_log_file, "=== RimDroid log started ===\n");
+        // Self-describing header: the launcher settings this run was started with (renderer,
+        // Vulkan driver, debug, render scale, box64 knobs). Composed in Java (GameLauncher), passed
+        // verbatim via RIMDROID_LAUNCH_CONFIG, so a pasted rimdroid.log says how it was launched.
+        const char* launch_cfg = getenv("RIMDROID_LAUNCH_CONFIG");
+        if (launch_cfg && launch_cfg[0]) {
+            fprintf(g_rimdroid_log_file, "%s\n", launch_cfg);
+        }
         fflush(g_rimdroid_log_file);
     }
 
@@ -814,6 +1170,27 @@ void rimdroid_start_game(const char* game_dir_path,
             }
         } else {
             LOGE("%s: timed out waiting for native_window — GL will fail", rname);
+        }
+    }
+
+    // RD_SOFTPIPE: CPU software renderer (OSMesa + softpipe). No GPU/Vulkan/EGL →
+    // no binder, so the fork caveats above do not apply; but we still need the
+    // surface ready before creating the context (the buffer is sized from it).
+    // The game is relocatable → runs in-process (below), so the context created
+    // here is valid for the whole run.
+    if (g_rimdroid_renderer == RD_SOFTPIPE) {
+        LOGI("SOFTPIPE: waiting for native_window (up to 5 s)...");
+        for (int i = 0; i < 500 && !g_rimdroid_surface.native_window; i++) {
+            struct timespec ts = {0, 10 * 1000 * 1000}; // 10 ms
+            nanosleep(&ts, NULL);
+        }
+        if (g_rimdroid_surface.native_window) {
+            LOGI("SOFTPIPE: native_window ready: %p — initialising OSMesa softpipe",
+                 g_rimdroid_surface.native_window);
+            if (rimdroid_init_osmesa() != 0)
+                LOGE("SOFTPIPE: OSMesa init failed — GL will fall through to dummy SDL");
+        } else {
+            LOGE("SOFTPIPE: timed out waiting for native_window — GL will fail");
         }
     }
 
@@ -1183,6 +1560,8 @@ int rimdroid_init() {
         g_rimdroid_renderer = RD_ZINK_ZFA;
     } else if (strcmp(renderer_name, "ZINK_OSMESA") == 0) {
         g_rimdroid_renderer = RD_ZINK_OSMESA;
+    } else if (strcmp(renderer_name, "SOFTPIPE") == 0) {
+        g_rimdroid_renderer = RD_SOFTPIPE;
     } else {
         LOGE("Unrecognized renderer: %s", renderer_name);
         g_rimdroid_renderer = RD_GL4ES;

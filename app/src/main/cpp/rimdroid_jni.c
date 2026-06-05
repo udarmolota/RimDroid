@@ -136,6 +136,14 @@ Java_com_rimdroid_GameLauncher_destroySurface(JNIEnv* env, jobject clazz) {
     rimdroid_surface_deinit();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_rimdroid_GameLauncher_nativeOsmesaSmokeTest(JNIEnv* env, jclass clazz, jstring jpath) {
+    const char* path = jpath ? (*env)->GetStringUTFChars(env, jpath, NULL) : NULL;
+    int rc = rimdroid_osmesa_smoketest(path);
+    if (path) (*env)->ReleaseStringUTFChars(env, jpath, path);
+    return rc;
+}
+
 // --- Phase A input injection (touch → SDL mouse); rd_input_* declared in rimdroid.h ---
 // action: 0 = move, 1 = down, 2 = up. x,y are game-window pixels (already scaled).
 JNIEXPORT void JNICALL

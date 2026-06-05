@@ -1,47 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/action_settings"
-        android:icon="@android:drawable/ic_menu_preferences"
-        android:title="@string/nav_settings" />
-    <item
-        android:id="@+id/action_install_instance"
-        android:icon="@android:drawable/ic_menu_add"
-        android:title="@string/nav_new_instance" />
-    <item
-        android:id="@+id/action_import_mods"
-        android:icon="@android:drawable/ic_menu_upload"
-        android:title="@string/nav_import_mods" />
-    <item
-        android:id="@+id/action_export_saves"
-        android:icon="@android:drawable/ic_menu_save"
-        android:title="@string/nav_export_saves" />
-    <item
-        android:id="@+id/action_import_saves"
-        android:icon="@android:drawable/ic_menu_revert"
-        android:title="@string/nav_import_saves" />
-    <item
-        android:id="@+id/action_export_layout"
-        android:icon="@android:drawable/ic_menu_set_as"
-        android:title="@string/nav_export_layout" />
-    <item
-        android:id="@+id/action_import_layout"
-        android:icon="@android:drawable/ic_menu_edit"
-        android:title="@string/nav_import_layout" />
-    <item
-        android:id="@+id/action_export_logs"
-        android:icon="@android:drawable/ic_menu_share"
-        android:title="@string/nav_export_logs" />
-    <item
-        android:id="@+id/action_manage_storage"
-        android:icon="@android:drawable/ic_menu_manage"
-        android:title="@string/nav_manage_storage" />
-    <item
-        android:id="@+id/action_updates"
-        android:icon="@android:drawable/ic_menu_info_details"
-        android:title="@string/nav_updates" />
-    <item
-        android:id="@+id/action_reddit"
-        android:icon="@android:drawable/ic_menu_send"
-        android:title="@string/nav_reddit" />
+
+    <!-- Get content -->
+    <group android:id="@+id/group_content" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_download_game"
+            android:icon="@drawable/mt_icon_save"
+            android:title="@string/nav_download_game" />
+        <item
+            android:id="@+id/action_install_instance"
+            android:icon="@drawable/mt_icon_add"
+            android:title="@string/nav_new_instance" />
+        <item
+            android:id="@+id/action_install_content"
+            android:icon="@drawable/mt_icon_mods"
+            android:title="@string/nav_install_content" />
+        <item
+            android:id="@+id/action_custom_driver"
+            android:icon="@drawable/mt_icon_settings"
+            android:title="@string/nav_custom_driver" />
+    </group>
+
+    <!-- Settings -->
+    <group android:id="@+id/group_settings" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_settings"
+            android:icon="@drawable/mt_icon_settings"
+            android:title="@string/nav_settings" />
+    </group>
+
+    <!-- Backup &amp; files -->
+    <group android:id="@+id/group_files" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_export_saves"
+            android:icon="@drawable/mt_icon_save"
+            android:title="@string/nav_export_saves" />
+        <item
+            android:id="@+id/action_import_saves"
+            android:icon="@drawable/mt_icon_folder_open"
+            android:title="@string/nav_import_saves" />
+        <item
+            android:id="@+id/action_export_layout"
+            android:icon="@drawable/mt_icon_folder"
+            android:title="@string/nav_export_layout" />
+        <item
+            android:id="@+id/action_import_layout"
+            android:icon="@drawable/mt_icon_folder_open"
+            android:title="@string/nav_import_layout" />
+        <item
+            android:id="@+id/action_export_logs"
+            android:icon="@drawable/mt_icon_logfile"
+            android:title="@string/nav_export_logs" />
+        <item
+            android:id="@+id/action_manage_storage"
+            android:icon="@drawable/mt_icon_folder"
+            android:title="@string/nav_manage_storage" />
+    </group>
+
+    <!-- About -->
+    <group android:id="@+id/group_about" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_updates"
+            android:icon="@drawable/ic_github"
+            android:title="@string/nav_updates" />
+        <item
+            android:id="@+id/action_reddit"
+            android:icon="@drawable/ic_reddit"
+            android:title="@string/nav_reddit" />
+    </group>
+
 </menu>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default filled button: comfortable padding, readable non-tiny text. -->
+    <style name="AppTheme.Button" parent="Widget.Material3.Button">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <!-- Drawer: brand-coloured dividers between menu groups. -->
+    <style name="AppTheme.NavigationView" parent="Widget.Material3.NavigationView">
+        <item name="dividerColor">@color/rd_primary</item>
+    </style>
+
+    <!-- Borderless, tinted 48dp icon button (e.g. the instance-card gear). -->
+    <style name="AppTheme.ImageButton">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:tint">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Section header (e.g. on the Settings / Download screens). -->
+    <style name="AppTheme.SectionTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+</resources>

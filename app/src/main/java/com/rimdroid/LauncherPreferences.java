@@ -16,7 +16,7 @@ public class LauncherPreferences {
         GL4ES("libGL.so.1"),
         ZINK_ZFA("libGL.so.1"),       // Mesa Zink via ZFA window (GPU, Vulkan)
         ZINK_OSMESA("libGL.so.1"),    // Mesa Zink via OSMesa (unused fallback)
-        SOFTPIPE("libGL.so.1");       // Mesa softpipe (CPU) via the ZFA window — works on any GPU
+        SOFTPIPE("libGL.so.1");       // Mesa softpipe (CPU) via OSMesa + blit — works on any GPU
 
         public final String libName;
         Renderer(String libName) { this.libName = libName; }
@@ -56,7 +56,16 @@ public class LauncherPreferences {
         new VulkanDriverOption("libvulkan_freedreno_8xx.so", "Freedreno 8xx (newer)"),
         new VulkanDriverOption("libvulkan_freedreno_840.so", "Turnip Adreno 830/840"),
         new VulkanDriverOption("libvulkan_freedreno.so",     "Freedreno 7xx/8xx"),
-        new VulkanDriverOption("libvulkan.ad07XX.so",        "Turnip Adreno 7xx")
+        // ad07XX has env vars baked in for an anti-flicker fix; _regular is the plain build.
+        new VulkanDriverOption("libvulkan.ad07XX.so",         "Turnip Adreno 7xx (anti-flicker)"),
+        new VulkanDriverOption("libvulkan.ad07XX_regular.so", "Turnip Adreno 7xx (regular)"),
+        // Older Turnip revision (Mesa ~23/24, 2024-03) for legacy Adreno 6xx (e.g. Snapdragon 685
+        // = Adreno 610). The newer v25 freedreno builds black-screen on these; this is the build
+        // that worked on old Adreno in Zomdroid.
+        new VulkanDriverOption("vulkan.ad06XX.so",           "Turnip Adreno 6xx (legacy)"),
+        // User-supplied driver imported via App settings → "Import custom Vulkan driver".
+        // The .so is stored in the deps dir as custom_driver.so; pick this to use it.
+        new VulkanDriverOption(C.deps.CUSTOM_DRIVER_FILENAME, "Custom driver (imported)")
     );
 
     // Default = the phone's own Vulkan driver: works on any GPU (Adreno=Qualcomm driver,
@@ -196,6 +205,18 @@ public class LauncherPreferences {
 
     public void clearControlsJson() {
         prefs.edit().remove("input_controls").apply();
+    }
+
+    // --- Theme mode (System / Light / Dark) ---
+    // Stores an AppCompatDelegate.MODE_NIGHT_* constant; applied in RimDroidApplication.onCreate.
+
+    public int getThemeMode() {
+        return prefs.getInt("theme_mode",
+                androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+    }
+
+    public void setThemeMode(int mode) {
+        prefs.edit().putInt("theme_mode", mode).apply();
     }
 
     // --- Last instance ---

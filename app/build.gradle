@@ -13,8 +13,11 @@ android {
         applicationId "com.rimdroid"
         minSdk = 30
         targetSdk = 35
-        versionCode 14
-        versionName "0.1.4"
+        versionCode 15
+        versionName "0.1.5"
+        // JavaSteam + protobuf + kotlin push us past the 64K method limit. minSdk 30 has
+        // native multidex, but the build still needs this flag to split the dex.
+        multiDexEnabled true
 
         externalNativeBuild {
             cmake {
@@ -32,6 +35,7 @@ android {
 
     buildFeatures {
         viewBinding true
+        buildConfig true   // expose BuildConfig.VERSION_NAME/CODE (used in the launch-config log)
     }
 
     externalNativeBuild {
@@ -71,6 +75,25 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.core:core:1.12.0'
     implementation 'org.apache.commons:commons-compress:1.26.1'
-    implementation 'org.tukaani:xz:1.9'
+    implementation 'org.tukaani:xz:1.11'   // VZipUtil (LZMAInputStream); 1.11 = version JavaSteam 1.8.0 was built against
     implementation 'com.google.code.gson:gson:2.10.1'
+
+    // --- In-app Steam downloader SPIKE (Milestone 0) — JavaSteam (MIT, SteamKit2 port) ---
+    // Proves on-device QR/Steam-Mobile login + (later) depot download, no Termux/PC.
+    // bcprov + protobuf-java are JavaSteam's "optional" deps the consumer must add at the
+    // versions JavaSteam 1.8.0 was built against (gradle/libs.versions.toml). xz (1.9) is
+    // already above; zstd-jni is only needed for the depot-download step (add later).
+    implementation 'in.dragonbra:javasteam:1.8.0'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.83'      // crypto provider JavaSteam needs
+    implementation 'com.google.protobuf:protobuf-java:4.31.1'  // must match JavaSteam's protobuf
+
+    // --- Milestone 1: depot download (DepotDownloader high-level API) ---
+    // Separate Maven artifact in 1.8.0. Transitively pulls ktor-client-cio (pure-Kotlin/nio HTTP
+    // engine used for CDN chunk downloads — Android-compatible) + kotlinx-serialization + okio.
+    // The downloader is Android-aware: it REQUIRES an absolute installDirectory (else throws) and
+    // writes its .DepotDownloader/staging under it, never to the process CWD.
+    implementation 'in.dragonbra:javasteam-depotdownloader:1.8.0'
+    // VZstdUtil decompresses zstd-compressed depot chunks via com.github.luben.zstd (native .so).
+    // The @aar variant bundles jni/arm64-v8a/libzstd-jni-*.so — the desktop .jar has no Android natives.
+    implementation 'com.github.luben:zstd-jni:1.5.7-6@aar'
 }

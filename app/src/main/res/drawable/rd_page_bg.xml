@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Window background for all screens: the theme surface colour + a faint piece of the RimDroid
+     logo anchored to the bottom-right and pushed partly off-screen (negative insets) so only a
+     corner of the star/robot shows behind the content. Colour resolves per light/dark mode. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/md_theme_background" />
+    <item>
+        <bitmap
+            android:src="@drawable/rd_watermark"
+            android:gravity="bottom|right" />
+    </item>
+</layer-list>

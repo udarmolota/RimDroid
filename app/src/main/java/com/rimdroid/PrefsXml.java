@@ -69,6 +69,32 @@ public final class PrefsXml {
         }
     }
 
+    /**
+     * Pin ONLY {@code fullscreen=True} — leave the user's chosen resolution untouched. Run on EVERY
+     * launch: changing the window resolution inside RimWorld makes it save {@code fullscreen=False},
+     * which drops the NEXT launch into a windowed sub-rectangle / black screen. Unlike
+     * {@link #forceFullscreen}, this does NOT force a resolution, so it's safe on weak GPUs (forcing
+     * the resolution there raised the internal res and broke boot — why the full pin is GPU-gated).
+     */
+    public static void forceFullscreenOnly(File configDir) {
+        if (configDir == null) return;
+        File f = new File(configDir, "Prefs.xml");
+        try {
+            String xml;
+            if (f.isFile()) {
+                xml = new String(readAll(f), StandardCharsets.UTF_8);
+                xml = setTag(xml, "fullscreen", "True");
+            } else {
+                xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                    + "<prefs>\n  <fullscreen>True</fullscreen>\n</prefs>\n";
+            }
+            writeAll(f, xml.getBytes(StandardCharsets.UTF_8));
+            Log.i(TAG, "Prefs pinned: fullscreen=True (" + f + ")");
+        } catch (Exception e) {
+            Log.w(TAG, "forceFullscreenOnly failed for " + f + ": " + e.getMessage());
+        }
+    }
+
     /** Replace {@code <key>...</key>} with the new value, or insert before {@code </prefs>}. */
     private static String setTag(String xml, String key, String value) {
         Pattern p = Pattern.compile("<" + key + ">.*?</" + key + ">", Pattern.DOTALL);

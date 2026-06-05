@@ -1,0 +1,144 @@
+package com.rimdroid;
+
+import android.content.SharedPreferences;
+
+import com.rimdroid.LauncherPreferences.Renderer;
+import com.rimdroid.LauncherPreferences.VulkanDriverOption;
+
+import java.util.List;
+
+/**
+ * Per-instance launch settings: renderer, Vulkan driver, debug, interpreter mode. Each instance
+ * keeps its own (e.g. one instance on the System driver, another on Turnip; debug only on a test
+ * instance). Stored in the shared prefs under an {@code inst:<name>:} prefix.
+ *
+ * Defaults fall back to the corresponding GLOBAL {@link LauncherPreferences} value, so existing
+ * single-instance users keep their current setup on first run after the per-instance migration, and
+ * brand-new instances start from the same sane defaults (ZINK_ZFA + System driver + debug off).
+ *
+ * Render scale and the on-screen controls layout remain GLOBAL (read by GameActivity / the controls
+ * editor, which aren't instance-scoped) — by design.
+ */
+public class InstanceSettings {
+
+    private final SharedPreferences p;
+    private final String pfx;
+    private final LauncherPreferences global;
+
+    public InstanceSettings(String instanceName) {
+        global = LauncherPreferences.requireSingleton();
+        p = global.getSharedPrefs();
+        pfx = "inst:" + instanceName + ":";
+    }
+
+    // --- Renderer ---
+    public Renderer getRenderer() {
+        String def = global.getRenderer().name();
+        try { return Renderer.valueOf(p.getString(pfx + "renderer", def)); }
+        catch (Exception e) { return Renderer.ZINK_ZFA; }
+    }
+
+    public void setRenderer(Renderer r) {
+        p.edit().putString(pfx + "renderer", r.name()).apply();
+    }
+
+    // --- Vulkan driver (.so file name; "" = System / phone driver) ---
+    public String getVulkanDriverSo() {
+        return p.getString(pfx + "driver_so", global.getVulkanDriverSo());
+    }
+
+    public void setVulkanDriverSo(String soName) {
+        p.edit().putString(pfx + "driver_so", soName).apply();
+    }
+
+    /** True if this instance has its OWN driver choice stored (vs. inheriting the global default). */
+    public boolean hasExplicitDriver() {
+        return p.contains(pfx + "driver_so");
+    }
+
+    /** Index of the selected driver in {@link LauncherPreferences#VULKAN_DRIVERS} (0 if unknown). */
+    public int getVulkanDriverIndex() {
+        String so = getVulkanDriverSo();
+        List<VulkanDriverOption> drivers = LauncherPreferences.VULKAN_DRIVERS;
+        for (int i = 0; i < drivers.size(); i++) {
+            if (drivers.get(i).soName.equals(so)) return i;
+        }
+        return 0;
+    }
+
+    // --- Debug ---
+    // Debug is a throwaway diagnostic (extra box64 logging), NOT something to inherit: new
+    // instances always start with it OFF, regardless of the (now-vestigial) global debug flag.
+    // Inheriting global.isDebug() used to turn debug ON for every new instance when the global
+    // flag was left enabled from the old global-settings design — which slowed launches.
+    public boolean isDebug() {
+        return p.getBoolean(pfx + "debug", false);
+    }
+
+    public void setDebug(boolean v) {
+        p.edit().putBoolean(pfx + "debug", v).apply();
+    }
+
+    // --- Drag-to-pan (move the camera by dragging the map with a finger). Default ON. ---
+    public boolean isDragPan() {
+        return p.getBoolean(pfx + "drag_pan", true);
+    }
+
+    public void setDragPan(boolean v) {
+        p.edit().putBoolean(pfx + "drag_pan", v).apply();
+    }
+
+    // --- Interpreter mode (BOX64_DYNAREC=0 diagnostic; pref key kept for back-compat as "interpreter") ---
+    public boolean isInterpreter() {
+        return p.getBoolean(pfx + "interpreter", global.isStrictBarriers());
+    }
+
+    public void setInterpreter(boolean v) {
+        p.edit().putBoolean(pfx + "interpreter", v).apply();
+    }
+
+    // --- Render scale (per-instance; the device floor stays a global static) ---
+    public int getRenderScalePercent() {
+        int v = p.getInt(pfx + "render_scale_pct", global.getRenderScalePercent());
+        return Math.max(LauncherPreferences.RENDER_SCALE_ABS_MIN, Math.min(100, v));
+    }
+
+    public void setRenderScalePercent(int pct) {
+        p.edit().putInt(pfx + "render_scale_pct",
+                Math.max(LauncherPreferences.RENDER_SCALE_ABS_MIN, Math.min(100, pct))).apply();
+    }
+
+    /** Stored scale raised to the per-device floor (>=1280x720), as a 0..1 fraction. */
+    public float getEffectiveRenderScale(int surfaceW, int surfaceH) {
+        int eff = Math.max(getRenderScalePercent(), LauncherPreferences.minRenderScalePercent(surfaceW, surfaceH));
+        return Math.min(100, eff) / 100f;
+    }
+
+    // --- On-screen controls layout (per-instance JSON) ---
+    public String getControlsJson() {
+        return p.getString(pfx + "controls", global.getControlsJson());
+    }
+
+    public void setControlsJson(String json) {
+        p.edit().putString(pfx + "controls", json).apply();
+    }
+
+    public void clearControlsJson() {
+        p.edit().remove(pfx + "controls").apply();
+    }
+
+    /** Remove all stored keys for an instance (call when the instance is deleted). */
+    public static void delete(String instanceName) {
+        SharedPreferences p = LauncherPreferences.requireSingleton().getSharedPrefs();
+        String pfx = "inst:" + instanceName + ":";
+        p.edit()
+                .remove(pfx + "renderer")
+                .remove(pfx + "driver_so")
+                .remove(pfx + "debug")
+                .remove(pfx + "interpreter")
+                .remove(pfx + "render_scale_pct")
+                .remove(pfx + "controls")
+                .apply();
+    }
+}
+

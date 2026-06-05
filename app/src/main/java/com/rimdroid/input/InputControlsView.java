@@ -35,8 +35,11 @@ public class InputControlsView extends View {
     private final float density;
     private float renderScale = 0.72f;
 
-    // shared cursor (screen px); injected as cur * renderScale
+    // shared cursor (screen px); injected as (cur - gameOffset) * renderScale
     private float curX = -1, curY = -1;
+    // Letterbox game rect (screen px): the game occupies a centered sub-rect, so cursor/tap →
+    // game coords subtract this offset + scale. gameW<=0 = full-screen fallback (e.g. the editor).
+    private int gameLeft = 0, gameTop = 0, gameW = 0, gameH = 0;
 
     // edit mode
     private boolean editMode = false;
@@ -61,8 +64,16 @@ public class InputControlsView extends View {
         void onElementSelected(ControlElement el);
     }
 
+    /** null instanceName → use the global controls layout (smoke test / no instance). */
+    private String instanceName;
+
     public InputControlsView(Context c, float renderScale) {
+        this(c, renderScale, null);
+    }
+
+    public InputControlsView(Context c, float renderScale, String instanceName) {
         super(c);
+        this.instanceName = instanceName;
         this.renderScale = renderScale;
         this.density = getResources().getDisplayMetrics().density;
         curFill.setStyle(Paint.Style.FILL); curFill.setColor(0xFFFFFFFF); curFill.setAlpha(150);
@@ -79,12 +90,34 @@ public class InputControlsView extends View {
 
     // ====================== injection (called by elements) =====================
 
-    private int gx() { return (int) (curX * renderScale); }
-    private int gy() { return (int) (curY * renderScale); }
+    /** Called by GameActivity with the letterbox game rect (screen px). */
+    public void setGameRect(int left, int top, int w, int h) {
+        gameLeft = left; gameTop = top; gameW = w; gameH = h;
+        if (curX < 0 && w > 0) { curX = left + w / 2f; curY = top + h / 2f; }   // start cursor centred in the game
+    }
+
+    private int gx() {
+        if (gameW <= 0) return (int) (curX * renderScale);      // full-screen fallback
+        int max = Math.max(1, Math.round(gameW * renderScale)) - 1;
+        int v = Math.round((curX - gameLeft) * renderScale);
+        return v < 0 ? 0 : (v > max ? max : v);
+    }
+    private int gy() {
+        if (gameH <= 0) return (int) (curY * renderScale);
+        int max = Math.max(1, Math.round(gameH * renderScale)) - 1;
+        int v = Math.round((curY - gameTop) * renderScale);
+        return v < 0 ? 0 : (v > max ? max : v);
+    }
 
     public void moveCursorBy(float dx, float dy) {
-        curX = Math.max(0, Math.min(getWidth()  - 1, curX + dx));
-        curY = Math.max(0, Math.min(getHeight() - 1, curY + dy));
+        // Keep the cursor inside the game rect (so it aligns 1:1 with the on-screen game cursor
+        // and never strays into the black letterbox bars). Fall back to the full view if unset.
+        float minX = gameW > 0 ? gameLeft : 0;
+        float maxX = gameW > 0 ? gameLeft + gameW - 1 : getWidth()  - 1;
+        float minY = gameH > 0 ? gameTop  : 0;
+        float maxY = gameH > 0 ? gameTop  + gameH - 1 : getHeight() - 1;
+        curX = Math.max(minX, Math.min(maxX, curX + dx));
+        curY = Math.max(minY, Math.min(maxY, curY + dy));
         try { GameActivity.nativeTouch(0, gx(), gy()); } catch (UnsatisfiedLinkError ignored) {}
     }
 
@@ -283,8 +316,12 @@ public class InputControlsView extends View {
 
     public void loadFromPrefsOrDefault() {
         String json = null;
-        LauncherPreferences lp = LauncherPreferences.getSingleton();
-        if (lp != null) json = lp.getControlsJson();
+        if (instanceName != null) {
+            json = new com.rimdroid.InstanceSettings(instanceName).getControlsJson();
+        } else {
+            LauncherPreferences lp = LauncherPreferences.getSingleton();
+            if (lp != null) json = lp.getControlsJson();
+        }
         List<ControlElementDescription> list = (json != null) ? parse(json) : null;
         if (list == null || list.isEmpty()) list = readDefaultAsset();
         applyDescriptions(list);
@@ -312,7 +349,11 @@ public class InputControlsView extends View {
     }
 
     public void saveToPrefs() {
-        LauncherPreferences lp = LauncherPreferences.getSingleton();
-        if (lp != null) lp.setControlsJson(toJson());
+        if (instanceName != null) {
+            new com.rimdroid.InstanceSettings(instanceName).setControlsJson(toJson());
+        } else {
+            LauncherPreferences lp = LauncherPreferences.getSingleton();
+            if (lp != null) lp.setControlsJson(toJson());
+        }
     }
 }

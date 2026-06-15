@@ -12,6 +12,9 @@
     <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU. Если игра вылетает при запуске — попробуйте другой.</string>
     <string name="driver_recommend">Рекомендуемый драйвер (определить GPU)</string>
     <string name="drag_pan_label">Двигать карту пальцем (панорама)</string>
+    <string name="haptic_label">Вибрация при нажатии кнопок</string>
+    <string name="audio_label">Звук игры (эксперимент)</string>
+    <string name="audio_needs_mod">Для звука нужен отдельный мод \"RimDroid Sound\" + Harmony (установить и включить), иначе будет просто шум. (Временно для 0.1.6–0.1.7.)</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
     <string name="driver_auto_set">Обнаружен GPU: %1$s.\n\nДля этого инстанса выставлен рекомендуемый Vulkan-драйвер: %2$s.\n\nЕсли получите чёрный экран или артефакты — смените его в настройках инстанса (шестерёнка на карточке).</string>
@@ -76,20 +79,25 @@
     <string name="download_dlc_note">Выберите DLC, которыми владеет ваш аккаунт. Каждое скачивается портативным .zip в /Download/RimDroid — затем импортируйте его в любой инстанс из меню. (Чужие DLC пропускаются.)</string>
     <string name="download_dlc_start">Скачать выбранные DLC</string>
     <string name="download_install_content">Установить мод / DLC в инстанс…</string>
-    <string name="download_mods_note">Скачивание модов Мастерской по ID (число в URL мастерской: …/sharedfiles/filedetails/?id=ЧИСЛО). Нужен тот же логин Steam, что и для игры (контент Мастерской нельзя качать анонимно). Несколько ID — через пробел. Каждый сохраняется в .zip в /Download/RimDroid — потом установите его в инстанс.</string>
+    <string name="download_mods_note">Скачивание модов Мастерской по ID (число в URL мастерской: …/sharedfiles/filedetails/?id=ЧИСЛО). Логин Steam не нужен. Несколько ID — через пробел. Каждый сохраняется в .zip в /Download/RimDroid.</string>
     <string name="download_mods_hint">ID Мастерской — через пробел</string>
     <string name="download_mods_hint_single">ID Мастерской</string>
     <string name="download_mods_start">Скачать моды</string>
-    <string name="download_mods_login_head">С логином Steam (напрямую)</string>
-    <string name="download_mods_browser_head">Без логина (через браузер)</string>
-    <string name="download_mods_browser_note">Логин Steam не нужен. Открывает сторонний загрузчик (ggntw.com) в браузере — скачайте .zip там, затем установите в инстанс. (Сторонний сервис; на ваше усмотрение.)</string>
+    <string name="download_mods_login_head">Прямое скачивание (без логина)</string>
+    <string name="download_mods_browser_head">Скачать через браузер (ggntw.com)</string>
+    <string name="download_mods_browser_note">Открывает сторонний загрузчик — скачайте .zip там, затем установите в инстанс. (Сторонний сервис; на ваше усмотрение.)</string>
     <string name="download_mods_browser_start">Получить ссылку (браузер)</string>
+    <string name="download_cancel">Отменить скачивание</string>
+    <string name="download_cancel_confirm">Отменить текущее скачивание?</string>
     <string name="gl4es_label">GL4ES (совместимый, старые GPU)</string>
     <string name="zink_zfa_label">Zink ZFA (Vulkan, рекомендуется)</string>
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, запасной)</string>
     <string name="softpipe_label">Программный (медленный, любой GPU — для Mali/PowerVR)</string>
     <string name="debug_mode">Режим отладки (подробный лог)</string>
     <string name="strict_barriers">Режим интерпретатора (тест — ОЧЕНЬ медленно, диагностика порчи сейвов)</string>
+    <string name="env_vars_title">Дополнительно: переменные запуска</string>
+    <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для диагностики / тестов производительности — оставьте пустым, если не уверены. Для каждого инстанса отдельно.</string>
+    <string name="env_vars_hint_example">напр. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
     <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
     <string name="steam_spike_label">Проба входа в Steam (QR)</string>
     <string name="steam_dl_label">Проба загрузки Steam (RimWorld)</string>

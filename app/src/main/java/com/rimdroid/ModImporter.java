@@ -128,7 +128,10 @@ public final class ModImporter {
         try (OutputStream os = new FileOutputStream(out)) {
             byte[] buf = new byte[65536];
             int n;
-            while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+            // Stop only on EOF (-1). read() may legally return 0 without meaning EOF; the old ">0"
+            // check truncated entries (a 132 KB Patches/Audio.xml landed as 0 bytes inside a large
+            // pack), silently breaking patch mods.
+            while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
         }
     }
 

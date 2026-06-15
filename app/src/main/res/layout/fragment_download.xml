@@ -18,8 +18,9 @@
             android:textColor="?attr/colorPrimary"
             android:layout_marginBottom="4dp" />
 
-        <!-- Login privacy note: relevant to ALL tabs (login is never stored). -->
+        <!-- Login privacy note: Game + DLC only (mods download anonymously → hidden on the Mods tab). -->
         <TextView
+            android:id="@+id/tv_login_note"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/download_login_note"
@@ -154,26 +155,41 @@
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:layout_marginBottom="8dp" />
 
-            <CheckBox
-                android:id="@+id/cb_dlc_royalty"
+            <!-- DLC in a 2-column grid to save vertical space. -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Royalty" />
-            <CheckBox
-                android:id="@+id/cb_dlc_ideology"
+                android:orientation="horizontal">
+                <CheckBox
+                    android:id="@+id/cb_dlc_royalty"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Royalty" />
+                <CheckBox
+                    android:id="@+id/cb_dlc_ideology"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Ideology" />
+            </LinearLayout>
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Ideology" />
-            <CheckBox
-                android:id="@+id/cb_dlc_biotech"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Biotech" />
-            <CheckBox
-                android:id="@+id/cb_dlc_anomaly"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Anomaly" />
+                android:orientation="horizontal">
+                <CheckBox
+                    android:id="@+id/cb_dlc_biotech"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Biotech" />
+                <CheckBox
+                    android:id="@+id/cb_dlc_anomaly"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Anomaly" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/btn_dlc_start"
@@ -222,6 +238,49 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/download_mods_start" />
+        </LinearLayout>
+
+        <!-- ============ shared progress + console log ============ -->
+        <ProgressBar
+            android:id="@+id/progress_dl"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:max="100"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <!-- Compact ~3-line scrolling console (scrolls internally; auto-scrolls to newest). -->
+        <TextView
+            android:id="@+id/tv_dl_status"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="8dp"
+            android:padding="8dp"
+            android:background="#14000000"
+            android:fontFamily="monospace"
+            android:textSize="11sp"
+            android:scrollbars="vertical"
+            android:textIsSelectable="true" />
+
+        <!-- Cancel a running download (visible only while downloading). -->
+        <Button
+            android:id="@+id/btn_dl_cancel"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:text="@string/download_cancel" />
+
+        <!-- ===== MODS — Part B: browser/ggntw fallback (placed BELOW the steam download + its log) ===== -->
+        <LinearLayout
+            android:id="@+id/section_mods_browser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
 
             <View
                 android:layout_width="match_parent"
@@ -230,7 +289,6 @@
                 android:layout_marginBottom="12dp"
                 android:background="?android:attr/listDivider" />
 
-            <!-- Part B: without login — via the ggntw.com third-party service, opened in the browser. -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -258,35 +316,10 @@
 
             <Button
                 android:id="@+id/btn_mods_browser"
-                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/download_mods_browser_start" />
         </LinearLayout>
-
-        <!-- ============ shared progress + console log ============ -->
-        <ProgressBar
-            android:id="@+id/progress_dl"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:max="100"
-            android:indeterminate="true"
-            android:visibility="gone" />
-
-        <!-- Compact ~3-line scrolling console (scrolls internally; auto-scrolls to newest). -->
-        <TextView
-            android:id="@+id/tv_dl_status"
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginTop="8dp"
-            android:padding="8dp"
-            android:background="#14000000"
-            android:fontFamily="monospace"
-            android:textSize="11sp"
-            android:scrollbars="vertical"
-            android:textIsSelectable="true" />
 
         <!-- Install a downloaded DLC/mod (from /Download/RimDroid) into an instance. -->
         <Button

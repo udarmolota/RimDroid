@@ -29,11 +29,14 @@ public final class GpuInfo {
     @Nullable public final String vendor;
     /** Parsed Adreno series number (6/7/8/…) or 0 if not an Adreno / unknown. */
     public final int adrenoSeries;
+    /** Full Adreno model number (e.g. 644, 735, 830) or 0 if not an Adreno / unknown. */
+    public final int adrenoModel;
 
-    private GpuInfo(@Nullable String renderer, @Nullable String vendor, int adrenoSeries) {
+    private GpuInfo(@Nullable String renderer, @Nullable String vendor, int adrenoSeries, int adrenoModel) {
         this.renderer = renderer;
         this.vendor = vendor;
         this.adrenoSeries = adrenoSeries;
+        this.adrenoModel = adrenoModel;
     }
 
     /** Query the GPU. Cheap (a 1x1 pbuffer context); call off the very first frame to be safe. */
@@ -77,17 +80,18 @@ public final class GpuInfo {
                 }
             } catch (Throwable ignored) {}
         }
-        return new GpuInfo(r, v, parseAdrenoSeries(r));
+        int model = parseAdrenoModel(r);
+        int series = model > 0 ? (model / (model >= 1000 ? 1000 : 100)) : 0;  // 644→6, 735→7, 830→8
+        return new GpuInfo(r, v, series, model);
     }
 
-    /** Extract the leading digit of an Adreno model number, e.g. "Adreno (TM) 830" → 8, "610" → 6. */
-    private static int parseAdrenoSeries(@Nullable String renderer) {
+    /** Extract the full Adreno model number, e.g. "Adreno (TM) 830" → 830, "Adreno (TM) 644" → 644. */
+    private static int parseAdrenoModel(@Nullable String renderer) {
         if (renderer == null) return 0;
         if (!renderer.toLowerCase().contains("adreno")) return 0;
         Matcher m = Pattern.compile("(\\d{3,4})").matcher(renderer);
         if (m.find()) {
-            String n = m.group(1);
-            return n.charAt(0) - '0';   // 830→8, 730→7, 610→6
+            try { return Integer.parseInt(m.group(1)); } catch (NumberFormatException e) { return 0; }
         }
         return 0;
     }
@@ -102,7 +106,12 @@ public final class GpuInfo {
         switch (adrenoSeries) {
             case 8: return "libvulkan_freedreno.v25.so";   // Adreno 8xx (830/840) — tested best
             case 7: return "libvulkan.ad07XX_regular.so";  // Adreno 7xx
-            case 6: return "vulkan.ad06XX.so";             // Adreno 6xx legacy (old Turnip rev)
+            case 6:
+                // a6xx is split: NEWER high a6xx (>=630: 630/640/642L/644/650/660/680/690) need a MODERN
+                // Turnip (Mesa 25) — the legacy ad06XX (old Mesa) HANGS Zink at context creation on them
+                // (field-confirmed: Adreno 644 / Snapdragon 7 Gen 1 / Huawei MatePad 11.5 2023). The legacy
+                // build is only for OLD budget a6xx (<=620: a610/a612/a619), which v25 in turn black-screens.
+                return (adrenoModel >= 630) ? "libvulkan_freedreno.v25.so" : "vulkan.ad06XX.so";
             default: return LauncherPreferences.SYSTEM_VULKAN_DRIVER_SO; // "" System
         }
     }

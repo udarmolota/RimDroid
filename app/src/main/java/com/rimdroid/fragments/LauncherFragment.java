@@ -49,7 +49,7 @@ public class LauncherFragment extends Fragment {
 
     private RecyclerView rvInstances;
     private TextView tvNoInstances;
-    private Button btnInstallInstance;
+    private volatile String pendingInstallName;   // ZIP instance being installed → GPU driver advisor
     private Button btnClearLog;
     private TextView tvLog;
     private ScrollView scrollLog;
@@ -76,7 +76,6 @@ public class LauncherFragment extends Fragment {
 
         rvInstances        = view.findViewById(R.id.rv_instances);
         tvNoInstances      = view.findViewById(R.id.tv_no_instances);
-        btnInstallInstance = view.findViewById(R.id.btn_install_instance);
         btnClearLog        = view.findViewById(R.id.btn_clear_log);
         tvLog              = view.findViewById(R.id.tv_log);
         scrollLog          = view.findViewById(R.id.scroll_log);
@@ -85,8 +84,8 @@ public class LauncherFragment extends Fragment {
         instanceAdapter = buildInstanceAdapter();
         rvInstances.setAdapter(instanceAdapter);
 
-        btnInstallInstance.setOnClickListener(v ->
-                zipPicker.launch(new String[]{"application/zip", "application/x-zip-compressed"}));
+        // ZIP install is now ONLY in the drawer's "Add Instance" (which lets you name the instance
+        // and refuses to overwrite). The launcher's name-less install button was a redundant subset.
         btnClearLog.setOnClickListener(v -> clearLog());
 
         // Hook up the log callback from GameLauncher
@@ -186,7 +185,7 @@ public class LauncherFragment extends Fragment {
     }
 
     private void confirmDeleteInstance(GameInstance gi) {
-        new android.app.AlertDialog.Builder(requireContext())
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                 .setTitle(getString(R.string.delete_instance))
                 .setMessage(getString(R.string.delete_instance_confirm, gi.getName()))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -281,6 +280,7 @@ public class LauncherFragment extends Fragment {
                     while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
                 }
                 String instanceName = guessInstanceName(uri);
+                pendingInstallName = instanceName;
                 mainHandler.post(() -> appendLog("Installing: " + instanceName + "..."));
                 InstallerService.startInstallInstance(requireContext(),
                         cacheZip.getAbsolutePath(), instanceName);
@@ -307,6 +307,26 @@ public class LauncherFragment extends Fragment {
         return "rimworld";
     }
 
+    /** After a ZIP instance install from the launcher button, detect the GPU and set the recommended
+     *  driver on the new instance, then show a one-time dialog (no navigation — already on launcher). */
+    private void adviseDriverForPendingInstall() {
+        final String inst = pendingInstallName;
+        pendingInstallName = null;
+        if (inst == null) return;
+        new Thread(() -> {
+            final com.rimdroid.GpuDriverAdvisor.Result r =
+                    com.rimdroid.GpuDriverAdvisor.applyRecommendedDriver(inst);
+            mainHandler.post(() -> {
+                if (!isAdded() || getView() == null || !r.applied) return;
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.driver_auto_set_title)
+                        .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+            });
+        }, "rd-gpu-advise").start();
+    }
+
     // ---- Installer broadcast ------------------------------------------------
 
     private final BroadcastReceiver installerReceiver = new BroadcastReceiver() {
@@ -319,6 +339,7 @@ public class LauncherFragment extends Fragment {
             } else if (InstallerService.BROADCAST_DONE.equals(action)) {
                 appendLog(msg);
                 refreshInstances();
+                adviseDriverForPendingInstall();
             } else if (InstallerService.BROADCAST_ERROR.equals(action)) {
                 appendLog("ERROR: " + msg);
             }

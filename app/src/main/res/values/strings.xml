@@ -13,6 +13,9 @@
     <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If the game crashes on launch, try another one.</string>
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
     <string name="drag_pan_label">Drag the map with a finger to pan</string>
+    <string name="haptic_label">Vibrate on button press</string>
+    <string name="audio_label">Game sound (experimental)</string>
+    <string name="audio_needs_mod">Sound needs the separate \"RimDroid Sound\" mod + Harmony installed and enabled — otherwise you\'ll just get noise. (Temporary for 0.1.6–0.1.7.)</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
     <string name="driver_auto_set">Detected GPU: %1$s.\n\nThe recommended Vulkan driver was set for this instance: %2$s.\n\nIf you get a black screen or artifacts, change it in the instance settings (the gear icon on the instance card).</string>
@@ -79,20 +82,25 @@
     <string name="download_dlc_note">Pick the DLC your account owns. Each downloads as a portable .zip into /Download/RimDroid — import it into any instance from the menu. (Unowned DLC are skipped.)</string>
     <string name="download_dlc_start">Download selected DLC</string>
     <string name="download_install_content">Install a mod / DLC into an instance…</string>
-    <string name="download_mods_note">Download Workshop mods by ID (the number in the workshop URL: …/sharedfiles/filedetails/?id=NUMBER). Needs the same Steam login as the game (Workshop content isn\'t downloadable anonymously). Several IDs can be space-separated. Each is saved as a .zip in /Download/RimDroid — then Install it into an instance.</string>
+    <string name="download_mods_note">Download Workshop mods by ID (the number in the workshop URL: …/sharedfiles/filedetails/?id=NUMBER). No Steam login needed. Several IDs can be space-separated. Each is saved as a .zip in /Download/RimDroid.</string>
     <string name="download_mods_hint">Workshop ID(s) — space-separated</string>
     <string name="download_mods_hint_single">Workshop ID</string>
     <string name="download_mods_start">Download mods</string>
-    <string name="download_mods_login_head">With Steam login (direct)</string>
-    <string name="download_mods_browser_head">Without login (via browser)</string>
-    <string name="download_mods_browser_note">No Steam login needed. Opens a third-party downloader (ggntw.com) in your browser — download the .zip there, then Install it into an instance. (Third-party service; use at your own discretion.)</string>
+    <string name="download_mods_login_head">Direct download (no login)</string>
+    <string name="download_mods_browser_head">Download via browser (ggntw.com)</string>
+    <string name="download_mods_browser_note">Opens a third-party downloader — download the .zip there, then Install it into an instance. (Third-party service; use at your own discretion.)</string>
     <string name="download_mods_browser_start">Get download link (browser)</string>
+    <string name="download_cancel">Cancel download</string>
+    <string name="download_cancel_confirm">Cancel the download in progress?</string>
     <string name="gl4es_label">GL4ES (compatible, older GPUs)</string>
     <string name="zink_zfa_label">Zink ZFA (Vulkan, recommended)</string>
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, fallback)</string>
     <string name="softpipe_label">Software (slow, any GPU — for Mali/PowerVR)</string>
     <string name="debug_mode">Debug mode (verbose log)</string>
     <string name="strict_barriers">Interpreter mode (test — VERY slow, diagnostic for save corruption)</string>
+    <string name="env_vars_title">Advanced: extra launch variables</string>
+    <string name="env_vars_hint">KEY=VALUE pairs (space-separated), applied on launch and overriding the defaults. For diagnostics / performance tests — leave empty unless you know what you\'re doing. Per-instance.</string>
+    <string name="env_vars_hint_example">e.g. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
     <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
     <string name="steam_dl_label">Steam download spike (RimWorld)</string>

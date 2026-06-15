@@ -67,6 +67,11 @@ public class InputControlsView extends View {
     /** null instanceName → use the global controls layout (smoke test / no instance). */
     private String instanceName;
 
+    /** When true, all controls except the TOGGLE_CONTROLS button(s) are hidden + untouchable. */
+    private boolean controlsHidden = false;
+    /** Light haptic tick on button press, when the user enabled it (per-instance, default off). */
+    private boolean hapticEnabled = false;
+
     public InputControlsView(Context c, float renderScale) {
         this(c, renderScale, null);
     }
@@ -80,6 +85,58 @@ public class InputControlsView extends View {
         curStroke.setStyle(Paint.Style.STROKE); curStroke.setStrokeWidth(1.5f * density); curStroke.setColor(0xC0000000);
         setFocusable(false);
         loadFromPrefsOrDefault();
+        // Haptic preference: per-instance with a global fallback (matches drag-pan etc.).
+        if (instanceName != null) {
+            hapticEnabled = new com.rimdroid.InstanceSettings(instanceName).isHapticFeedback();
+        } else {
+            LauncherPreferences lp = LauncherPreferences.getSingleton();
+            hapticEnabled = lp != null && lp.isHapticFeedback();
+        }
+    }
+
+    /** Light haptic tick on a control press, only when the user enabled it (default off).
+     *  Uses the Vibrator service directly rather than View.performHapticFeedback, because the latter
+     *  is silently ignored when the system-wide "touch vibration" setting is OFF (common default on
+     *  tablets, e.g. Legion Y700) and modern Android offers no flag to override that global setting.
+     *  A direct one-shot vibration fires regardless (needs the VIBRATE permission). */
+    public void maybeHaptic() {
+        if (!hapticEnabled) return;
+        try {
+            android.os.Vibrator vib;
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                android.os.VibratorManager vm =
+                        (android.os.VibratorManager) getContext().getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                vib = (vm != null) ? vm.getDefaultVibrator() : null;
+            } else {
+                vib = (android.os.Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
+            }
+            if (vib == null || !vib.hasVibrator()) {
+                // No motor (or none exposed) — fall back to the view-level feedback, best effort.
+                performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY,
+                        android.view.HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
+                return;
+            }
+            // Short, light tick. EFFECT_TICK is the subtlest predefined effect (API 29+).
+            vib.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_TICK));
+        } catch (Throwable t) {
+            // Never let a haptic glitch crash input handling.
+            try {
+                performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY,
+                        android.view.HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
+            } catch (Throwable ignored) { }
+        }
+    }
+
+    /** Flip the hide-all-controls state (bound to the default "V" button). */
+    public void toggleControlsHidden() {
+        controlsHidden = !controlsHidden;
+        resetAll();          // release any held inputs from buttons we're about to hide
+        invalidate();
+    }
+
+    /** The TOGGLE_CONTROLS button stays visible/touchable even while everything else is hidden. */
+    private boolean isControlsToggle(ControlElement el) {
+        return el instanceof ButtonElement && ((ButtonElement) el).getBinding() == Binding.TOGGLE_CONTROLS;
     }
 
     public float density() { return density; }
@@ -124,6 +181,11 @@ public class InputControlsView extends View {
     /** Inject a binding press/release. Mouse buttons act at the cursor. */
     public void inject(Binding b, boolean pressed) {
         if (b == null) return;
+        // Special UI actions are handled here, not sent to the game; act once, on press.
+        if (b.kind == Binding.Kind.SPECIAL) {
+            if (pressed && b == Binding.TOGGLE_CONTROLS) toggleControlsHidden();
+            return;
+        }
         try {
             switch (b.kind) {
                 case MOUSE:  GameActivity.nativeButton(b.code, pressed ? 1 : 0, gx(), gy()); break;
@@ -150,9 +212,20 @@ public class InputControlsView extends View {
 
         int a = e.getActionMasked();
         boolean down = (a == MotionEvent.ACTION_DOWN || a == MotionEvent.ACTION_POINTER_DOWN);
+        // Start of a brand-new gesture (first finger, no other pointers down): no element can still
+        // legitimately own a pointer, so clear any stale ownership before routing. Without this, a
+        // leftover pointerId (e.g. an UP that never reached the element after a menu opened) makes the
+        // element reject the fresh DOWN → the touch falls through to the map-pan gesture. That was the
+        // "first, precise tap on the mouse-stick just pans the screen; the second tap works" bug.
+        if (a == MotionEvent.ACTION_DOWN) {
+            for (ControlElement el : elements) el.clearStalePointer();
+        }
         boolean consumed = false;
         // Broadcast; on DOWN the first element to claim the pointer wins.
         for (ControlElement el : elements) {
+            // While hidden, only the toggle button reacts — everything else is non-interactive
+            // so taps pass through to the game (pan/zoom) instead of hitting invisible buttons.
+            if (controlsHidden && !isControlsToggle(el)) continue;
             if (el.handleTouch(e)) { consumed = true; if (down) break; }
         }
         return consumed; // false -> Activity gets it (pinch-zoom / direct tap)
@@ -164,7 +237,11 @@ public class InputControlsView extends View {
     // ============================== drawing ===================================
 
     @Override protected void onDraw(Canvas c) {
-        for (ControlElement el : elements) el.draw(c);
+        for (ControlElement el : elements) {
+            // In play mode, when hidden, draw only the toggle button. The editor always shows all.
+            if (!editMode && controlsHidden && !isControlsToggle(el)) continue;
+            el.draw(c);
+        }
         if (!editMode && curX >= 0) drawCursor(c);
     }
 

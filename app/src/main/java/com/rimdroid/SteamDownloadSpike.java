@@ -68,7 +68,7 @@ import java.util.concurrent.TimeUnit;
  *
  * Run on a BACKGROUND thread (blocks in a callback loop + awaitCompletion). Pure network client.
  */
-public class SteamDownloadSpike implements Runnable, IDownloadListener {
+public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancellable {
 
     private static final String TAG = "RimDroid/SteamDL";
 
@@ -81,6 +81,23 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
     // so this stays "latest stable 1.5". Advanced users can override with a specific manifest id
     // (older public 1.5 builds, newest→oldest, are listed in memory/in_app_game_downloader.md).
     private static final long RIMWORLD_1_5_MANIFEST = 2197714010033731403L;
+
+    /**
+     * Pin DLC to the last 1.5 build too — otherwise DepotDownloader pulls "latest" (= 1.6), which is
+     * a version mismatch with the 1.5 base game. Keyed by the DLC's Linux DEPOT id (resolved from base
+     * app 294100; it's printed in the debug log as the "DLC depot map="). Fill each from SteamDB:
+     * app 294100 → Depots → the DLC's Linux depot → its last 1.5 manifest (newest manifest dated just
+     * before the 1.6 switch). Any depot NOT listed here falls back to latest. RimWorld DLC app ids for
+     * reference: Royalty 1149640, Ideology 1392840, Biotech 1826140, Anomaly 2380740.
+     */
+    private static final java.util.Map<Integer, Long> DLC_DEPOT_1_5_MANIFEST = new java.util.HashMap<>();
+    static {
+        // Linux depot (under base app 294100) → last 1.5 manifest. Provided by the maintainer from SteamDB.
+        DLC_DEPOT_1_5_MANIFEST.put(1149643, 7489971535168711930L);   // Royalty  (app 1149640)
+        DLC_DEPOT_1_5_MANIFEST.put(294108,  8829858508882856102L);   // Ideology (app 1392840)
+        DLC_DEPOT_1_5_MANIFEST.put(367686,  8944803661678388929L);   // Biotech  (app 1826140)
+        DLC_DEPOT_1_5_MANIFEST.put(294112,  6055297988647927242L);   // Anomaly  (app 2380740)
+    }
 
     private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
 
@@ -122,6 +139,9 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
     private volatile String refreshToken;
 
     private volatile boolean running;
+    private volatile Thread workerThread;          // the depot-download thread (interrupted on cancel)
+    private volatile boolean cancelled;            // user requested cancel
+    private volatile boolean doneEmitted;          // ensure exactly one terminal onDone
     private volatile boolean downloadStarted;     // a download attempt is queued/running this connection
     private volatile boolean downloadInProgress;   // a DepotDownloader is actively running
     private volatile boolean downloadCompleted;    // succeeded — stop everything
@@ -179,8 +199,22 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
     }
 
     private void done(String m) {
+        if (doneEmitted) return;     // exactly one terminal message (cancel + a late retry-finish can race)
+        doneEmitted = true;
         Log.i(TAG, "DONE: " + m);
         if (listener != null) listener.onDone(m);
+    }
+
+    /** {@link Cancellable}: stop the running download — break the blocking await + the CM loop. */
+    @Override
+    public void cancel() {
+        cancelled = true;
+        running = false;
+        downloadCompleted = true;            // prevent the disconnect handler from reconnecting/retrying
+        Thread w = workerThread;
+        if (w != null) w.interrupt();        // break DepotDownloader's awaitCompletion()
+        try { if (steamClient != null) steamClient.disconnect(); } catch (Throwable ignored) {}
+        done("Download cancelled.");
     }
 
     @Override
@@ -206,6 +240,9 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
                 manager.runWaitCallbacks(1000L);
             }
             Log.i(TAG, "Spike loop ended");
+            // Safety net: never leave the UI stuck in "downloading" if the loop ended without a
+            // terminal result (e.g. a disconnect path that set running=false but did not call done()).
+            if (!doneEmitted) done("Stopped before finishing — please try again.");
         } catch (Throwable t) {
             Log.e(TAG, "SteamDownloadSpike crashed", t);
             done("crash: " + t);
@@ -270,6 +307,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
         progress("Connection lost — reconnecting (attempt " + (downloadAttempts + 1) + ")...");
         downloadStarted = false;
         try { Thread.sleep(2000L); } catch (InterruptedException ignored) {}
+        if (!running) return;   // cancelled while waiting to reconnect
         steamClient.connect();   // → onConnected reuses the cached token (no re-approval)
     }
 
@@ -297,7 +335,9 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
         downloadStarted = true;
         Runnable job = (workshopIds != null) ? this::downloadMods
                 : (dlcs != null) ? this::downloadDlcs : this::download;
-        new Thread(job, "rd-depot-dl").start();
+        Thread t = new Thread(job, "rd-depot-dl");
+        workerThread = t;            // tracked so cancel() can interrupt the blocking download
+        t.start();
     }
 
     /**
@@ -348,6 +388,19 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
                 if (!work.mkdirs()) { progress("✗ " + d.name + ": cannot create work dir"); skipped++; continue; }
                 lastError = null;
                 boolean got = false;
+                // Pin to 1.5 only if we know the 1.5 manifest for EVERY resolved depot (AppItem needs
+                // depot[i] ↔ manifest[i] parallel). Otherwise fall back to latest for this DLC.
+                List<Long> manifests = new ArrayList<>();
+                for (Integer dep : depots) {
+                    Long m = DLC_DEPOT_1_5_MANIFEST.get(dep);
+                    if (m == null) { manifests = List.of(); break; }
+                    manifests.add(m);
+                }
+                if (manifests.isEmpty()) {
+                    progress("  (no pinned 1.5 manifest for depots " + depots + " → downloading LATEST = 1.6)");
+                } else {
+                    progress("  (pinned to 1.5 manifests " + manifests + ")");
+                }
                 try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true)) {
                     dd.addListener(this);
                     AppItem item = new AppItem(
@@ -364,7 +417,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener {
                             /* language */ "english",
                             /* lowViolence */ false,
                             /* depot */ depots,           // the DLC's linux depot(s), resolved above
-                            /* manifest */ List.of(),     // latest
+                            /* manifest */ manifests,     // pinned 1.5 (parallel to depots) or empty = latest
                             /* verify */ false,
                             /* downloadManifestOnly */ false);
                     dd.add(item);

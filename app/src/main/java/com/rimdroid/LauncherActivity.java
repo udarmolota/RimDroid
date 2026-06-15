@@ -211,7 +211,7 @@ public class LauncherActivity extends AppCompatActivity {
         if (all.size() == 1) { cont.accept(all.get(0)); return; }
         String[] names = new String[all.size()];
         for (int i = 0; i < all.size(); i++) names[i] = all.get(i).getName();
-        new android.app.AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Which instance?")
                 .setItems(names, (d, which) -> cont.accept(all.get(which)))
                 .show();
@@ -273,7 +273,7 @@ public class LauncherActivity extends AppCompatActivity {
             msg = "Installed: " + installed + "\nLatest on GitHub: " + latest
                     + "\n\nA newer version is available.";
         }
-        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder b = new MaterialAlertDialogBuilder(this)
                 .setTitle("App version")
                 .setMessage(msg)
                 .setNegativeButton("Close", null);

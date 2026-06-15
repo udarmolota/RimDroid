@@ -47,5 +47,7 @@
 
         <item name="materialButtonStyle">@style/AppTheme.Button</item>
         <item name="navigationViewStyle">@style/AppTheme.NavigationView</item>
+        <!-- Rounded, brand-title dialogs (instance picker, confirmations) for every Material dialog. -->
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.RimDroid.Dialog</item>
     </style>
 </resources>

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Wrap the logo PNG with inset so the full image fits inside the adaptive
-     icon safe zone (center 72dp of the 108dp canvas, i.e. ~33% padding).
-     Adjust android:inset to taste: bigger = smaller logo, more padding. -->
+     icon safe zone (center 72dp of the 108dp canvas). Bumped 12%→16% so the logo
+     circle no longer touches the launcher mask edge (was clipped right at the rim);
+     ~4 more units of padding on the 108 canvas. Bigger = smaller logo, more padding. -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/rimdroid_logo"
-    android:inset="12%"/>
+    android:inset="16%"/>

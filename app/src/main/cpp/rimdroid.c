@@ -330,6 +330,7 @@ static int   g_osmesa_w = 0, g_osmesa_h = 0; // current buffer dimensions
 static PFN_OSMesaMakeCurrent g_osmesa_make_current_fn = NULL;
 static PFN_OSMesaPixelStore  g_osmesa_pixel_store_fn  = NULL;
 static void (*g_osmesa_glFinish_fn)(void)             = NULL;
+static PFN_OSMesaCreateContextAttribs g_osmesa_create_attribs_fn = NULL; // for extra shared contexts
 
 // Load libOSMesa.so (via rimdroid_ns so libcutils/liblog resolve) and create a
 // CORE 3.3 softpipe context. Called once at launch for RD_SOFTPIPE. Returns 0 ok.
@@ -349,6 +350,7 @@ int rimdroid_init_osmesa(void) {
     g_osmesa_make_current_fn = (PFN_OSMesaMakeCurrent) dlsym(lib, "OSMesaMakeCurrent");
     g_osmesa_pixel_store_fn  = (PFN_OSMesaPixelStore)  dlsym(lib, "OSMesaPixelStore");
     g_osmesa_glFinish_fn     = (void(*)(void))         dlsym(lib, "glFinish");
+    g_osmesa_create_attribs_fn = fAttribs;   // kept so we can make extra SHARED contexts later
     if (!g_osmesa_make_current_fn || (!fAttribs && !fCreate)) {
         LOGE("OSMesa init: missing API (attribs=%p create=%p makecur=%p)",
              (void*)fAttribs, (void*)fCreate, (void*)g_osmesa_make_current_fn);
@@ -385,8 +387,30 @@ int rimdroid_init_osmesa(void) {
 // buffer is sized to g_rimdroid_surface (= the game's drawable, since PrefsXml
 // pins screenWidth/Height = surface dims for softpipe → glViewport matches);
 // SurfaceFlinger upscales the posted buffer to the physical display. Returns 1 ok.
-int rimdroid_osmesa_make_current(void) {
-    if (!g_osmesa_context || !g_osmesa_make_current_fn) return 0;
+// Create an ADDITIONAL OSMesa context that SHARES resources (textures, buffers, …) with the
+// primary one. Unity's GLCore path creates a 2nd "shared" GL context; with a single OSMesa
+// context their separate GL states collapsed into one → the menu rendered into nothing (black).
+// Each Unity context now gets its own OSMesa context (separate state) but shared resources, all
+// drawing into the one window CPU buffer. Returns the new context, or the primary as a fallback.
+void* rimdroid_osmesa_create_shared(void) {
+    if (!g_osmesa_create_attribs_fn || !g_osmesa_context) return g_osmesa_context;
+    const int attribs[] = {
+        RD_OSMESA_FORMAT,                RD_OSMESA_RGBA,
+        RD_OSMESA_DEPTH_BITS,            24,
+        RD_OSMESA_STENCIL_BITS,          8,
+        RD_OSMESA_PROFILE,               RD_OSMESA_CORE_PROFILE,
+        RD_OSMESA_CONTEXT_MAJOR_VERSION, 3,
+        RD_OSMESA_CONTEXT_MINOR_VERSION, 3,
+        0
+    };
+    void* ctx = g_osmesa_create_attribs_fn(attribs, g_osmesa_context);  // sharelist = primary
+    LOGI("OSMesa: created shared context %p (sharing with %p)", ctx, g_osmesa_context);
+    return ctx ? ctx : g_osmesa_context;
+}
+
+// Bind a SPECIFIC OSMesa context to the (shared) window CPU buffer, (re)sizing it to the surface.
+int rimdroid_osmesa_make_current_ctx(void* ctx) {
+    if (!ctx || !g_osmesa_make_current_fn) return 0;
     int w = g_rimdroid_surface.width;
     int h = g_rimdroid_surface.height;
     if (w <= 0 || h <= 0) { LOGE("OSMesa make_current: bad surface %dx%d", w, h); return 0; }
@@ -395,8 +419,7 @@ int rimdroid_osmesa_make_current(void) {
         if (!nb) { LOGE("OSMesa make_current: OOM %dx%d", w, h); return 0; }
         g_osmesa_buffer = nb; g_osmesa_w = w; g_osmesa_h = h;
     }
-    if (!g_osmesa_make_current_fn(g_osmesa_context, g_osmesa_buffer,
-                                  RD_GL_UNSIGNED_BYTE, w, h)) {
+    if (!g_osmesa_make_current_fn(ctx, g_osmesa_buffer, RD_GL_UNSIGNED_BYTE, w, h)) {
         LOGE("OSMesa make_current: OSMesaMakeCurrent failed (%dx%d)", w, h);
         return 0;
     }
@@ -405,12 +428,46 @@ int rimdroid_osmesa_make_current(void) {
     return 1;
 }
 
+// Back-compat wrapper: bind the PRIMARY context.
+int rimdroid_osmesa_make_current(void) {
+    return rimdroid_osmesa_make_current_ctx(g_osmesa_context);
+}
+
 // Present: finish CPU rendering, then blit the OSMesa buffer to the surface.
 // This IS the only present path for softpipe (OSMesa has no winsys). Mirrors the
 // proven smoke-test blit. Called by box64 on SDL_GL_SwapWindow.
 void rimdroid_osmesa_swap(void) {
     if (!g_osmesa_context || !g_osmesa_buffer) return;
     if (g_osmesa_glFinish_fn) g_osmesa_glFinish_fn();
+    // DIAGNOSTIC (throttled): is Unity's image actually IN our buffer? Count non-zero RGB pixels.
+    // all-zero ⇒ Unity never draws to the default framebuffer (OSMesa/softpipe FBO issue);
+    // non-zero ⇒ content is present and the blit/surface path is what's dropping it.
+    {
+        static unsigned long s_swapn = 0;
+        if ((s_swapn++ % 120UL) == 0UL && g_osmesa_w > 0 && g_osmesa_h > 0) {
+            const unsigned int* p = (const unsigned int*)g_osmesa_buffer;
+            size_t n = (size_t)g_osmesa_w * (size_t)g_osmesa_h, nz = 0;
+            unsigned int sample = 0;
+            for (size_t i = 0; i < n; i++) {
+                unsigned int v = p[i] & 0x00FFFFFFu;
+                if (v) { nz++; if (!sample) sample = p[i]; }
+            }
+            // Also ask GL what Unity left bound at swap: which framebuffer + what viewport. FBO != 0
+            // ⇒ Unity rendered into its own FBO and never presented to the default (our buffer);
+            // viewport != buffer size ⇒ content rendered off-buffer (resolution mismatch).
+            static void (*p_glGetIntegerv)(unsigned int, int*) = NULL;
+            static int s_resolved = 0;
+            if (!s_resolved) { s_resolved = 1; if (g_osmesa_handle) p_glGetIntegerv =
+                (void(*)(unsigned int,int*)) dlsym(g_osmesa_handle, "glGetIntegerv"); }
+            int fbo = -1, vp[4] = {-1,-1,-1,-1};
+            if (p_glGetIntegerv) {
+                p_glGetIntegerv(0x8CA6 /*GL_DRAW_FRAMEBUFFER_BINDING*/, &fbo);
+                p_glGetIntegerv(0x0BA2 /*GL_VIEWPORT*/, vp);
+            }
+            LOGI("OSMesa buffer diag: %zu/%zu non-zero px, sample=0x%08x buf=%dx%d | draw_fbo=%d viewport=[%d,%d,%d,%d]",
+                 nz, n, sample, g_osmesa_w, g_osmesa_h, fbo, vp[0], vp[1], vp[2], vp[3]);
+        }
+    }
     ANativeWindow* win = g_rimdroid_surface.native_window;
     int w = g_osmesa_w, h = g_osmesa_h;
     if (!win || w <= 0 || h <= 0) return;
@@ -1164,9 +1221,36 @@ void rimdroid_start_game(const char* game_dir_path,
             // GCs — each one is a signal round-trip to every thread, brutally slow
             // under box64.  A large initial heap drastically cuts GC frequency →
             // much faster load.  GC_FREE_SPACE_DIVISOR low = collect less often.
-            setenv("GC_INITIAL_HEAP_SIZE", "1073741824", 1);   // 1 GiB
-            setenv("GC_FREE_SPACE_DIVISOR", "1", 1);
-            LOGI("Boehm GC: initial heap 1GiB, free_space_divisor=1 (fewer STW GCs)");
+            // overwrite=0: these are DEFAULTS only — a per-instance "Extra env vars"
+            // entry (e.g. a smaller GC_INITIAL_HEAP_SIZE + higher GC_FREE_SPACE_DIVISOR
+            // on a low-RAM device to cut peak memory / avoid OOM) takes precedence.
+            //
+            // Scale the initial heap to the device's physical RAM instead of a fixed 1 GiB.
+            // A big head start cuts GC frequency (each stop-the-world collection is a brutally
+            // slow signal round-trip under box64), but a flat 1 GiB is too much up-front on
+            // 4-6 GB phones: it both contributes to OOM (caravan-trade crash on a 6 GB device) and,
+            // in the IN-PROCESS path on a 39-bit-VA device, adds to the address-space crunch (ART
+            // boot image + scudo reservations already crowd the low VA; a 1 GiB contiguous mmap makes
+            // it worse). Use ~1/12 of RAM, clamped to [384 MiB, 1 GiB]: flagships keep the full 1 GiB,
+            // low-RAM devices get ~512 MiB (6 GB) / ~384 MiB (4 GB). Env field still overrides.
+            {
+                long phys_pages = sysconf(_SC_PHYS_PAGES);
+                long page_size  = sysconf(_SC_PAGE_SIZE);
+                unsigned long long total_ram =
+                    (phys_pages > 0 && page_size > 0)
+                        ? (unsigned long long)phys_pages * (unsigned long long)page_size : 0ULL;
+                const unsigned long long HEAP_MIN = 384ULL * 1024 * 1024;   // 384 MiB floor
+                const unsigned long long HEAP_MAX = 1024ULL * 1024 * 1024;  // 1 GiB cap (prior default)
+                unsigned long long heap = (total_ram > 0) ? (total_ram / 12ULL) : HEAP_MAX;
+                if (heap < HEAP_MIN) heap = HEAP_MIN;
+                if (heap > HEAP_MAX) heap = HEAP_MAX;
+                char heap_buf[32];
+                snprintf(heap_buf, sizeof(heap_buf), "%llu", heap);
+                setenv("GC_INITIAL_HEAP_SIZE", heap_buf, 0);   // RAM-scaled
+                setenv("GC_FREE_SPACE_DIVISOR", "1", 0);       // collect rarely
+                LOGI("Boehm GC: device RAM=%lluMiB -> initial heap %lluMiB, fsd=1 (overridable via env)",
+                     total_ram / (1024ULL * 1024), heap / (1024ULL * 1024));
+            }
             launch_rimworld_elf(game_dir_path, argc, argv);
             LOGI("In-process launch returned");
             LOGI("rimdroid_start_game: done (in-process)");

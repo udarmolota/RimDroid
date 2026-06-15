@@ -59,6 +59,15 @@ public abstract class ControlElement {
     public abstract boolean handleTouch(MotionEvent e);
     /** Release any held input + reset visual state (called when leaving play mode). */
     public abstract void reset();
+
+    /**
+     * Called at the very start of a new gesture (first finger down, no other pointers active).
+     * At that moment no element can legitimately still own a pointer, so clear any STALE pointer
+     * ownership (and release a stuck hold) — this fixes the "first tap on a stick/button after a
+     * menu just pans the map" bug, where a leftover pointerId rejected the fresh touch-down.
+     * Default = reset(); ButtonElement overrides it to PRESERVE intentional toggle latches.
+     */
+    public void clearStalePointer() { reset(); }
     public abstract ControlElementDescription describe();
     /** Short human label for the editor "selected: ..." line. */
     public abstract String editorLabel();

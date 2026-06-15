@@ -115,9 +115,13 @@ public class InstallerService extends Service {
         if (!zipFile.exists()) throw new Exception("Zip not found: " + zipPath);
 
         File instanceDir = storage.getInstanceDir(instanceName);
-        if (instanceDir.exists()) {
-            broadcastProgress("Removing old instance...");
-            deleteDir(instanceDir);
+        // NEVER overwrite an existing instance — that silently wiped the user's data when a new
+        // instance was given a name that already existed (e.g. auto-filled from the zip filename).
+        // Require a unique name; the user must delete the old instance first if they really mean to.
+        File[] existing = instanceDir.exists() ? instanceDir.listFiles() : null;
+        if (existing != null && existing.length > 0) {
+            throw new Exception("Instance '" + instanceName + "' already exists — pick another name "
+                    + "(or delete it first).");
         }
         instanceDir.mkdirs();
 
@@ -190,7 +194,7 @@ public class InstallerService extends Service {
                     try (FileOutputStream fos = new FileOutputStream(out)) {
                         byte[] buf = new byte[65536];
                         int len;
-                        while ((len = tarIn.read(buf)) > 0) fos.write(buf, 0, len);
+                        while ((len = tarIn.read(buf)) != -1) fos.write(buf, 0, len);
                     }
                 }
             }
@@ -214,7 +218,7 @@ public class InstallerService extends Service {
                     out.getParentFile().mkdirs();
                     try (FileOutputStream fos = new FileOutputStream(out)) {
                         int len;
-                        while ((len = zis.read(buf)) > 0) fos.write(buf, 0, len);
+                        while ((len = zis.read(buf)) != -1) fos.write(buf, 0, len);
                     }
                 }
                 zis.closeEntry();
@@ -258,7 +262,7 @@ public class InstallerService extends Service {
         byte[] buf = new byte[65536];
         try (FileOutputStream out = new FileOutputStream(dest)) {
             int len;
-            while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+            while ((len = in.read(buf)) != -1) out.write(buf, 0, len);
         }
     }
 

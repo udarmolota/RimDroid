@@ -28,6 +28,50 @@ target_link_libraries(rimdroid
 )
 
 # ---------------------------------------------------------------------------
+# libpulsesimpleshim.so — tiny PulseAudio "simple" API shim backed by AAudio.
+# RimWorld's FMOD probes libpulse-simple.so.0 for output; we provide the 7 funcs
+# box64's wrappedpulsesimple bridges. Built with DT_SONAME "libpulse-simple.so.0"
+# so that, once preloaded by name (RimDroidApplication), box64's wrapper
+# dlopen("libpulse-simple.so.0") resolves to this library. See pulse_simple_shim.c.
+# ---------------------------------------------------------------------------
+add_library(pulsesimpleshim SHARED pulse_simple_shim.c)
+set_target_properties(pulsesimpleshim PROPERTIES OUTPUT_NAME "pulsesimpleshim")
+# Force DT_SONAME = libpulse-simple.so.0 so that, once this file (libpulsesimpleshim.so) is preloaded,
+# the linker registers it under that soname and box64's dlopen("libpulse-simple.so.0") resolves to it.
+# The flag MUST come AFTER CMake's auto "-soname,libpulsesimpleshim.so" (last one wins); CMake emits its
+# auto soname after <LINK_FLAGS> but before <LINK_LIBRARIES>, so we pass ours as a link-library item
+# (the very end of the link line) rather than via target_link_options (which lands in <LINK_FLAGS>).
+target_link_libraries(pulsesimpleshim
+    log
+    aaudio
+    "-Wl,-soname,libpulse-simple.so.0"
+)
+
+# ---------------------------------------------------------------------------
+# libpulseshim.so — fake async PulseAudio client (libpulse.so.0). FMOD's pulse output enumerates
+# devices via this (getNumDrivers); reports one "default" sink so FMOD proceeds to play via pa_simple.
+# Same soname-override trick as the pulse-simple shim.
+# ---------------------------------------------------------------------------
+add_library(pulseshim SHARED pulse_shim.c)
+set_target_properties(pulseshim PROPERTIES OUTPUT_NAME "pulseshim")
+target_link_libraries(pulseshim
+    log
+    "-Wl,-soname,libpulse.so.0"
+)
+
+# ---------------------------------------------------------------------------
+# libasoundshim.so — minimal ALSA (libasound.so.2) → AAudio. With the pulse shims NOT preloaded,
+# FMOD falls back to its ALSA output and uses this. snd_pcm_writei → blocking AAudio write.
+# ---------------------------------------------------------------------------
+add_library(asoundshim SHARED alsa_shim.c)
+set_target_properties(asoundshim PROPERTIES OUTPUT_NAME "asoundshim")
+target_link_libraries(asoundshim
+    log
+    aaudio
+    "-Wl,-soname,libasound.so.2"
+)
+
+# ---------------------------------------------------------------------------
 # box64 — root-level submodule (path: <project_root>/box64)
 # CMAKE_CURRENT_SOURCE_DIR is app/src/main/cpp, so go up 4 levels.
 #

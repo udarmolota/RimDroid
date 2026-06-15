@@ -88,6 +88,15 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "drag_pan", v).apply();
     }
 
+    // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
+    public boolean isHapticFeedback() {
+        return p.getBoolean(pfx + "haptic", global.isHapticFeedback());
+    }
+
+    public void setHapticFeedback(boolean v) {
+        p.edit().putBoolean(pfx + "haptic", v).apply();
+    }
+
     // --- Interpreter mode (BOX64_DYNAREC=0 diagnostic; pref key kept for back-compat as "interpreter") ---
     public boolean isInterpreter() {
         return p.getBoolean(pfx + "interpreter", global.isStrictBarriers());
@@ -95,6 +104,19 @@ public class InstanceSettings {
 
     public void setInterpreter(boolean v) {
         p.edit().putBoolean(pfx + "interpreter", v).apply();
+    }
+
+    // --- Extra env vars (KEY=VALUE, space-separated). Per-instance, falls back to the global value. ---
+    // Power-user / diagnostic knob applied last in GameLauncher, so it can OVERRIDE the box64 defaults.
+    // E.g. "BOX64_DYNAREC_ALIGNED_ATOMICS=1" (Mali/Cortex save-corruption test) or
+    // "BOX64_DYNAREC_STRONGMEM=2" (FPS A/B). Lets us test box64 knobs without a rebuild per variant.
+    public String getEnvVars() {
+        return p.getString(pfx + "env_vars", global.getEnvVars());
+    }
+
+    public void setEnvVars(String v) {
+        if (v == null || v.trim().isEmpty()) p.edit().remove(pfx + "env_vars").apply();
+        else p.edit().putString(pfx + "env_vars", v.trim()).apply();
     }
 
     // --- Render scale (per-instance; the device floor stays a global static) ---
@@ -136,6 +158,8 @@ public class InstanceSettings {
                 .remove(pfx + "driver_so")
                 .remove(pfx + "debug")
                 .remove(pfx + "interpreter")
+                .remove(pfx + "env_vars")
+                .remove(pfx + "haptic")
                 .remove(pfx + "render_scale_pct")
                 .remove(pfx + "controls")
                 .apply();

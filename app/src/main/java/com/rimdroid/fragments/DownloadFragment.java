@@ -21,7 +21,9 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.rimdroid.R;
+import com.rimdroid.SteamAnonModDownloader;
 import com.rimdroid.SteamDownloadSpike;
+import com.rimdroid.SteamDownloadState;
 import com.rimdroid.StorageAccess;
 
 import java.util.ArrayList;
@@ -36,18 +38,17 @@ import java.util.concurrent.CompletableFuture;
  *   • Mods — Workshop (anonymous) — coming soon.
  * Login is sent to Steam (like DepotDownloader) and never stored; the token lives only in memory.
  */
-public class DownloadFragment extends Fragment {
+public class DownloadFragment extends Fragment implements SteamDownloadState.View {
 
     private final Handler mainH = new Handler(Looper.getMainLooper());
 
     private EditText etInstance, etUser, etPass, etManifest, etModsIds, etModsBrowserId;
-    private Button btnStart, btnDlcStart, btnModsStart, btnModsBrowser;
+    private Button btnStart, btnDlcStart, btnModsStart, btnModsBrowser, btnCancel;
     private CheckBox cbRoyalty, cbIdeology, cbBiotech, cbAnomaly;
     private ProgressBar progress;
     private TextView tvStatus;
-    private View blockLogin, sectionGame, sectionDlc, sectionMods, btnInstallContent;
+    private View blockLogin, sectionGame, sectionDlc, sectionMods, sectionModsBrowser, tvLoginNote, btnInstallContent;
     private android.content.Context appCtx;   // for the keep-alive service (valid even if detached)
-    private volatile boolean downloading;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -78,13 +79,17 @@ public class DownloadFragment extends Fragment {
         sectionGame = v.findViewById(R.id.section_game);
         sectionDlc  = v.findViewById(R.id.section_dlc);
         sectionMods = v.findViewById(R.id.section_mods);
+        sectionModsBrowser = v.findViewById(R.id.section_mods_browser);
+        tvLoginNote = v.findViewById(R.id.tv_login_note);
 
         btnInstallContent = v.findViewById(R.id.btn_install_content);
+        btnCancel = v.findViewById(R.id.btn_dl_cancel);
         tvStatus.setMovementMethod(new ScrollingMovementMethod());   // make the log area scrollable
         btnStart.setOnClickListener(view -> startGame());
         btnDlcStart.setOnClickListener(view -> startDlc());
         btnModsStart.setOnClickListener(view -> startMods());
         btnModsBrowser.setOnClickListener(view -> openModInBrowser());
+        btnCancel.setOnClickListener(view -> confirmCancel());
         btnInstallContent.setOnClickListener(view ->
                 androidx.navigation.Navigation.findNavController(view).navigate(R.id.action_open_install));
 
@@ -95,18 +100,49 @@ public class DownloadFragment extends Fragment {
         toggle.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (!isChecked) return;
             boolean game = checkedId == R.id.btn_type_game;
+            boolean mods = checkedId == R.id.btn_type_mods;
             sectionGame.setVisibility(game ? View.VISIBLE : View.GONE);
             sectionDlc.setVisibility(checkedId == R.id.btn_type_dlc ? View.VISIBLE : View.GONE);
-            sectionMods.setVisibility(checkedId == R.id.btn_type_mods ? View.VISIBLE : View.GONE);
-            blockLogin.setVisibility(View.VISIBLE);   // login needed for game, DLC and mods
+            sectionMods.setVisibility(mods ? View.VISIBLE : View.GONE);
+            sectionModsBrowser.setVisibility(mods ? View.VISIBLE : View.GONE);
+            // Login (and its privacy preamble) is needed for game + DLC; mods download anonymously.
+            blockLogin.setVisibility(mods ? View.GONE : View.VISIBLE);
+            tvLoginNote.setVisibility(mods ? View.GONE : View.VISIBLE);
             btnInstallContent.setVisibility(game ? View.GONE : View.VISIBLE);
         });
         toggle.check(R.id.btn_type_game);   // default to Game
+
+        // Re-attach to a download already running in the background (the worker thread outlives this
+        // fragment via SteamDownloadState), restoring the log + progress + "busy" state on return.
+        SteamDownloadState st = SteamDownloadState.get();
+        st.setView(this);
+        tvStatus.setText(st.getLog());
+        scrollLogToBottom();
+        boolean busy = st.isDownloading();
+        setControlsEnabled(!busy);
+        btnCancel.setVisibility(busy ? View.VISIBLE : View.GONE);
+        if (busy) {
+            progress.setVisibility(View.VISIBLE);
+            if (st.isIndeterminate() || st.getPercent() < 0) {
+                progress.setIndeterminate(true);
+            } else {
+                progress.setIndeterminate(false);
+                progress.setProgress(st.getPercent());
+            }
+        } else {
+            progress.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        SteamDownloadState.get().clearView(this);
+        super.onDestroyView();
     }
 
     // ---- Game ----
     private void startGame() {
-        if (downloading) return;
+        if (SteamDownloadState.get().isDownloading()) return;
         final String name = text(etInstance);
         if (name.isEmpty()) { etInstance.setError(getString(R.string.error_name_required)); return; }
         if (!loginFilled()) return;
@@ -117,14 +153,18 @@ public class DownloadFragment extends Fragment {
             if (!mt.isEmpty()) manifestId = Long.parseLong(mt);
         } catch (NumberFormatException ignored) { /* blank/invalid → default */ }
 
+        SteamDownloadState st = SteamDownloadState.get();
+        SteamDownloadSpike dl = new SteamDownloadSpike(text(etUser), etPass.getText().toString(), name,
+                /* manifestOnly */ false, manifestId, st);
+        st.begin(appCtx, name);          // adviseInstance = name → auto-set GPU driver on success
+        st.setActive(dl);
         beginUi();
-        new Thread(new SteamDownloadSpike(text(etUser), etPass.getText().toString(), name,
-                /* manifestOnly */ false, manifestId, makeListener(name)), "rd-download").start();
+        new Thread(dl, "rd-download").start();
     }
 
     // ---- DLC ----
     private void startDlc() {
-        if (downloading) return;
+        if (SteamDownloadState.get().isDownloading()) return;
         if (!loginFilled()) return;
 
         List<SteamDownloadSpike.Dlc> dlcs = new ArrayList<>();
@@ -139,7 +179,7 @@ public class DownloadFragment extends Fragment {
 
         // DLC zip lands in the public /Download folder → needs All-files access on Android 11+.
         if (!StorageAccess.hasAllFilesAccess()) {
-            new AlertDialog.Builder(requireActivity())
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                     .setTitle("Storage access needed")
                     .setMessage("DLC are saved as zips into the public Download folder so you can see, "
                             + "share and reuse them. Please grant \"All files access\" to RimDroid, "
@@ -150,15 +190,19 @@ public class DownloadFragment extends Fragment {
             return;
         }
 
+        SteamDownloadState st = SteamDownloadState.get();
+        SteamDownloadSpike dl = SteamDownloadSpike.forDlc(text(etUser), etPass.getText().toString(), dlcs, st);
+        st.begin(appCtx, null);
+        st.setActive(dl);
         beginUi();
-        new Thread(SteamDownloadSpike.forDlc(text(etUser), etPass.getText().toString(), dlcs, makeListener(null)),
-                "rd-download").start();
+        new Thread(dl, "rd-download").start();
     }
 
-    // ---- Mods (by Workshop ID; needs login — Workshop UGC isn't downloadable anonymously) ----
+    // ---- Mods (by Workshop ID) — ANONYMOUS, no login. We resolve each item's owning game
+    //      (consumer_app_id) ourselves, so this works for ANY public Workshop item, not just
+    //      RimWorld. Items that require ownership fall back to the browser/ggntw option below. ----
     private void startMods() {
-        if (downloading) return;
-        if (!loginFilled()) return;
+        if (SteamDownloadState.get().isDownloading()) return;
         List<Long> ids = new ArrayList<>();
         for (String tok : text(etModsIds).split("[\\s,]+")) {
             if (tok.isEmpty()) continue;
@@ -172,7 +216,7 @@ public class DownloadFragment extends Fragment {
 
         // Mods zip into the public /Download folder → needs All-files access on Android 11+.
         if (!StorageAccess.hasAllFilesAccess()) {
-            new AlertDialog.Builder(requireActivity())
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                     .setTitle("Storage access needed")
                     .setMessage("Mods are saved as zips into the public Download folder so you can see, "
                             + "share and reuse them. Please grant \"All files access\" to RimDroid, "
@@ -183,9 +227,20 @@ public class DownloadFragment extends Fragment {
             return;
         }
 
+        SteamDownloadState st = SteamDownloadState.get();
+        SteamAnonModDownloader dl = new SteamAnonModDownloader(ids, st);
+        st.begin(appCtx, null);
+        st.setActive(dl);
         beginUi();
-        new Thread(SteamDownloadSpike.forMods(text(etUser), etPass.getText().toString(), ids, makeListener(null)),
-                "rd-download").start();
+        new Thread(dl, "rd-anon-mod").start();
+    }
+
+    private void confirmCancel() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
+                .setMessage(R.string.download_cancel_confirm)
+                .setPositiveButton(R.string.download_cancel, (d, w) -> SteamDownloadState.get().cancel())
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     // ---- Mods without login: ask the ggntw.com third-party service for a download link, open it in the
@@ -257,74 +312,74 @@ public class DownloadFragment extends Fragment {
     }
 
     private void beginUi() {
-        downloading = true;
-        // Keep the process at foreground priority so backgrounding doesn't drop the CM connection.
-        com.rimdroid.DownloadKeepAliveService.start(appCtx);
-        btnStart.setEnabled(false);
-        btnDlcStart.setEnabled(false);
-        btnModsStart.setEnabled(false);
+        setControlsEnabled(false);
+        btnCancel.setVisibility(View.VISIBLE);
         progress.setVisibility(View.VISIBLE);
         progress.setIndeterminate(true);   // until the first real percent arrives
-        tvStatus.setText("");              // clear previous run's log
-        appendLog("Connecting to Steam…");
+        tvStatus.setText("");              // SteamDownloadState already cleared its log buffer in begin()
     }
 
-    // adviseInstance != null (game download) → on success, auto-set the GPU-recommended driver on it.
-    private SteamDownloadSpike.Listener makeListener(final String adviseInstance) {
-        return new SteamDownloadSpike.Listener() {
-            @Override
-            public CompletableFuture<String> requestSteamGuardCode(boolean prevWrong, String email) {
-                final CompletableFuture<String> fut = new CompletableFuture<>();
-                mainH.post(() -> {
-                    if (!isAdded()) { fut.complete(""); return; }
-                    final EditText etCode = new EditText(requireActivity());
-                    etCode.setHint(email != null ? ("Code emailed to " + email) : "Steam Guard code");
-                    etCode.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-                    new AlertDialog.Builder(requireActivity())
-                            .setTitle(prevWrong ? "Code incorrect — try again" : "Enter Steam Guard code")
-                            .setView(etCode)
-                            .setCancelable(false)
-                            .setPositiveButton("OK", (d, w) -> fut.complete(etCode.getText().toString().trim()))
-                            .show();
-                });
-                return fut;
-            }
+    /** Enable/disable the start controls (everything except Cancel) while a download runs. */
+    private void setControlsEnabled(boolean enabled) {
+        if (btnStart != null) btnStart.setEnabled(enabled);
+        if (btnDlcStart != null) btnDlcStart.setEnabled(enabled);
+        if (btnModsStart != null) btnModsStart.setEnabled(enabled);
+        if (btnModsBrowser != null) btnModsBrowser.setEnabled(enabled);
+        if (etInstance != null) etInstance.setEnabled(enabled);
+        if (etUser != null) etUser.setEnabled(enabled);
+        if (etPass != null) etPass.setEnabled(enabled);
+        if (etManifest != null) etManifest.setEnabled(enabled);
+        if (etModsIds != null) etModsIds.setEnabled(enabled);
+    }
 
-            @Override
-            public void onProgress(String message) {
-                mainH.post(() -> appendLog(message));
-            }
+    // ---- SteamDownloadState.View (callbacks already posted to the main thread by the state) ----
+    @Override
+    public void onLog(CharSequence fullLog) {
+        if (tvStatus == null) return;
+        tvStatus.setText(fullLog);
+        scrollLogToBottom();
+    }
 
-            @Override
-            public void onPercent(int percent) {
-                mainH.post(() -> {
-                    if (progress == null) return;
-                    progress.setIndeterminate(false);
-                    progress.setProgress(Math.max(0, Math.min(100, percent)));
-                });
-            }
+    @Override
+    public void onPercent(int percent, boolean indeterminate) {
+        if (progress == null) return;
+        progress.setVisibility(View.VISIBLE);
+        progress.setIndeterminate(indeterminate);
+        if (!indeterminate) progress.setProgress(Math.max(0, Math.min(100, percent)));
+    }
 
-            @Override
-            public void onDone(String message) {
-                mainH.post(() -> {
-                    downloading = false;
-                    com.rimdroid.DownloadKeepAliveService.stop(appCtx);
-                    appendLog((isError(message) ? "✗ " : "✓ ") + message);
-                    if (progress != null) progress.setVisibility(View.GONE);
-                    if (btnStart != null) btnStart.setEnabled(true);
-                    if (btnDlcStart != null) btnDlcStart.setEnabled(true);
-                    if (btnModsStart != null) btnModsStart.setEnabled(true);
-                    if (isAdded()) {
-                        Toast.makeText(requireContext().getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                    }
-                    // After a successful GAME download, detect the GPU and set the recommended
-                    // Vulkan driver on the new instance, then tell the user (they can change it).
-                    if (adviseInstance != null && !isError(message) && isAdded()) {
-                        adviseDriverFor(adviseInstance);
-                    }
-                });
-            }
-        };
+    @Override
+    public void onFinished(String message) {
+        setControlsEnabled(true);
+        if (progress != null) progress.setVisibility(View.GONE);
+        if (btnCancel != null) btnCancel.setVisibility(View.GONE);
+        if (isAdded()) {
+            Toast.makeText(requireContext().getApplicationContext(), message, Toast.LENGTH_LONG).show();
+        }
+        // After a successful GAME download, detect the GPU and set the recommended Vulkan driver on
+        // the new instance (the state remembers which instance to advise on).
+        String advise = SteamDownloadState.get().getAdviseInstance();
+        if (advise != null && !SteamDownloadState.isError(message) && isAdded()) {
+            adviseDriverFor(advise);
+        }
+    }
+
+    @Override
+    public CompletableFuture<String> requestSteamGuardCode(boolean prevWrong, String email) {
+        final CompletableFuture<String> fut = new CompletableFuture<>();
+        mainH.post(() -> {
+            if (!isAdded()) { fut.complete(""); return; }
+            final EditText etCode = new EditText(requireActivity());
+            etCode.setHint(email != null ? ("Code emailed to " + email) : "Steam Guard code");
+            etCode.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
+                    .setTitle(prevWrong ? "Code incorrect — try again" : "Enter Steam Guard code")
+                    .setView(etCode)
+                    .setCancelable(false)
+                    .setPositiveButton("OK", (d, w) -> fut.complete(etCode.getText().toString().trim()))
+                    .show();
+        });
+        return fut;
     }
 
     /** Off-thread GPU detect → set the instance's recommended driver → inform the user. */
@@ -334,7 +389,7 @@ public class DownloadFragment extends Fragment {
                     com.rimdroid.GpuDriverAdvisor.applyRecommendedDriver(instanceName);
             mainH.post(() -> {
                 if (!isAdded() || !r.applied) return;
-                new AlertDialog.Builder(requireActivity())
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                         .setTitle(R.string.driver_auto_set_title)
                         .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
                         .setPositiveButton(android.R.string.ok, null)
@@ -343,18 +398,8 @@ public class DownloadFragment extends Fragment {
         }, "rd-gpu-advise").start();
     }
 
-    /** Heuristic: a terminal message is an error if it mentions failure words. */
-    private static boolean isError(String m) {
-        if (m == null) return true;
-        String s = m.toLowerCase();
-        return s.contains("error") || s.contains("fail") || s.contains("crash")
-                || s.contains("lost") || s.contains("cannot");
-    }
-
-    /** Append one line to the console log and auto-scroll to the bottom. */
-    private void appendLog(String line) {
+    private void scrollLogToBottom() {
         if (tvStatus == null) return;
-        tvStatus.append(line + "\n");
         android.text.Layout layout = tvStatus.getLayout();
         if (layout != null) {
             int y = layout.getLineTop(tvStatus.getLineCount()) - tvStatus.getHeight();

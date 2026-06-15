@@ -19,6 +19,19 @@ public class RimDroidApplication extends Application {
         // Load native libraries built by CMake
         System.loadLibrary("rimdroid");
         System.loadLibrary("rimdroidlinker");
+        // Audio: preload the PulseAudio "simple" shim. Its DT_SONAME is "libpulse-simple.so.0", so once
+        // loaded here the dynamic linker registers it under that soname — box64's wrappedpulsesimple
+        // dlopen("libpulse-simple.so.0") then resolves to it and RimWorld's FMOD output gets sound via
+        // AAudio. Best-effort: if it fails the game just stays silent (as before).
+        // Audio backend = ALSA→AAudio. We deliberately do NOT preload the pulse shims: with no native
+        // libpulse*, FMOD's PulseAudio output fails to load and FMOD falls back to its ALSA output, which
+        // uses our libasound.so.2 shim (soname-registered by this preload) → AAudio. The pulse shims
+        // (pulse_shim.c / pulse_simple_shim.c) are kept in the tree/build but inert unless preloaded.
+        // Audio: the libasound→AAudio shim is NOT preloaded here. It is loaded on demand in
+        // GameLauncher.launch() only when the (experimental, default-off) audio toggle is enabled,
+        // so flipping the toggle takes effect on the next game launch without an app restart.
+        // Default = no shim → FMOD finds no audio device → clean silence (current FMOD output under
+        // box64 is garbled noise).
     }
 
     /**

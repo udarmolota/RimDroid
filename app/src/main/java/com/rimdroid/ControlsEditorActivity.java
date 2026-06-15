@@ -256,7 +256,7 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
 
     private void showAddDialog() {
         final String[] items = { "Button", "Mouse-stick (cursor)", "Camera-stick (keys)" };
-        new AlertDialog.Builder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.editor_add)
                 .setItems(items, (d, which) -> {
                     ControlElementDescription desc;
@@ -272,7 +272,7 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
     }
 
     private void showResetDialog() {
-        new AlertDialog.Builder(this)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.editor_reset)
                 .setMessage(R.string.editor_reset_confirm)
                 .setPositiveButton(android.R.string.ok, (d, w) -> {

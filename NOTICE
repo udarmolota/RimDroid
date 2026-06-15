@@ -24,6 +24,13 @@ and/or links the third-party components below, each of which remains under its
 own (permissive, GPL-compatible) license. Their copyright notices are retained
 here as required; the GPL-3.0 of RimDroid does not relicense them.
 
+Per-file exception (MIT, not GPL-3.0): the anonymous Steam Workshop mod-download
+mechanism — app/src/main/java/com/rimdroid/SteamAnonModDownloader.java and
+app/src/main/java/com/rimdroid/SteamAnonModSpike.java (original work by udarmolota) —
+is licensed under the MIT License. The author may reuse it in her other projects
+(e.g. Zomdroid) and others may reuse it too, provided the copyright notice is preserved.
+MIT is GPL-compatible, so this does not affect the GPL-3.0 status of the rest of RimDroid.
+
 --- Native (bundled .so / linked / git submodules) ---
 
 box64                  MIT License          Copyright (c) 2020 ptitSeb

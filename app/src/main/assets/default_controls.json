@@ -188,5 +188,17 @@
     "bindings": ["KEY_H"],
     "sensitivity": 2.0,
     "isToggle": false
+  },
+  {
+    "type": "BUTTON",
+    "shape": "CIRCLE",
+    "text": "V",
+    "centerXRelative": 0.955,
+    "centerYRelative": 0.075,
+    "scale": 0.5,
+    "alpha": 28,
+    "bindings": ["TOGGLE_CONTROLS"],
+    "sensitivity": 2.0,
+    "isToggle": false
   }
 ]

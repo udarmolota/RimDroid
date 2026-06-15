@@ -105,6 +105,19 @@ public class LauncherPreferences {
         prefs.edit().putBoolean(C.shprefs.keys.ARE_DEPENDENCIES_INSTALLED, value).apply();
     }
 
+    // --- Audio (experimental) ---
+    // Default OFF. FMOD's output under box64 is currently garbled noise (broken Vorbis decode), so
+    // we don't preload the libasound→AAudio shim → FMOD finds no audio device → clean SILENCE
+    // (better than screech). Flip on only to resume audio bring-up/diagnostics; all the audio code
+    // (shim, dump, sine test) stays in the build and works the moment this is enabled.
+    public boolean isAudioEnabled() {
+        return prefs.getBoolean("audio_enabled", false);
+    }
+
+    public void setAudioEnabled(boolean value) {
+        prefs.edit().putBoolean("audio_enabled", value).apply();
+    }
+
     // --- Renderer ---
 
     public Renderer getRenderer() {
@@ -252,5 +265,15 @@ public class LauncherPreferences {
     @Nullable
     public String getEnvVars() {
         return prefs.getString("env_vars", null);
+    }
+
+    // --- Haptic feedback (global default; per-instance override in InstanceSettings). Default OFF. ---
+
+    public boolean isHapticFeedback() {
+        return prefs.getBoolean("haptic", false);
+    }
+
+    public void setHapticFeedback(boolean v) {
+        prefs.edit().putBoolean("haptic", v).apply();
     }
 }

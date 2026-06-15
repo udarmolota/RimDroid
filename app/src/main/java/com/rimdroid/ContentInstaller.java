@@ -1,7 +1,7 @@
 package com.rimdroid;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
@@ -70,7 +70,7 @@ public final class ContentInstaller {
         rg.addView(rbMod); rg.addView(rbDlc); rg.check(1);
         box.addView(rg);
 
-        new AlertDialog.Builder(act)
+        new MaterialAlertDialogBuilder(act)
                 .setTitle("Install mod / DLC")
                 .setView(box)
                 .setNegativeButton("Cancel", null)
@@ -95,7 +95,9 @@ public final class ContentInstaller {
                  FileOutputStream out = new FileOutputStream(cache)) {
                 byte[] b = new byte[65536];
                 int n;
-                while ((n = in.read(b)) > 0) out.write(b, 0, n);
+                // Stop only on EOF (-1) — read() may return 0 without EOF, and ">0" would truncate
+                // the cached copy of a large pack (caused a patch file to land as 0 bytes).
+                while ((n = in.read(b)) != -1) out.write(b, 0, n);
             } catch (Exception e) {
                 main.post(() -> Toast.makeText(act, "Read failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 return;
@@ -113,7 +115,7 @@ public final class ContentInstaller {
                 } else {
                     msg = "Install failed: " + String.join("; ", r.errors);
                 }
-                new AlertDialog.Builder(act).setMessage(msg).setPositiveButton("OK", null).show();
+                new MaterialAlertDialogBuilder(act).setMessage(msg).setPositiveButton("OK", null).show();
             });
         }, "rd-content-install").start();
     }

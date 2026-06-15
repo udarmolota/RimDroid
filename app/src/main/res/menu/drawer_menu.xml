@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Steam -->
+    <group android:id="@+id/group_steam" android:checkableBehavior="none">
+    <item
+        android:id="@+id/action_download_game"
+        android:icon="@drawable/ic_steam"
+        android:title="@string/nav_download_game" />
+    </group>
+
     <!-- Get content -->
     <group android:id="@+id/group_content" android:checkableBehavior="none">
-        <item
-            android:id="@+id/action_download_game"
-            android:icon="@drawable/mt_icon_save"
-            android:title="@string/nav_download_game" />
         <item
             android:id="@+id/action_install_instance"
             android:icon="@drawable/mt_icon_add"

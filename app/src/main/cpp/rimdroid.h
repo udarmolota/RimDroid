@@ -47,9 +47,11 @@ int rimdroid_osmesa_smoketest(const char* osmesa_lib_path);
  * swap blits the buffer to the surface. The g_osmesa_context / g_osmesa_handle
  * globals are weak-referenced by box64 (wrappedsdl2.c) to select the softpipe path.
  */
-int  rimdroid_init_osmesa(void);
-int  rimdroid_osmesa_make_current(void);
-void rimdroid_osmesa_swap(void);
+int   rimdroid_init_osmesa(void);
+int   rimdroid_osmesa_make_current(void);
+int   rimdroid_osmesa_make_current_ctx(void* ctx);   // bind a specific (per-Unity) OSMesa context
+void* rimdroid_osmesa_create_shared(void);           // extra context sharing with the primary
+void  rimdroid_osmesa_swap(void);
 
 /* Phase A input injection (defined in rimdroid.c). The Android touch handler
  * pushes mouse events; box64's my2_SDL_PollEvent drains them via rd_input_poll. */

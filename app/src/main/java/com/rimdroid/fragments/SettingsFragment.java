@@ -64,6 +64,8 @@ public class SettingsFragment extends Fragment {
         Switch swDebug        = view.findViewById(R.id.sw_debug);
         Switch swStrict       = view.findViewById(R.id.sw_strict_barriers);
         Switch swDragPan      = view.findViewById(R.id.sw_drag_pan);
+        Switch swHaptic       = view.findViewById(R.id.sw_haptic);
+        Switch swAudio        = view.findViewById(R.id.sw_audio);
         final android.widget.Button btnSmoke = view.findViewById(R.id.btn_smoketest);
         final android.widget.Button btnSteamSpike = view.findViewById(R.id.btn_steam_spike);
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
@@ -74,12 +76,10 @@ public class SettingsFragment extends Fragment {
         // GL4ES / ZINK_OSMESA options.
         rbGl4es.setVisibility(View.GONE);
         rbZinkOsmesa.setVisibility(View.GONE);
-        // "Software" (SOFTPIPE) is wired + proven to run Unity (Milestone 2), but NOT
-        // yet usable for real play: large textures render BLACK on softpipe and the
-        // box64/Mono load is too slow (see memory/software_renderer_plan.md). FULLY HIDDEN
-        // (even in Debug) — all the code stays (GameLauncher SOFTPIPE case + enum + native
-        // OSMesa path), it's just not selectable. A user with SOFTPIPE saved falls back to
-        // ZINK_ZFA so nobody is stuck on the hidden renderer.
+        // "Software" (SOFTPIPE) — CPU renderer that bypasses Vulkan. HIDDEN again: it does not
+        // render Unity's scene (only immediate-mode overlays reach FBO 0 → black/dark screen),
+        // so it is not user-ready. Code path kept; the radio is GONE and any instance still set to
+        // SOFTPIPE falls through to the GPU default (ZINK_ZFA) below.
         boolean showSoftpipe = false;
         rbSoftpipe.setVisibility(View.GONE);
         switch (inst.getRenderer()) {
@@ -94,6 +94,34 @@ public class SettingsFragment extends Fragment {
         swStrict.setChecked(inst.isInterpreter());
         swDragPan.setChecked(inst.isDragPan());
         swDragPan.setOnCheckedChangeListener((btn, checked) -> inst.setDragPan(checked));
+        swHaptic.setChecked(inst.isHapticFeedback());
+        swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
+        // Audio is GLOBAL (experimental, default off) — the libasound→AAudio shim is loaded at game
+        // launch only when this is on. Off = clean silence (FMOD output under box64 is still garbled).
+        swAudio.setChecked(LauncherPreferences.requireSingleton().isAudioEnabled());
+        swAudio.setOnCheckedChangeListener((btn, checked) -> {
+            LauncherPreferences.requireSingleton().setAudioEnabled(checked);
+            // Temporary (0.1.6–0.1.7): game audio needs the separate Sound mod + Harmony, or it's
+            // just noise. Warn on enable so users don't expect working sound from the toggle alone.
+            if (checked) {
+                android.widget.Toast.makeText(getContext(),
+                        getString(R.string.audio_needs_mod), android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+
+        // Advanced: per-instance extra env vars (KEY=VALUE, space-separated). Applied last in
+        // GameLauncher so they override the box64 defaults. Diagnostic/perf knob (e.g.
+        // BOX64_DYNAREC_ALIGNED_ATOMICS=1 for the Mali/Cortex save bug, or BOX64_DYNAREC_STRONGMEM=2).
+        final android.widget.EditText etEnv = view.findViewById(R.id.et_env_vars);
+        String envCur = inst.getEnvVars();
+        etEnv.setText(envCur != null ? envCur : "");
+        etEnv.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(android.text.Editable s) {
+                inst.setEnvVars(s.toString().replace('\n', ' '));   // newlines → spaces (KEY=VALUE list)
+            }
+        });
         // Interpreter mode (BOX64_DYNAREC=0) is FULLY HIDDEN: on a Mali/MediaTek device it took ~1.5h
         // just to load the APP (not even the menu) — impractical to test, so we don't expose it. The
         // code (toggle + InstanceSettings.interpreter + GameLauncher BOX64_DYNAREC=0) is KEPT for later.
@@ -132,7 +160,7 @@ public class SettingsFragment extends Fragment {
             box.addView(etUser);
             box.addView(etPass);
 
-            new android.app.AlertDialog.Builder(act)
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
                     .setTitle("Steam login (spike)")
                     .setMessage("Sent to Steam like DepotDownloader. Then approve in Steam Mobile, or enter the Steam Guard code.")
                     .setView(box)
@@ -150,7 +178,7 @@ public class SettingsFragment extends Fragment {
                                     etCode.setHint(email != null ? ("Code emailed to " + email) : "Steam Guard code");
                                     etCode.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                                             | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-                                    new android.app.AlertDialog.Builder(act)
+                                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
                                             .setTitle(prevWrong ? "Code incorrect — try again" : "Enter Steam Guard code")
                                             .setView(etCode)
                                             .setCancelable(false)
@@ -172,8 +200,11 @@ public class SettingsFragment extends Fragment {
                     .show();
         });
 
-        // Steam downloader SPIKE buttons FULLY HIDDEN — superseded by the real "Download game (Steam)"
-        // screen (drawer). Click logic kept but unreachable.
+        // Anon-mod-download spike — REMOVED (the real anonymous downloader shipped). Button hidden.
+        btnSteamSpike.setVisibility(View.GONE);
+
+        // Steam downloader SPIKE button (full game download) HIDDEN — superseded by the real
+        // "Download game (Steam)" screen. Click logic kept but unreachable.
         btnSteamDl.setVisibility(View.GONE);
         tvSteamDlStatus.setVisibility(View.GONE);
         btnSteamDl.setOnClickListener(v -> {
@@ -211,7 +242,7 @@ public class SettingsFragment extends Fragment {
             box.addView(etPass);
             box.addView(etManifest);
 
-            new android.app.AlertDialog.Builder(act)
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
                     .setTitle("Steam download spike")
                     .setMessage((manifestOnly ? "MANIFEST-ONLY test. " : "")
                             + "RimDroid currently works with RimWorld 1.5 (Steam 'latest' is already 1.6). "
@@ -246,7 +277,7 @@ public class SettingsFragment extends Fragment {
                                     etCode.setHint(email != null ? ("Code emailed to " + email) : "Steam Guard code");
                                     etCode.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                                             | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-                                    new android.app.AlertDialog.Builder(act)
+                                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
                                             .setTitle(prevWrong ? "Code incorrect — try again" : "Enter Steam Guard code")
                                             .setView(etCode)
                                             .setCancelable(false)

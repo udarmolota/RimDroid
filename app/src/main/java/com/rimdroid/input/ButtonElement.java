@@ -70,6 +70,7 @@ public class ButtonElement extends ControlElement {
             case MotionEvent.ACTION_POINTER_DOWN:
                 if (pointerId < 0 && isPointOver(e.getX(idx), e.getY(idx))) {
                     pointerId = pid;
+                    view.maybeHaptic();   // light tick on press, only if the user enabled haptics
                     if (isToggle) {
                         toggledOn = !toggledOn;
                         view.inject(binding, toggledOn);
@@ -99,6 +100,12 @@ public class ButtonElement extends ControlElement {
     @Override public void reset() {
         if (pointerId >= 0 && !isToggle) view.inject(binding, false);
         if (isToggle && toggledOn) { view.inject(binding, false); toggledOn = false; }
+        pointerId = -1;
+    }
+
+    /** Clear a stale HOLD press but keep an intentional toggle latch (it should survive across taps). */
+    @Override public void clearStalePointer() {
+        if (pointerId >= 0 && !isToggle) view.inject(binding, false);
         pointerId = -1;
     }
 

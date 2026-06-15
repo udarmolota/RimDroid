@@ -50,11 +50,53 @@ public class GameLauncher {
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
                 + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=1\n"
+            + "extra env     : " + envFieldReport(s) + "\n"
             + "(GL_RENDERER / GL_VERSION appear below once GL initialises)\n"
             + "==============================";
     }
 
+    /**
+     * Diagnostic fingerprint of the user-entered "Extra env vars" field. Prints the raw string AND
+     * reads each key back from the live process environment via {@link Os#getenv} — proving (a) the
+     * user actually entered something and it was saved, and (b) it was applied to the environment that
+     * box64 forwards to the guest. "(NULL!)" means the setenv did not stick (e.g. malformed token).
+     * Called from buildLaunchConfig, which runs AFTER the env field is applied, so the readback is valid.
+     */
+    private static String envFieldReport(InstanceSettings s) {
+        String raw = s.getEnvVars();
+        if (raw == null || raw.trim().isEmpty()) return "(none entered)";
+        StringBuilder sb = new StringBuilder();
+        sb.append('"').append(raw.trim()).append('"');
+        for (String token : raw.trim().split("\\s+")) {
+            String[] parts = token.split("=", 2);
+            if (parts.length == 2) {
+                String k = parts[0].trim();
+                String got = Os.getenv(k);
+                sb.append("\n                  ").append(k).append(" → getenv=")
+                  .append(got == null ? "(NULL!)" : got);
+            } else {
+                sb.append("\n                  [malformed token, no '=']: ").append(token);
+            }
+        }
+        return sb.toString();
+    }
+
     public static void launch(GameInstance gameInstance) throws ErrnoException {
+
+        // --- Audio (experimental, GLOBAL toggle, default OFF) ---
+        // Load the libasound→AAudio shim only when audio is enabled, right before launch, so the
+        // toggle takes effect on the very next game start (no app restart). Its DT_SONAME is
+        // "libasound.so.2", so loading it here registers it under that soname before the guest's FMOD
+        // dlopen("libasound.so.2") runs → sound via AAudio. OFF (default) = FMOD finds no audio device
+        // = clean silence (FMOD output under box64 is currently garbled noise). Best-effort.
+        if (LauncherPreferences.requireSingleton().isAudioEnabled()) {
+            try {
+                System.loadLibrary("asoundshim");
+                postLog("Audio: libasound→AAudio shim loaded (experimental)");
+            } catch (Throwable t) {
+                Log.e(TAG, "asound shim load failed; game will be silent", t);
+            }
+        }
 
         // --- Box64 tuning ---
         // BOX64_LOG: 0 normally (verbose tracing = gigabyte logs). Raise to 1-2
@@ -66,6 +108,20 @@ public class GameLauncher {
         Os.setenv("BOX64_DYNAREC_SAFEFLAGS", "1", true);
         Os.setenv("BOX64_DYNAREC_STRONGMEM", "4", true);    // QEMU-style strong memory model. Tested on Adreno 830: 4 > 3 > 2 for FPS (more barriers → fewer Mono-GC fault-storms; strictest = also safest for saves). Kept at 4.
         Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "1", true);  // box64 default; WEAKBARRIER=0 was tested, did NOT fix save corruption
+        // FASTNAN/FASTROUND default to 1 in box64 (imprecise FP). Force OFF: imprecise FP is a known
+        // amplifier of the pawn-save corruption (multiple reports got corruption ONLY after a third-party
+        // AI told them to set these to 1). Precise FP costs a little speed, safety wins.
+        Os.setenv("BOX64_DYNAREC_FASTNAN", "0", true);
+        Os.setenv("BOX64_DYNAREC_FASTROUND", "0", true);
+        // TEMPORARY tester experiment (DEBUG builds only): force box64's aligned-atomics CAS path to
+        // test the Mali/Cortex save-corruption hypothesis — Mono's GC CMPXCHG may be hitting box64's
+        // "unaligned atomic" fallback (marked "not enough" in box64 source) → corrupting Pawn objects →
+        // pawns serialize as empty <li/>. Debug-only so the signed release is unaffected. If this fixes
+        // the save bug on the affected device, we make it a proper per-device default. Remove afterwards.
+        // (Ruled out as the softpipe "all-zero buffer" cause — re-enabled for the Mali/Cortex test.)
+        if (BuildConfig.DEBUG) {
+            Os.setenv("BOX64_DYNAREC_ALIGNED_ATOMICS", "1", true);
+        }
         // BOX64_DYNAREC_DIRTY=2 TESTED 2026-06-03 (Adreno 830): REJECTED. FPS collapsed to 12→7 (got WORSE over
         // time, opposite of cold-cache warmup) — NEVERCLEAN hotpages break Mono-JIT SMC handling. Keep default (0).
         // "Interpreter mode" test toggle → disable box64 dynarec entirely (BOX64_DYNAREC=0,
@@ -226,17 +282,6 @@ public class GameLauncher {
                 break;
         }
 
-        // Custom env vars from settings (KEY=VALUE pairs separated by spaces)
-        String rawEnvVars = LauncherPreferences.requireSingleton().getEnvVars();
-        if (rawEnvVars != null && !rawEnvVars.trim().isEmpty()) {
-            for (String token : rawEnvVars.trim().split("\\s+")) {
-                String[] parts = token.split("=", 2);
-                if (parts.length == 2) {
-                    Os.setenv(parts[0].trim(), parts[1].trim(), true);
-                }
-            }
-        }
-
         // Debug extras — when debug mode is on, keep box64 log modest.
         // BOX64_LOG=1 gives useful high-level markers (lib loading, GL, our RIMDROID lines).
         // We DELIBERATELY do NOT enable BOX64_DYNAREC_LOG: under Mono's Boehm GC (libmonobdwgc),
@@ -247,6 +292,39 @@ public class GameLauncher {
         if (gameInstance.settings().isDebug()) {
             Os.setenv("BOX64_LOG", "1", true);
             Os.setenv("BOX64_DYNAREC_LOG", "0", true);
+        }
+
+        // Custom env vars (KEY=VALUE pairs separated by spaces) — PER-INSTANCE (falls back to global).
+        // MUST be applied after ALL defaults above — including the debug extras — so a power-user/
+        // diagnostic value (e.g. BOX64_LOG=2 for an mmap trace) always wins. It used to run before the
+        // debug block, which silently clobbered a user-set BOX64_LOG with the debug default of 1.
+        String rawEnvVars = gameInstance.settings().getEnvVars();
+        if (rawEnvVars != null && !rawEnvVars.trim().isEmpty()) {
+            for (String token : rawEnvVars.trim().split("\\s+")) {
+                String[] parts = token.split("=", 2);
+                if (parts.length == 2) {
+                    Os.setenv(parts[0].trim(), parts[1].trim(), true);
+                }
+            }
+        }
+
+        // Safety clamp: several "save corruption" reports trace to cargo-cult env vars (copied from a
+        // third-party AI) that widen the box64 JIT race — BOX64_DYNAREC_BIGBLOCK>1, FASTNAN=1,
+        // FASTROUND=1, STRONGMEM=0. In RELEASE builds we re-pin these to safe values AFTER the user
+        // field, so a pasted dangerous value can't silently eat colonies. DEBUG builds leave them
+        // untouched so we (devs) can still A/B these knobs.
+        if (!BuildConfig.DEBUG && rawEnvVars != null) {
+            String[][] clamp = {
+                {"BOX64_DYNAREC_BIGBLOCK", "0"}, {"BOX64_DYNAREC_FASTNAN", "0"},
+                {"BOX64_DYNAREC_FASTROUND", "0"}, {"BOX64_DYNAREC_STRONGMEM", "4"}
+            };
+            for (String[] kv : clamp) {
+                String v = Os.getenv(kv[0]);
+                if (v != null && !v.equals(kv[1])) {
+                    Os.setenv(kv[0], kv[1], true);
+                    postLog("Safety: ignored unsafe " + kv[0] + "=" + v + " (forced " + kv[1] + " — protects saves)");
+                }
+            }
         }
 
         // Self-describing launch header: passed to native (RIMDROID_LAUNCH_CONFIG) so it lands at

@@ -61,12 +61,16 @@ public class NewInstanceFragment extends Fragment {
                 if (uri == null) return;
                 selectedZipUri = uri;
                 tvSelectedZip.setText(uri.getLastPathSegment());
-                // Auto-fill instance name from filename
-                String seg = uri.getLastPathSegment();
-                if (seg != null) {
-                    if (seg.contains("/")) seg = seg.substring(seg.lastIndexOf('/') + 1);
-                    if (seg.toLowerCase().endsWith(".zip")) seg = seg.substring(0, seg.length() - 4);
-                    etInstanceName.setText(seg);
+                // Auto-fill the instance name from the filename ONLY if the user hasn't typed one —
+                // otherwise picking the zip would clobber a name they already entered (which then
+                // installed under the zip's name and could collide with an existing instance).
+                if (etInstanceName.getText().toString().trim().isEmpty()) {
+                    String seg = uri.getLastPathSegment();
+                    if (seg != null) {
+                        if (seg.contains("/")) seg = seg.substring(seg.lastIndexOf('/') + 1);
+                        if (seg.toLowerCase().endsWith(".zip")) seg = seg.substring(0, seg.length() - 4);
+                        etInstanceName.setText(seg);
+                    }
                 }
                 btnInstall.setEnabled(true);
             });
@@ -115,7 +119,7 @@ public class NewInstanceFragment extends Fragment {
             mainHandler.post(() -> {
                 if (!isAdded() || getView() == null) return;
                 if (!r.applied) { Navigation.findNavController(requireView()).popBackStack(); return; }
-                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                         .setTitle(R.string.driver_auto_set_title)
                         .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
                         .setCancelable(false)

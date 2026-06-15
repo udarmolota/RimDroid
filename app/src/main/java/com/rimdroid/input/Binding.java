@@ -15,6 +15,11 @@ package com.rimdroid.input;
 public enum Binding {
     NONE(Kind.NONE, 0, 0, null, "None"),
 
+    // --- Special UI actions (handled by InputControlsView itself, NOT injected into the game) ---
+    // Toggle the visibility of all on-screen controls (the bound button stays visible so you can
+    // bring them back). Bind it to the default "V" button.
+    TOGGLE_CONTROLS(Kind.SPECIAL, 0, 0, null, "Hide/show controls"),
+
     // --- Mouse buttons (injected at the on-screen cursor) ---
     MOUSE_LEFT(Kind.MOUSE, 1, 0, null, "Left click"),
     MOUSE_MIDDLE(Kind.MOUSE, 2, 0, null, "Middle click"),
@@ -92,7 +97,7 @@ public enum Binding {
     KEY_9(Kind.KEY, 38, 57, "9", "9"),
     KEY_0(Kind.KEY, 39, 48, "0", "0");
 
-    public enum Kind { NONE, MOUSE, SCROLL, KEY }
+    public enum Kind { NONE, MOUSE, SCROLL, KEY, SPECIAL }
 
     public final Kind kind;
     public final int code;      // MOUSE: button#, SCROLL: dy, KEY: scancode

@@ -6,8 +6,9 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Instances + the install button scroll together; the button sits right under the last card
-         and descends as more instances are added (no longer pinned above the log). -->
+    <!-- Instances + the log scroll together; the log sits right under the last instance card and
+         descends as more instances are added (no longer pinned to the bottom of the screen).
+         Adding a new instance is now only in the drawer's "Add Instance". -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -37,59 +38,52 @@
                 android:textAppearance="?attr/textAppearanceBodyMedium"
                 android:visibility="gone" />
 
-            <Button
-                android:id="@+id/btn_install_instance"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+            <!-- Log header row (sits right under the instances list) -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/install_instance"
-                android:textSize="15dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/log"
+                    android:textSize="15dp"
+                    android:textAppearance="?attr/textAppearanceLabelSmall" />
+
+                <Button
+                    android:id="@+id/btn_clear_log"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clear"
+                    android:textSize="15dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
+
+            </LinearLayout>
+
+            <ScrollView
+                android:id="@+id/scroll_log"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:background="#14000000">
+
+                <TextView
+                    android:id="@+id/tv_log"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:textSize="11sp"
+                    android:padding="8dp" />
+
+            </ScrollView>
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
-    <!-- Log header row -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="4dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/log"
-            android:textSize="15dp"
-            android:textAppearance="?attr/textAppearanceLabelSmall" />
-
-        <Button
-            android:id="@+id/btn_clear_log"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/clear"
-            android:textSize="15dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
-
-    </LinearLayout>
-
-    <ScrollView
-        android:id="@+id/scroll_log"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:background="#14000000">
-
-        <TextView
-            android:id="@+id/tv_log"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="monospace"
-            android:textSize="11sp"
-            android:padding="8dp" />
-
-    </ScrollView>
 
 </LinearLayout>

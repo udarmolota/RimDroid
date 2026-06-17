@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mapper_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/rd_page_bg">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/mapper_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="@string/gamepad_mapper_title"
+        app:titleTextColor="?attr/colorOnSurface"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="?attr/colorOnSurface" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/gamepad_mapper_step_label"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="?attr/colorOnBackground"
+            android:textSize="22sp"
+            android:padding="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/gamepad_mapper_start_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/gamepad_mapper_start"
+            android:layout_marginTop="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/gamepad_mapper_reset_button"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/gamepad_mapper_reset"
+            android:layout_marginTop="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

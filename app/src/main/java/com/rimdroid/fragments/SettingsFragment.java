@@ -102,10 +102,14 @@ public class SettingsFragment extends Fragment {
         swAudio.setOnCheckedChangeListener((btn, checked) -> {
             LauncherPreferences.requireSingleton().setAudioEnabled(checked);
             // Temporary (0.1.6–0.1.7): game audio needs the separate Sound mod + Harmony, or it's
-            // just noise. Warn on enable so users don't expect working sound from the toggle alone.
+            // just noise. Show a dismissable dialog (not a Toast) on enable so the user has time to
+            // read the whole note and tap OK.
             if (checked) {
-                android.widget.Toast.makeText(getContext(),
-                        getString(R.string.audio_needs_mod), android.widget.Toast.LENGTH_LONG).show();
+                new android.app.AlertDialog.Builder(requireContext())
+                        .setTitle(R.string.audio_dialog_title)
+                        .setMessage(R.string.audio_needs_mod)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
             }
         });
 
@@ -395,6 +399,10 @@ public class SettingsFragment extends Fragment {
             i.putExtra(com.rimdroid.ControlsEditorActivity.EXTRA_INSTANCE_NAME, instanceName);
             startActivity(i);
         });
+
+        // --- Gamepad button mapping (fix swapped/inverted controllers) ---
+        view.findViewById(R.id.btn_gamepad_mapper).setOnClickListener(v ->
+            startActivity(new android.content.Intent(requireContext(), com.rimdroid.GamepadMapperActivity.class)));
 
         // --- Render scale (UI size / GPU load) seek bar: device-floor..100% ---
         // The floor keeps the internal resolution >=1280x720 (RimWorld UI minimum) and

@@ -34,6 +34,31 @@ public class GameLauncher {
      * in the launcher log). Lists the per-instance settings + the key box64 knobs this run uses.
      * GL_RENDERER/GL_VERSION are added later by the native side once GL initialises.
      */
+    /** True if the RimDroidSound (PCM audio) mod is present in this instance's Mods folder. Matched by
+     *  folder name (contains "rimdroidsound") or by About.xml packageId "rimdroid.sound" (in case the
+     *  folder was renamed). Used to gate audio so the un-modded screech never plays. */
+    private static boolean isSoundModInstalled(GameInstance gi) {
+        java.io.File[] dirs = new java.io.File(gi.getGamePath(), "Mods").listFiles();
+        if (dirs == null) return false;
+        for (java.io.File d : dirs) {
+            if (!d.isDirectory()) continue;
+            if (d.getName().toLowerCase().contains("rimdroidsound")) return true;
+            java.io.File about = new java.io.File(d, "About/About.xml");
+            if (about.isFile() && fileContains(about, "rimdroid.sound")) return true;
+        }
+        return false;
+    }
+
+    private static boolean fileContains(java.io.File f, String needle) {
+        String lneedle = needle.toLowerCase();
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) {
+            String line;
+            while ((line = r.readLine()) != null)
+                if (line.toLowerCase().contains(lneedle)) return true;
+        } catch (Exception ignore) {}
+        return false;
+    }
+
     private static String buildLaunchConfig(GameInstance gi) {
         InstanceSettings s = gi.settings();
         String so = s.getVulkanDriverSo();
@@ -89,12 +114,22 @@ public class GameLauncher {
         // "libasound.so.2", so loading it here registers it under that soname before the guest's FMOD
         // dlopen("libasound.so.2") runs → sound via AAudio. OFF (default) = FMOD finds no audio device
         // = clean silence (FMOD output under box64 is currently garbled noise). Best-effort.
+        // Gate on the RimDroidSound mod being present in THIS instance: box64's Vorbis/codec decode is
+        // broken, so RimWorld's stock audio plays as a screech. The RimDroidSound mod swaps those clips
+        // for plain PCM (clean). Without the mod, enabling sound = screech — so if the mod isn't there,
+        // we keep the shim unloaded (silence) even when the toggle is on. Sound effectively turns on
+        // together with the mod; no screech on a first launch before the mod is added.
         if (LauncherPreferences.requireSingleton().isAudioEnabled()) {
-            try {
-                System.loadLibrary("asoundshim");
-                postLog("Audio: libasound→AAudio shim loaded (experimental)");
-            } catch (Throwable t) {
-                Log.e(TAG, "asound shim load failed; game will be silent", t);
+            if (!isSoundModInstalled(gameInstance)) {
+                postLog("Audio: RimDroidSound mod not installed in this instance — sound stays off "
+                        + "until you add it (this avoids the un-modded screech).");
+            } else {
+                try {
+                    System.loadLibrary("asoundshim");
+                    postLog("Audio: libasound→AAudio shim loaded (experimental)");
+                } catch (Throwable t) {
+                    Log.e(TAG, "asound shim load failed; game will be silent", t);
+                }
             }
         }
 
@@ -354,6 +389,10 @@ public class GameLauncher {
         Os.setenv("SDL_AUDIODRIVER", "dummy", true);
         // Suppress ALSA errors (no ALSA on Android)
         Os.setenv("ALSA_CONFIG_PATH", "/dev/null", true);
+        // Audio goes through our libasound→AAudio shim; PulseAudio is never used. Tell box64 not to
+        // even try to load/wrap libpulse / libpulse-simple, so FMOD goes straight to ALSA instead of
+        // box64 logging a scary (but harmless) "Error initializing libpulse-simple" before falling back.
+        Os.setenv("BOX64_NOPULSE", "1", true);
 
         // Create libmono.so → libmonobdwgc-2.0.so symlink if needed.
         // Unity's Linux player dlopen's "libmono.so" but MonoBleedingEdge ships

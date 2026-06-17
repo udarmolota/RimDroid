@@ -134,6 +134,15 @@ public class InputControlsView extends View {
         invalidate();
     }
 
+    /** Set the hide-all-controls state directly (used to auto-hide when a physical gamepad
+     *  connects, and restore when it disconnects). No-op if already in that state. */
+    public void setControlsHidden(boolean hidden) {
+        if (controlsHidden == hidden) return;
+        controlsHidden = hidden;
+        resetAll();
+        invalidate();
+    }
+
     /** The TOGGLE_CONTROLS button stays visible/touchable even while everything else is hidden. */
     private boolean isControlsToggle(ControlElement el) {
         return el instanceof ButtonElement && ((ButtonElement) el).getBinding() == Binding.TOGGLE_CONTROLS;
@@ -176,6 +185,7 @@ public class InputControlsView extends View {
         curX = Math.max(minX, Math.min(maxX, curX + dx));
         curY = Math.max(minY, Math.min(maxY, curY + dy));
         try { GameActivity.nativeTouch(0, gx(), gy()); } catch (UnsatisfiedLinkError ignored) {}
+        invalidate();   // repaint the overlay cursor (the gamepad path has no touch to trigger it)
     }
 
     /** Inject a binding press/release. Mouse buttons act at the cursor. */

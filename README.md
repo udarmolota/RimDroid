@@ -1,161 +1,103 @@
 # RimDroid
 
-Run **RimWorld** (the native Linux x86_64 build, Unity 2019) on an Android phone via
-x86_64→ARM64 emulation, with **real GPU rendering** and **on-screen touch controls**.
+**RimDroid** is a launcher that runs [RimWorld](https://rimworldgame.com) — the native Linux build —
+on Android phones, with real GPU rendering, touch controls, gamepad support, and mods.
 
-> **Status (v0.1.5): playable on Snapdragon/Adreno, with working mods.** RimWorld 1.5 boots,
-> renders at native resolution, takes touch input (tap/select, **drag-to-pan the map**, orders,
-> camera, zoom), and runs mods (Harmony, RimHUD, Pick Up And Haul). The launcher now manages
-> **multiple instances** (each with its own settings), can **download the game, DLC, and mods
-> from Steam in-app**, **auto-picks a Vulkan driver for your GPU** (or import your own), and has a
-> Material 3 UI with **night mode**. Mali/MediaTek is **experimental** — it launches and new
-> colonies are playable, but loading a save can lose colonists (an experimental fix is in this build).
+> [!NOTE]
+> This application is **not developed by or affiliated with Ludeon Studios** in any way.
+> You must own RimWorld — RimDroid does **not** include or distribute any game files.
 
----
+> [!WARNING]
+> **0.1.7 is a beta.** It runs well on some devices and not yet on others — compatibility is
+> currently per-device, not per-GPU brand. See [Device compatibility](#device-compatibility).
 
-## What & why
+## Features
 
-RimWorld officially ships only for x86_64 (Windows/Linux/macOS). RimDroid takes the
-**native Linux build of the game** and runs it directly on an ARM64 phone:
+- ✔️ Runs **RimWorld 1.5** (the native Linux x86_64 build) on ARM64 phones
+- ✔️ **Real GPU rendering** — OpenGL via Zink/Vulkan (Turnip on Adreno)
+- ✔️ **In-app downloads** — get the game, DLC, and Workshop mods straight from Steam
+- ✔️ **Mods** — Harmony patching works (tested: RimHUD, Pick Up And Haul); needs Harmony 2.2.2
+- ✔️ **Multiple instances** — each install is a card with its own settings (renderer, driver, controls)
+- ✔️ **Touch controls** — tap/select, drag-to-pan, right-click, selection box, pinch-zoom; the whole
+  layout is editable (move/resize/opacity, bind any key, export/import)
+- ✔️ **Physical gamepad** support, with a button-remapping wizard
+- ✔️ **Per-GPU Vulkan driver** — auto-picked for your GPU, or import your own
+- ✔️ **Material 3 UI** with night mode and a Russian translation
+- ⭕ **Audio** temporarily disabled (work in progress)
+- ⭕ **On-screen keyboard** for text fields not yet available
 
-- **box64** emulates the x86_64 code (Unity engine + Mono) on ARM64;
-- it runs **in-process, without fork** — possible for 1.5 because `UnityPlayer.so` is
-  relocatable (PIE) and loads below the ART heap;
-- graphics go through the phone's real GPU (not a software renderer);
-- touch input is injected into the game's SDL event queue.
+## Device compatibility
 
-## Stack
+Compatibility right now depends on the **specific phone** (GPU + driver + kernel), not just the GPU
+brand — some Mali phones run great while others don't start yet. This is a living list; if your
+device isn't here, try it and send us a log.
 
-| Layer | What is used |
-|-------|--------------|
-| Emulation | **box64** (x86_64 → ARM64), in-process, no fork |
-| GPU | **Zink** (OpenGL→Vulkan, Mesa 25) over **Turnip** (`libvulkan_freedreno`, Adreno) → real **OpenGL 4.3 Core** via `libzfa.so` |
-| Window | **SDL2** (`SDL_VIDEODRIVER=dummy`), rendering into the Activity's `ANativeWindow`; orientation handled Zomdroid-style (landscape + identity buffer transform) |
-| SDL dynapi | **remap** of the jump_table to the proc order of the SDL statically linked into `UnityPlayer.so` (differs from box64's) |
-| Input | Android touch → injected **SDL events** (`my2_SDL_PollEvent` / `SDL_GetMouseState`); on-screen sticks + buttons |
-| Runtime | the game's own **Mono / Boehm GC** |
+**Works:**
+- Samsung Galaxy S25 Ultra (Adreno 830)
+- Lenovo Legion Y700 (Adreno 730)
+- Realme P4x (Mali)
 
-Reference device: **Snapdragon 8 Elite, Adreno 830**.
+**Boots, but may hit a "colonists missing after load" / crash bug — a reboot often helps:**
+- Poco X7 (Mali)
+- Poco F5 / Snapdragon 7+ Gen 2 (Adreno 725)
 
-## What works
+**Doesn't start yet:**
+- Infinix Note 50s 5G (Mali-G615) and similar — waiting on the software renderer
 
-- ✅ RimWorld **1.5 launches** in-process and **renders at native resolution** (landscape);
-- ✅ full GPU pipeline (Zink/Vulkan/Turnip, GL 4.3 Core);
-- ✅ **multiple instances** — each install is a card with its own **Play** + settings; renderer,
-  Vulkan driver, debug and controls are **per instance**;
-- ✅ **in-app downloads** — get the game, DLC, and Workshop mods straight from Steam in the
-  launcher (sign in with your own account; mods can also be fetched without login via a browser);
-- ✅ **per-GPU Vulkan driver** — the launcher **auto-detects your GPU and picks a matching driver**
-  (new instances get it automatically); a picker offers System + Turnip variants for Adreno
-  8xx/7xx/6xx, and you can **import your own driver** (`.so` or AdrenoTools `.zip`);
-- ✅ **Material 3 UI** with **night mode** (System / Light / Dark) and a **Russian translation**
-  (auto-selected by device language);
-- ✅ **input:** left-click (tap / mouse-stick), **right-click** (RBC button),
-  **left-drag** (LBC button — selection box / zones / Architect), camera pan
-  (**drag the map with a finger**, or the WASD-stick → arrow keys), **pinch-to-zoom**;
-- ✅ **editable on-screen controls** — move / resize / opacity (with "Opacity → all"), add
-  buttons bound to any key or mouse action (incl. **F1–F12**), circular or rectangular, and
-  **export/import the layout** (Settings → Edit on-screen controls; menu → Export/Import
-  controls layout);
-- ✅ **mods work** — Harmony patching is functional (tested: Harmony, RimHUD, Pick Up And
-  Haul). Requires **Harmony 2.2.2** (see [Mods](#mods));
-- ✅ **smart mod importer** (menu → Import Mods (ZIP)) — finds each mod's root and strips
-  wrapper folders;
-- ✅ **save/settings backup** (menu → Export/Import saves + settings) and **one-tap log
-  export** (menu → Export logs);
-- ✅ **Community / new-versions links** in the menu (Reddit, GitHub releases);
-- ✅ saving/loading on Adreno (on Mali/MediaTek a save currently loads without colonists —
-  see [Remaining](#remaining--todo)).
+## System requirements
 
-## Key problems that were solved
+- Android 11+
+- A 64-bit (ARM64) device; **8 GB+ RAM** recommended
+- ~5–10 GB free storage for the game, DLC, and mods
+- A copy of RimWorld you own (Steam)
 
-- **The "infinite `SDL_GL_DeleteContext` loop"** that froze the first frame for days was a
-  **red herring**: the SDL dynapi remap was off-by-one (it assumed the game lacks
-  `SDL_GL_GetDrawableSize`), so the game's **`SDL_GL_SwapWindow` was routed to
-  `SDL_GL_DeleteContext`**. Unity's normal present loop was spinning into our no-op delete.
-  Fixed by correcting the slot indices (SwapWindow 522, DeleteContext 523).
-- **Orientation** (rotated / quarter-screen) — fixed by mirroring Zomdroid: `SENSOR_LANDSCAPE`
-  + `holder.setFixedSize()` + an IDENTITY `ANativeWindow` buffer transform, no native
-  `setBuffersGeometry`.
-- **Clicks "selected everything of a type" / right-click misbehaved** — injected SDL events
-  had `timestamp == 0`, so RimWorld read every click as a double/triple click. Fixed by
-  stamping a real monotonic-ms timestamp on each injected event.
-- **Mods didn't patch (Harmony `NotImplementedException`)** — Harmony 2.3's MonoMod.Core read
-  `/proc/self/auxv`, saw `aarch64`, and picked an unimplemented ARM64 code-detour, so every
-  patch failed. Fixed two ways: box64 now reports `x86_64` in `/proc/self/auxv` (so arch
-  detection is correct), and RimDroid uses **Harmony 2.2.2** (older MonoMod) whose x86_64
-  detour works under emulation.
+## Roadmap
 
-## Controls
+- [ ] Expand GPU/device compatibility 
+- [ ] Fix the "colonists missing after load" / crash bug on affected devices
+- [ ] In-game audio
+- [ ] On-screen keyboard for text fields
+- [ ] Make the latest Harmony 2.3 work (so mods aren't pinned to 2.2.2)
 
-- **Mouse-stick** (right): drag to move the cursor (white arrow); tap the stick = left-click.
-- **Direct tap** on the game = left-click.
-- **Drag the map** with one finger to pan the camera (a quick tap stays a left-click).
-- **WASD-stick** (left): pan the camera (arrow keys).
-- **RBC** button (top-right): hold to right-click at the cursor (orders, context menus).
-- **LBC** button: hold to left-drag at the cursor (selection box, zone painting, Architect drag).
-- **Pinch**: zoom.
+## How it works
 
-The whole layout is editable in **Settings → Edit on-screen controls**: drag to move, **hold
-an element briefly to open its settings**, sliders for size and opacity (with **"Opacity →
-all"** to copy one element's opacity to every element), add/delete elements, and bind any
-button to a mouse action or a key (Space, Tab, Esc, digits, letters, arrows, **F1–F12**, …).
-Buttons are circular by default and can be switched to rectangular. **Export/Import controls
-layout** from the menu to back up or share your setup.
+RimWorld officially ships only for x86_64. RimDroid runs the **native Linux build** directly on
+ARM64: [box64](https://github.com/ptitSeb/box64) emulates the x86_64 engine + Mono in-process,
+graphics go through your phone's real GPU via Zink/Vulkan, and Android touch and gamepad input is
+injected straight into the game.
 
 ## Mods
 
-Mods that patch the game use **Harmony**, and Harmony must be version **2.2.2** — **not** the
-latest 2.3.x. Under emulation the 2.3.x patch engine (MonoMod.Core) detects an
-`Android x86_64` environment and has no working code-detour, so every patch fails; the older
-2.2.2 engine works. Install the recommended **Harmony 2.2.2** build (`Harmony-2.2.2-RimDroid.zip`,
-packageId `brrainz.harmony`) instead of the Steam Workshop Harmony — don't install both
-(duplicate package id).
-
-Add mods (and Harmony itself) with **menu → Import Mods (ZIP)**: pick any mod zip and it
-finds the mod root, unwraps any extra/double folder, and drops it into the instance's `Mods`.
-You can also **download Workshop mods from Steam in-app** (Steam Downloads → Mods). Dragging a
-mod folder into `Mods` via **Manage Storage** still works too.
+Mods that patch the game use **Harmony**, and it must be version **2.2.2** — not the latest 2.3.x
+(its patch engine can't run under emulation). Install the provided `Harmony-2.2.2-RimDroid.zip`
+instead of the Steam Workshop Harmony, then add mods with **menu → Import Mods (ZIP)**, or download
+them in-app (Steam Downloads → Mods).
 
 ## Build
 
-- Android Studio, **JDK 21** (JDK 25 breaks Kotlin DSL compilation — see `gradle.properties`);
-- native part: `gradlew :app:externalNativeBuildDebug`;
-- `box64/` is a fork (`udarmolota/rimdroid-box64`);
-- `libzfa.so` (Mesa+Zink+ZFA target) is built via GitHub Actions in the
-  `udarmolota/zomdroid-dependencies` fork;
-- an instance holds the extracted Linux build of RimWorld (`RimWorldLinux` + `RimWorldLinux_Data`).
+- Android Studio, **JDK 21** (JDK 25 breaks the Kotlin DSL build — see `gradle.properties`)
+- `box64/` is a fork ([udarmolota/rimdroid-box64](https://github.com/udarmolota/rimdroid-box64));
+  `libzfa.so` (Mesa + Zink) is built via GitHub Actions
+- An instance holds the extracted Linux build of RimWorld (`RimWorldLinux` + `RimWorldLinux_Data`)
 
-## Remaining / TODO
+## Supporting development
 
-- **Mali/MediaTek: colonists missing after loading a save** — a low-level box64 emulation bug on
-  those CPUs (Snapdragon/Adreno unaffected); **0.1.5 ships an experimental memory-model fix
-  attempt** — please report whether saves keep your colonists;
-- **software (CPU) renderer** for GPUs where Zink/Vulkan won't run (in progress);
-- on-screen keyboard (text fields: colony/pawn names, search);
-- occasional black screen / stuck loading on launch — kill + relaunch (usually works on the
-  second try);
-- audio (FMOD);
-- make the latest Harmony 2.3 work, so users aren't pinned to 2.2.2;
-- physical mouse/keyboard polish.
+This is an independent project. To help keep it going, contributions are welcome via
+[Ko-Fi](https://ko-fi.com/udarmolota).
 
----
+## Feedback
 
-*Core logic: `app/src/main/cpp/rimdroid.c` (launch, ZFA/GPU, input ring),
-`box64/src/wrapped/wrappedsdl2.c` (SDL/GL/event intercepts + dynapi remap),
-`box64/src/wrapped/wrappedlibc.c` (`/proc/self/auxv` → x86_64),
-`app/src/main/java/com/rimdroid/input/` (`InputControlsView`, `ControlElement`,
-`ButtonElement` + sticks), `ControlsEditorActivity`, `ModImporter`, `GameDataTransfer`
-(save/settings backup), `LogExporter` (log zip), `GameActivity`.*
+Please report issues or request features via
+[GitHub Issues](https://github.com/udarmolota/RimDroid/issues). There's a one-tap **Export logs** in
+the in-app menu — attach the zip so we can see what your device is doing.
 
 ## Credits & Third-Party Sources
 
-* [box64](https://github.com/ptitSeb/box64) — x86_64→ARM64 emulation backend
-* [Mesa / Zink / ZFA](https://gitlab.freedesktop.org/mesa/mesa) — GPU rendering (OpenGL→Vulkan)
-* [Turnip / libvulkan_freedreno](https://gitlab.freedesktop.org/mesa/mesa) — Adreno Vulkan driver
-* [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access
-* [Zomdroid](https://github.com/udarmolota/zomdroid) — architecture reference and inspiration
-* [Harmony](https://github.com/pardeike/Harmony) — required by mods (MIT)
+- [box64](https://github.com/ptitSeb/box64) — x86_64→ARM64 emulation backend
+- [Mesa / Zink](https://gitlab.freedesktop.org/mesa/mesa) — GPU rendering (OpenGL→Vulkan)
+- [Turnip / libvulkan_freedreno](https://gitlab.freedesktop.org/mesa/mesa) — Adreno Vulkan driver
+- [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access
+- [Harmony](https://github.com/pardeike/Harmony) — required by mods
+- [Zomdroid](https://github.com/udarmolota/zomdroid) — architecture reference and inspiration
 
-> RimDroid is not affiliated with Ludeon Studios.
-> RimWorld must be purchased separately.
+> RimDroid is not affiliated with Ludeon Studios. RimWorld must be purchased separately.

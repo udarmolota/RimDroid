@@ -95,7 +95,16 @@ public enum Binding {
     KEY_7(Kind.KEY, 36, 55, "7", "7"),
     KEY_8(Kind.KEY, 37, 56, "8", "8"),
     KEY_9(Kind.KEY, 38, 57, "9", "9"),
-    KEY_0(Kind.KEY, 39, 48, "0", "0");
+    KEY_0(Kind.KEY, 39, 48, "0", "0"),
+
+    // --- Punctuation: RimWorld colonist cycling (, = previous, . = next) ---
+    // SDL_SCANCODE_COMMA=54, PERIOD=55; keysym = ASCII.
+    KEY_COMMA(Kind.KEY, 54, 44, ",", "Comma (prev colonist)"),
+    KEY_PERIOD(Kind.KEY, 55, 46, ".", "Period (next colonist)"),
+
+    // --- Modifiers: held while clicking (Shift = queue orders / multi-select in RimWorld) ---
+    // SDL_SCANCODE_LSHIFT=225, SDLK_LSHIFT=225|0x40000000. No text (modifier).
+    KEY_LSHIFT(Kind.KEY, 225, 0x400000E1, null, "Left Shift");
 
     public enum Kind { NONE, MOUSE, SCROLL, KEY, SPECIAL }
 

@@ -10,11 +10,12 @@
     <string name="log">Log</string>
     <string name="renderer">Renderer</string>
     <string name="vulkan_driver">Vulkan driver</string>
-    <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If the game crashes on launch, try another one.</string>
+    <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If not works try another one.</string>
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
     <string name="drag_pan_label">Drag the map with a finger to pan</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound (experimental)</string>
+    <string name="audio_dialog_title">Game sound (experimental)</string>
     <string name="audio_needs_mod">Sound needs the separate \"RimDroid Sound\" mod + Harmony installed and enabled — otherwise you\'ll just get noise. (Temporary for 0.1.6–0.1.7.)</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
@@ -99,7 +100,7 @@
     <string name="debug_mode">Debug mode (verbose log)</string>
     <string name="strict_barriers">Interpreter mode (test — VERY slow, diagnostic for save corruption)</string>
     <string name="env_vars_title">Advanced: extra launch variables</string>
-    <string name="env_vars_hint">KEY=VALUE pairs (space-separated), applied on launch and overriding the defaults. For diagnostics / performance tests — leave empty unless you know what you\'re doing. Per-instance.</string>
+    <string name="env_vars_hint">KEY=VALUE pairs (space-separated), applied on launch and overriding the defaults. For diagnostics tests — leave empty unless you know what you\'re doing. </string>
     <string name="env_vars_hint_example">e.g. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
     <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
@@ -112,4 +113,27 @@
     <string name="error_name_required">Name is required</string>
     <string name="nav_manage_storage">Manage Storage</string>
     <string name="clear">Clear</string>
+
+    <!-- Gamepad button remapper -->
+    <string name="gamepad_mapper_settings_btn">Gamepad mapping</string>
+    <string name="gamepad_mapper_title">Gamepad mapping</string>
+    <string name="gamepad_mapper_instructions">Fix a controller with swapped buttons. Tap Start, then press the physical button you want for each action.</string>
+    <string name="gamepad_mapper_start">Start</string>
+    <string name="gamepad_mapper_reset">Reset to default</string>
+    <string name="gamepad_mapper_reset_done">Mapping reset to default</string>
+    <string name="gamepad_mapper_step">Press the button for:\n%1$s</string>
+    <string name="gamepad_mapper_done">Mapping saved</string>
+    <string name="gamepad_mapper_dup">Already assigned — press another button</string>
+    <string-array name="gamepad_mapper_labels">
+        <item>A — F1</item>
+        <item>B — Escape</item>
+        <item>X — F2</item>
+        <item>Y — Q (rotate)</item>
+        <item>LB — Zoom out</item>
+        <item>RB — Zoom in</item>
+        <item>Select — Tab</item>
+        <item>Start — Next colonist (.)</item>
+        <item>L3 — Shift (multi-select)</item>
+        <item>R3 — Right stick press (unused)</item>
+    </string-array>
 </resources>

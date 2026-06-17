@@ -152,19 +152,19 @@
         android:visibility="gone"
         android:textSize="12sp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/on_screen_controls"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="4dp" />
-
     <Button
         android:id="@+id/btn_edit_controls"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:text="@string/edit_controls" />
+
+    <Button
+        android:id="@+id/btn_gamepad_mapper"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/gamepad_mapper_settings_btn" />
 
     <Switch
         android:id="@+id/sw_drag_pan"
@@ -180,11 +180,15 @@
         android:layout_marginTop="12dp"
         android:text="@string/haptic_label" />
 
+    <!-- Sound toggle hidden for 0.1.7: the only way to get clean audio today is a PCM pack made from
+         RimWorld's own files, which we must NOT redistribute. Returns in 0.1.8 as on-device transcode
+         (decode the user's own OGG → WAV via Android MediaCodec at install — no redistribution). -->
     <Switch
         android:id="@+id/sw_audio"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
+        android:visibility="gone"
         android:text="@string/audio_label" />
 
     <!-- Advanced: extra box64/env vars (KEY=VALUE, space-separated). Applied last on launch, so they

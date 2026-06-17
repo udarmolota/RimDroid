@@ -173,6 +173,7 @@ public class LauncherFragment extends Fragment {
             int id = item.getItemId();
             if (id == R.id.action_instance_settings) { openInstanceSettings(gi); return true; }
             if (id == R.id.action_instance_delete)   { confirmDeleteInstance(gi); return true; }
+            if (id == R.id.action_instance_storage)  { openInstanceStorage(gi); return true; }
             return false;
         });
         pm.show();
@@ -182,6 +183,35 @@ public class LauncherFragment extends Fragment {
         Bundle b = new Bundle();
         b.putString(SettingsFragment.ARG_INSTANCE, gi.getName());
         Navigation.findNavController(requireView()).navigate(R.id.action_settings, b);
+    }
+
+    /** Open the system Documents UI directly at this instance's folder (same provider as the drawer's
+     *  Manage Storage, but scoped to this instance). Falls back to the storage root if a file manager
+     *  doesn't honour a folder-level view. */
+    private void openInstanceStorage(GameInstance gi) {
+        String docId = AppStorage.requireSingleton().getInstanceDir(gi.getName()).getAbsolutePath();
+        try {
+            android.net.Uri uri = android.provider.DocumentsContract.buildDocumentUri(
+                    com.rimdroid.C.STORAGE_PROVIDER_AUTHORITY, docId);
+            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+            i.setDataAndType(uri, "vnd.android.document/directory");
+            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    | android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    | android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            startActivity(i);
+        } catch (Exception e) {
+            try {   // fallback: open the storage root (like the drawer's Manage Storage)
+                android.net.Uri root = android.provider.DocumentsContract.buildRootsUri(
+                        com.rimdroid.C.STORAGE_PROVIDER_AUTHORITY);
+                android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                i.setDataAndType(root, "vnd.android.document/root");
+                i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } catch (Exception ignore) {
+                android.widget.Toast.makeText(requireContext(),
+                        "No file manager to open storage", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void confirmDeleteInstance(GameInstance gi) {

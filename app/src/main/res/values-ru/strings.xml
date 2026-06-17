@@ -9,11 +9,12 @@
     <string name="log">Лог</string>
     <string name="renderer">Рендерер</string>
     <string name="vulkan_driver">Vulkan-драйвер</string>
-    <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU. Если игра вылетает при запуске — попробуйте другой.</string>
+    <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU. Если не сработало — попробуйте другой.</string>
     <string name="driver_recommend">Рекомендуемый драйвер (определить GPU)</string>
     <string name="drag_pan_label">Двигать карту пальцем (панорама)</string>
     <string name="haptic_label">Вибрация при нажатии кнопок</string>
     <string name="audio_label">Звук игры (эксперимент)</string>
+    <string name="audio_dialog_title">Звук игры (экспериментально)</string>
     <string name="audio_needs_mod">Для звука нужен отдельный мод \"RimDroid Sound\" + Harmony (установить и включить), иначе будет просто шум. (Временно для 0.1.6–0.1.7.)</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
@@ -96,7 +97,7 @@
     <string name="debug_mode">Режим отладки (подробный лог)</string>
     <string name="strict_barriers">Режим интерпретатора (тест — ОЧЕНЬ медленно, диагностика порчи сейвов)</string>
     <string name="env_vars_title">Дополнительно: переменные запуска</string>
-    <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для диагностики / тестов производительности — оставьте пустым, если не уверены. Для каждого инстанса отдельно.</string>
+    <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для тестов — оставьте пустым, если не уверены. </string>
     <string name="env_vars_hint_example">напр. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
     <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
     <string name="steam_spike_label">Проба входа в Steam (QR)</string>
@@ -109,4 +110,27 @@
     <string name="error_name_required">Нужно указать имя</string>
     <string name="nav_manage_storage">Управление файлами</string>
     <string name="clear">Очистить</string>
+
+    <!-- Gamepad button remapper -->
+    <string name="gamepad_mapper_settings_btn">Раскладка геймпада</string>
+    <string name="gamepad_mapper_title">Раскладка геймпада</string>
+    <string name="gamepad_mapper_instructions">Настройка контроллера с перепутанными кнопками. Нажми «Начать», затем нажимай нужную физическую кнопку для каждого действия.</string>
+    <string name="gamepad_mapper_start">Начать</string>
+    <string name="gamepad_mapper_reset">Сбросить по умолчанию</string>
+    <string name="gamepad_mapper_reset_done">Раскладка сброшена</string>
+    <string name="gamepad_mapper_step">Нажми кнопку для:\n%1$s</string>
+    <string name="gamepad_mapper_done">Раскладка сохранена</string>
+    <string name="gamepad_mapper_dup">Уже назначено — нажми другую кнопку</string>
+    <string-array name="gamepad_mapper_labels">
+        <item>A — F1</item>
+        <item>B — Escape</item>
+        <item>X — F2</item>
+        <item>Y — Q (поворот)</item>
+        <item>LB — Отдалить</item>
+        <item>RB — Приблизить</item>
+        <item>Select — Tab</item>
+        <item>Start — Следующий колонист (.)</item>
+        <item>L3 — Shift (множ. выделение)</item>
+        <item>R3 — нажатие правого стика (не исп.)</item>
+    </string-array>
 </resources>

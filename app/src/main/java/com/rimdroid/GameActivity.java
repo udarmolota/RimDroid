@@ -47,7 +47,9 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private static final boolean PIN_GAME_PREFS = false;
     private android.view.ScaleGestureDetector scaleDetector;
     private boolean scaling = false;
+    private boolean prefsPinned = false;   // Prefs.xml resolution is pinned ONCE per launch (not per surface-change → no ping-pong)
     private com.rimdroid.input.InputControlsView controls;
+    private com.rimdroid.input.GamepadHandler gamepad;   // physical controller -> MNK injection
     private String instanceName;   // the launched instance (null for the smoke test)
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private float tapDownX, tapDownY; private long tapDownT; private boolean tapMoved;
@@ -101,6 +103,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
         scaleDetector = new android.view.ScaleGestureDetector(this, new ScaleListener());
         controls = new com.rimdroid.input.InputControlsView(this, renderScale, instanceName);
+        gamepad = new com.rimdroid.input.GamepadHandler(this, controls);
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF000000);   // black letterbox bars
@@ -112,6 +115,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         controls.setGameRect(boxLeft, boxTop, boxW, boxH);   // so cursor/tap map into the game rect
         setContentView(root);
         hideSystemBars();   // after setContentView — the decor view / insets controller now exist
+        // CRITICAL for gamepad: analog joystick MotionEvents (sticks/triggers) are delivered only to
+        // a focused View, then bubble to Activity.onGenericMotionEvent. Without a focusable+focused
+        // view, Android silently drops them (buttons still arrive via dispatchKeyEvent, but sticks
+        // don't). So make the game surface focusable and grab focus (re-grabbed in onResume).
+        surfaceView.setFocusable(true);
+        surfaceView.setFocusableInTouchMode(true);
+        surfaceView.requestFocus();
     }
 
     private void hideSystemBars() {
@@ -253,10 +263,76 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (surfaceView != null) surfaceView.requestFocus();   // re-grab focus so sticks keep working
+        if (gamepad != null) gamepad.start();         // resume the gamepad analog frame loop
+        // Auto-hide the on-screen controls while a physical gamepad is connected (like Zomdroid).
+        inputManager = (android.hardware.input.InputManager) getSystemService(INPUT_SERVICE);
+        if (inputManager != null) inputManager.registerInputDeviceListener(deviceListener, null);
+        refreshGamepadControls();                     // apply current connection state
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
+        if (gamepad != null) gamepad.stop();          // stop the loop, release held gamepad inputs
+        if (inputManager != null) inputManager.unregisterInputDeviceListener(deviceListener);
         releasePan();                                 // release held camera-pan arrows
         if (controls != null) controls.resetAll();   // release any held buttons/keys
+    }
+
+    // === physical gamepad detection -> auto hide/show on-screen controls ===
+    private android.hardware.input.InputManager inputManager;
+    private boolean lastPadConnected = false;
+    private final android.hardware.input.InputManager.InputDeviceListener deviceListener =
+        new android.hardware.input.InputManager.InputDeviceListener() {
+            @Override public void onInputDeviceAdded(int id)   { refreshGamepadControls(); }
+            @Override public void onInputDeviceRemoved(int id) { refreshGamepadControls(); }
+            @Override public void onInputDeviceChanged(int id) { refreshGamepadControls(); }
+        };
+
+    /** Hide the on-screen controls when a gamepad connects, show them when it disconnects.
+     *  Acts only on a connect/disconnect TRANSITION, so it never clobbers the manual hide toggle. */
+    private void refreshGamepadControls() {
+        boolean pad = isGamepadConnected();
+        if (pad == lastPadConnected) return;
+        lastPadConnected = pad;
+        if (controls != null) controls.setControlsHidden(pad);
+    }
+
+    private boolean isGamepadConnected() {
+        for (int id : android.view.InputDevice.getDeviceIds()) {
+            // A transient/virtual device (e.g. a screen recorder) can throw while being queried.
+            try {
+                android.view.InputDevice d = android.view.InputDevice.getDevice(id);
+                if (d == null || d.isVirtual()) continue;
+                int s = d.getSources();
+                boolean gamepadSource =
+                       (s & android.view.InputDevice.SOURCE_GAMEPAD)  == android.view.InputDevice.SOURCE_GAMEPAD
+                    || (s & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK;
+                // Require analog motion ranges too (like Zomdroid) so a keyboard/remote that merely
+                // reports a DPAD source isn't mistaken for a gamepad.
+                boolean hasMotion = d.getMotionRanges() != null && !d.getMotionRanges().isEmpty();
+                if (gamepadSource && hasMotion) return true;
+            } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
+    // Physical gamepad: buttons/D-pad arrive as key events, analog sticks/triggers as generic
+    // motion. Route both to GamepadHandler (maps to the same MNK injection as on-screen controls);
+    // if it consumes the event, don't let the system treat it as focus/back navigation.
+    @Override
+    public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        if (gamepad != null && gamepad.onKey(event)) return true;
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent event) {
+        if (gamepad != null && gamepad.onMotion(event)) return true;
+        return super.onGenericMotionEvent(event);
     }
 
     @Override
@@ -310,8 +386,17 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 softpipe = lp != null && lp.getRenderer() == LauncherPreferences.Renderer.SOFTPIPE;
             }
         } catch (Throwable ignored) {}
-        //noinspection ConstantValue
-        if (PIN_GAME_PREFS || softpipe) pinGamePrefs(width, height);
+        // Pin RimWorld's Prefs.xml ONCE per launch (NOT on every surface-change — per-change rewrites
+        // were what caused the resolution PING-PONG) to fullscreen at our render-buffer resolution, so
+        // RimWorld doesn't override -screen-width with its own saved/default resolution (the cause of
+        // the small / doubled / "warping" render seen on the 725 and flagships). ZFA/Zink renders into
+        // a surface*renderScale buffer; softpipe into a surface-sized CPU buffer.
+        if (!prefsPinned) {
+            prefsPinned = true;
+            if (softpipe) pinGamePrefs(width, height);
+            else pinGamePrefs(Math.max(1, Math.round(boxW * renderScale)),
+                              Math.max(1, Math.round(boxH * renderScale)));
+        }
     }
 
     /** Force the selected instance's Config/Prefs.xml to fullscreen at the render

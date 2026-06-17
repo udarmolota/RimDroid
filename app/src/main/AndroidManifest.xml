@@ -49,6 +49,10 @@
             android:screenOrientation="sensorLandscape"
             android:theme="@style/AppTheme" />
 
+        <activity
+            android:name=".GamepadMapperActivity"
+            android:theme="@style/AppTheme" />
+
         <service
             android:name=".InstallerService"
             android:exported="false"

@@ -14,3 +14,8 @@ app/build
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local scratch / debugging artifacts (not part of the project)
+_*
+*_INSTRUCTIONS.md
+AUDIO_FMOD_*.md

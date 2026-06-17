@@ -8,21 +8,19 @@ on Android phones, with real GPU rendering, touch controls, gamepad support, and
 > You must own RimWorld — RimDroid does **not** include or distribute any game files.
 
 > [!WARNING]
-> **0.1.7 is a beta.** It runs well on some devices and not yet on others — compatibility is
+> **The app is still in beta.** It runs well on some devices and not yet on others — compatibility is
 > currently per-device, not per-GPU brand. See [Device compatibility](#device-compatibility).
 
 ## Features
 
 - ✔️ Runs **RimWorld 1.5** (the native Linux x86_64 build) on ARM64 phones
-- ✔️ **Real GPU rendering** — OpenGL via Zink/Vulkan (Turnip on Adreno)
+- ✔️ **Editable on-screen touch controls** — move / resize / opacity, add buttons bound to any key or mouse action
 - ✔️ **In-app downloads** — get the game, DLC, and Workshop mods straight from Steam
-- ✔️ **Mods** — Harmony patching works (tested: RimHUD, Pick Up And Haul); needs Harmony 2.2.2
+- ✔️ **Mods** — Harmony patching works (tested: RimHUD, Pick Up And Haul, Camera+); needs Harmony 2.2.2
 - ✔️ **Multiple instances** — each install is a card with its own settings (renderer, driver, controls)
-- ✔️ **Touch controls** — tap/select, drag-to-pan, right-click, selection box, pinch-zoom; the whole
-  layout is editable (move/resize/opacity, bind any key, export/import)
-- ✔️ **Physical gamepad** support, with a button-remapping wizard
-- ✔️ **Per-GPU Vulkan driver** — auto-picked for your GPU, or import your own
-- ✔️ **Material 3 UI** with night mode and a Russian translation
+- ✔️ **Gamepad support** — version 1.0 with a button-remapping wizard for controllers with swapped buttons
+- ✔️ **Save/Settings import/export**
+- ✔️ **Controls Haptics** with night mode and a Russian translation
 - ⭕ **Audio** temporarily disabled (work in progress)
 - ⭕ **On-screen keyboard** for text fields not yet available
 
@@ -57,7 +55,6 @@ device isn't here, try it and send us a log.
 - [ ] Fix the "colonists missing after load" / crash bug on affected devices
 - [ ] In-game audio
 - [ ] On-screen keyboard for text fields
-- [ ] Make the latest Harmony 2.3 work (so mods aren't pinned to 2.2.2)
 
 ## How it works
 
@@ -75,7 +72,7 @@ them in-app (Steam Downloads → Mods).
 
 ## Build
 
-- Android Studio, **JDK 21** (JDK 25 breaks the Kotlin DSL build — see `gradle.properties`)
+- Android Studio, **JDK 21** (see `gradle.properties`)
 - `box64/` is a fork ([udarmolota/rimdroid-box64](https://github.com/udarmolota/rimdroid-box64));
   `libzfa.so` (Mesa + Zink) is built via GitHub Actions
 - An instance holds the extracted Linux build of RimWorld (`RimWorldLinux` + `RimWorldLinux_Data`)

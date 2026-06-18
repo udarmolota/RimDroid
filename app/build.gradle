@@ -13,8 +13,8 @@ android {
         applicationId "com.rimdroid"
         minSdk = 30
         targetSdk = 35
-        versionCode 17
-        versionName "0.1.7"
+        versionCode 18
+        versionName "0.1.8"
         // JavaSteam + protobuf + kotlin push us past the 64K method limit. minSdk 30 has
         // native multidex, but the build still needs this flag to split the dex.
         multiDexEnabled true
@@ -67,6 +67,12 @@ android {
 }
 
 dependencies {
+    // FMOD Android Java classes (org.fmod.AudioDevice / FMOD / MediaCodec). Required on the classpath
+    // so the bundled native libfmod.so's JNI_OnLoad can FindClass("org/fmod/AudioDevice") — without it
+    // System.load(libfmod) aborts with ClassNotFoundException. Used by the offline FSB5 audio decoder
+    // (FmodDecodeService, ":fmoddec" process). From the shared Zomdroid FMOD bundle.
+    implementation files('libs/fmod.jar')
+
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.activity:activity:1.8.2'
     implementation 'androidx.fragment:fragment:1.6.2'

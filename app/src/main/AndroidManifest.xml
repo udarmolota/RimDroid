@@ -63,6 +63,14 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- SPIKE: offline FMOD audio decoder runs in its OWN process so it does NOT load
+             librimdroidlinker (whose interposed dlopen would load libfmod into box64's namespace
+             and crash it). In ":fmoddec" dlopen is the real bionic one. See FmodDecodeService. -->
+        <service
+            android:name=".audio.FmodDecodeService"
+            android:exported="false"
+            android:process=":fmoddec" />
+
         <provider
             android:name=".AppStorageProvider"
             android:authorities="com.rimdroid.STORAGE_PROVIDER_AUTHORITY"

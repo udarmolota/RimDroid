@@ -28,6 +28,20 @@ target_link_libraries(rimdroid
 )
 
 # ---------------------------------------------------------------------------
+# libfmoddecode.so — STANDALONE offline FSB5-Vorbis -> PCM WAV decoder (native FMOD).
+# Deliberately does NOT link linkernsbypass/box64: it is loaded ONLY in the separate
+# ":fmoddec" process (where librimdroidlinker is NOT loaded), so its dlopen of the
+# bundled libfmod.so is the real bionic dlopen in the normal app namespace — avoiding
+# the in-process crash (box64's interposed dlopen loads libfmod into a namespace that
+# lacks libc++_shared/libaaudio -> libfmod init SIGSEGVs). See fmod_decode_spike.c.
+# ---------------------------------------------------------------------------
+add_library(fmoddecode SHARED fmod_decode_spike.c)
+target_link_libraries(fmoddecode
+    log
+    android
+)
+
+# ---------------------------------------------------------------------------
 # libpulsesimpleshim.so — tiny PulseAudio "simple" API shim backed by AAudio.
 # RimWorld's FMOD probes libpulse-simple.so.0 for output; we provide the 7 funcs
 # box64's wrappedpulsesimple bridges. Built with DT_SONAME "libpulse-simple.so.0"

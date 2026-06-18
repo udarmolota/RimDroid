@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -7,215 +8,308 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="12dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/renderer"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp" />
-
-    <RadioGroup
-        android:id="@+id/rg_renderer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp">
-
-        <RadioButton
-            android:id="@+id/rb_gl4es"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/gl4es_label" />
-
-        <RadioButton
-            android:id="@+id/rb_zink_zfa"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/zink_zfa_label" />
-
-        <RadioButton
-            android:id="@+id/rb_zink_osmesa"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/zink_osmesa_label" />
-
-        <RadioButton
-            android:id="@+id/rb_softpipe"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/softpipe_label" />
-
-    </RadioGroup>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/vulkan_driver"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="4dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/vulkan_driver_hint"
-        android:textAppearance="?attr/textAppearanceBodySmall"
-        android:layout_marginBottom="4dp" />
-
-    <Spinner
-        android:id="@+id/spinner_vulkan_driver"
+    <!-- ============================ VIDEO ============================ -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp" />
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
 
-    <Button
-        android:id="@+id/btn_recommend_driver"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/driver_recommend"
-        android:textSize="14dp"
-        android:layout_marginBottom="16dp" />
-
-    <!-- Render scale HIDDEN for now: it's currently a no-op (PIN_GAME_PREFS disabled → the game
-         renders at native surface resolution regardless of this slider). Kept (ids intact, code still
-         binds it) so we can re-enable once render-scale actually changes the internal resolution. -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/tv_render_scale_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Render scale: 60%"
-            android:textAppearance="?attr/textAppearanceTitleMedium" />
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Lower % = bigger UI. RimWorld needs ≥67% or its menus overflow."
+            android:text="@string/card_video"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/renderer"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_renderer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+          <RadioButton
+              android:id="@+id/rb_gl4es"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/gl4es_label" />
+
+          <RadioButton
+              android:id="@+id/rb_zink_zfa"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/zink_zfa_label" />
+
+          <RadioButton
+              android:id="@+id/rb_zink_osmesa"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/zink_osmesa_label" />
+
+          <RadioButton
+              android:id="@+id/rb_softpipe"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/softpipe_label" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vulkan_driver"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/vulkan_driver_hint"
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:layout_marginBottom="4dp" />
 
-        <SeekBar
-            android:id="@+id/sb_render_scale"
+        <Spinner
+            android:id="@+id/spinner_vulkan_driver"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="33"
-            android:progress="5"
-            android:layout_marginBottom="16dp" />
-    </LinearLayout>
+            android:layout_marginBottom="4dp" />
 
-    <Switch
-        android:id="@+id/sw_debug"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/debug_mode" />
+        <Button
+            android:id="@+id/btn_recommend_driver"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/driver_recommend"
+            android:textSize="14dp" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-    <Switch
-        android:id="@+id/sw_strict_barriers"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/strict_barriers" />
-
-    <Button
-        android:id="@+id/btn_smoketest"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/smoketest_label" />
-
-    <Button
-        android:id="@+id/btn_steam_spike"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/steam_spike_label" />
-
-    <Button
-        android:id="@+id/btn_steam_dl"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/steam_dl_label" />
-
-    <TextView
-        android:id="@+id/tv_steam_dl_status"
+    <!-- ============================ CONTROLS ============================ -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textIsSelectable="true"
-        android:visibility="gone"
-        android:textSize="12sp" />
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
 
-    <Button
-        android:id="@+id/btn_edit_controls"
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_controls"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btn_edit_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/edit_controls" />
+
+        <Button
+            android:id="@+id/btn_gamepad_mapper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/gamepad_mapper_settings_btn" />
+
+        <Switch
+            android:id="@+id/sw_haptic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/haptic_label" />
+
+        <Switch
+            android:id="@+id/sw_drag_pan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/drag_pan_label" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ SOUND ============================ -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/edit_controls" />
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
 
-    <Button
-        android:id="@+id/btn_gamepad_mapper"
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_sound"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btn_steam_spike"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sound_generate" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sound_generate_note"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+
+        <Switch
+            android:id="@+id/sw_audio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/audio_label" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ ADVANCED ============================ -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/gamepad_mapper_settings_btn" />
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
 
-    <Switch
-        android:id="@+id/sw_drag_pan"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/drag_pan_label" />
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
 
-    <Switch
-        android:id="@+id/sw_haptic"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/haptic_label" />
+        <!-- The whole Advanced card is collapsible: this header toggles ll_advanced_content (collapsed
+             by default, so testers stop wandering in). Toggle + arrow flip wired in SettingsFragment. -->
+        <TextView
+            android:id="@+id/tv_advanced_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/card_advanced"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:drawableEnd="@android:drawable/arrow_down_float"
+            android:clickable="true"
+            android:focusable="true" />
 
-    <!-- Sound toggle hidden for 0.1.7: the only way to get clean audio today is a PCM pack made from
-         RimWorld's own files, which we must NOT redistribute. Returns in 0.1.8 as on-device transcode
-         (decode the user's own OGG → WAV via Android MediaCodec at install — no redistribution). -->
-    <Switch
-        android:id="@+id/sw_audio"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:visibility="gone"
-        android:text="@string/audio_label" />
+        <LinearLayout
+            android:id="@+id/ll_advanced_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
 
-    <!-- Advanced: extra box64/env vars (KEY=VALUE, space-separated). Applied last on launch, so they
-         OVERRIDE the defaults. Diagnostic/power-user knob (e.g. box64 atomics / strongmem A-B tests). -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/env_vars_title"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="4dp" />
+          <Switch
+              android:id="@+id/sw_debug"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="12dp"
+              android:text="@string/debug_mode" />
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/env_vars_hint"
-        android:textAppearance="?attr/textAppearanceBodySmall"
-        android:layout_marginBottom="4dp" />
+          <TextView
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="16dp"
+              android:text="@string/env_section_header"
+              android:textAppearance="?attr/textAppearanceTitleMedium" />
 
-    <EditText
-        android:id="@+id/et_env_vars"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFamily="monospace"
-        android:textSize="13sp"
-        android:inputType="textNoSuggestions|textMultiLine|textVisiblePassword"
-        android:hint="@string/env_vars_hint_example" />
+          <TextView
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/env_vars_hint"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:layout_marginBottom="4dp" />
+
+          <EditText
+              android:id="@+id/et_env_vars"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:fontFamily="monospace"
+              android:textSize="13sp"
+              android:inputType="textNoSuggestions|textMultiLine|textVisiblePassword"
+              android:hint="@string/env_vars_hint_example" />
+
+          <!-- Hidden dev/diagnostic elements — kept so SettingsFragment.findViewById() still resolves
+               them (set GONE in code). Do not remove. -->
+          <Switch
+              android:id="@+id/sw_strict_barriers"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/strict_barriers"
+              android:visibility="gone" />
+
+          <Button
+              android:id="@+id/btn_smoketest"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/smoketest_label"
+              android:visibility="gone" />
+
+          <Button
+              android:id="@+id/btn_steam_dl"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/steam_dl_label"
+              android:visibility="gone" />
+
+          <TextView
+              android:id="@+id/tv_steam_dl_status"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:textIsSelectable="true"
+              android:visibility="gone"
+              android:textSize="12sp" />
+
+          <!-- Render scale HIDDEN (no-op while PIN_GAME_PREFS is disabled); ids kept, code still binds. -->
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_render_scale_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Render scale: 60%"
+                android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+            <SeekBar
+                android:id="@+id/sb_render_scale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="33"
+                android:progress="5" />
+          </LinearLayout>
+        </LinearLayout>
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
   </LinearLayout>
 </ScrollView>

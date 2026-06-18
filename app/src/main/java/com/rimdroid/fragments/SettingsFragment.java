@@ -99,18 +99,14 @@ public class SettingsFragment extends Fragment {
         // Audio is GLOBAL (experimental, default off) — the libasound→AAudio shim is loaded at game
         // launch only when this is on. Off = clean silence (FMOD output under box64 is still garbled).
         swAudio.setChecked(LauncherPreferences.requireSingleton().isAudioEnabled());
+        // The Sound toggle is the real master switch: it flips BOTH the audio output shim (global) AND
+        // the generated sound mod's active state in THIS instance's ModsConfig — so turning sound on/off
+        // needs no in-game mod fiddling. (Generate the pack once with the button; then just toggle.)
         swAudio.setOnCheckedChangeListener((btn, checked) -> {
             LauncherPreferences.requireSingleton().setAudioEnabled(checked);
-            // Temporary (0.1.6–0.1.7): game audio needs the separate Sound mod + Harmony, or it's
-            // just noise. Show a dismissable dialog (not a Toast) on enable so the user has time to
-            // read the whole note and tap OK.
-            if (checked) {
-                new android.app.AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.audio_dialog_title)
-                        .setMessage(R.string.audio_needs_mod)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-            }
+            java.io.File instDir = com.rimdroid.AppStorage.requireSingleton().getInstanceDir(instanceName);
+            String r = com.rimdroid.audio.FmodDecodeSpike.setSoundModActive(instDir, checked);
+            android.util.Log.i("RimDroid/Settings", "sound mod " + (checked ? "on" : "off") + ": " + r);
         });
 
         // Advanced: per-instance extra env vars (KEY=VALUE, space-separated). Applied last in
@@ -125,6 +121,16 @@ public class SettingsFragment extends Fragment {
             @Override public void afterTextChanged(android.text.Editable s) {
                 inst.setEnvVars(s.toString().replace('\n', ' '));   // newlines → spaces (KEY=VALUE list)
             }
+        });
+        // The whole Advanced card is collapsed by default (power-user diagnostics — too many testers
+        // wandered in). Tap the header to expand/collapse; the arrow flips to match.
+        final TextView advHeader = view.findViewById(R.id.tv_advanced_header);
+        final View advContent = view.findViewById(R.id.ll_advanced_content);
+        advHeader.setOnClickListener(v -> {
+            boolean show = advContent.getVisibility() != View.VISIBLE;
+            advContent.setVisibility(show ? View.VISIBLE : View.GONE);
+            advHeader.setCompoundDrawablesWithIntrinsicBounds(0, 0,
+                    show ? android.R.drawable.arrow_up_float : android.R.drawable.arrow_down_float, 0);
         });
         // Interpreter mode (BOX64_DYNAREC=0) is FULLY HIDDEN: on a Mali/MediaTek device it took ~1.5h
         // just to load the APP (not even the menu) — impractical to test, so we don't expose it. The
@@ -206,6 +212,24 @@ public class SettingsFragment extends Fragment {
 
         // Anon-mod-download spike — REMOVED (the real anonymous downloader shipped). Button hidden.
         btnSteamSpike.setVisibility(View.GONE);
+
+        // FMOD decode SPIKE (repurposes the redundant Steam-login spike button). Proves on-device
+        // FSB5-Vorbis -> PCM WAV via the bundled native libfmod.so (bypasses box64's broken Vorbis).
+        // Test: adb push _spike_entry.fsb / _spike_toggle.fsb to /sdcard/Download, tap, then pull
+        // /sdcard/Download/rd_spike_*.wav and compare to the oracle. (Overrides the GONE/onClick above.)
+        // Label/caption come from the layout ("Generate / update sound pack"). Decode runs in the
+        // ":fmoddec" process (clean dlopen → libfmod loads OK), writes the mod into the instance and
+        // enables it. Completion is reported by FmodDecodeService (toast); here we just kick it off.
+        btnSteamSpike.setVisibility(View.VISIBLE);
+        btnSteamSpike.setOnClickListener(v -> {
+            final android.content.Context appCtx = requireContext().getApplicationContext();
+            com.rimdroid.audio.FmodDecodeService.start(appCtx);
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.sound_installing_title)
+                    .setMessage(R.string.sound_generate_toast)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+        });
 
         // Steam downloader SPIKE button (full game download) HIDDEN — superseded by the real
         // "Download game (Steam)" screen. Click logic kept but unreachable.

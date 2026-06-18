@@ -13,9 +13,7 @@
     <string name="driver_recommend">Рекомендуемый драйвер (определить GPU)</string>
     <string name="drag_pan_label">Двигать карту пальцем (панорама)</string>
     <string name="haptic_label">Вибрация при нажатии кнопок</string>
-    <string name="audio_label">Звук игры (эксперимент)</string>
-    <string name="audio_dialog_title">Звук игры (экспериментально)</string>
-    <string name="audio_needs_mod">Для звука нужен отдельный мод \"RimDroid Sound\" + Harmony (установить и включить), иначе будет просто шум. (Временно для 0.1.6–0.1.7.)</string>
+    <string name="audio_label">Звук в игре</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
     <string name="driver_auto_set">Обнаружен GPU: %1$s.\n\nДля этого инстанса выставлен рекомендуемый Vulkan-драйвер: %2$s.\n\nЕсли получите чёрный экран или артефакты — смените его в настройках инстанса (шестерёнка на карточке).</string>
@@ -99,6 +97,18 @@
     <string name="env_vars_title">Дополнительно: переменные запуска</string>
     <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для тестов — оставьте пустым, если не уверены. </string>
     <string name="env_vars_hint_example">напр. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
+
+    <!-- Settings cards -->
+    <string name="card_video">Видео</string>
+    <string name="card_controls">Управление</string>
+    <string name="card_sound">Звук</string>
+    <string name="card_advanced">Дополнительно</string>
+    <string name="sound_generate">Установить звук в игре</string>
+    <string name="sound_generate_note">Звук в игре ставится отдельным модом из-за сложностей с кодировщиком. Тумблер ниже включает или отключает этот мод.</string>
+    <string name="sound_installing_title">Установка звука</string>
+    <string name="sound_generate_toast">Может занять до 2 минут. Можно продолжать пользоваться приложением.</string>
+    <string name="env_section_header">Переменные окружения</string>
+
     <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
     <string name="steam_spike_label">Проба входа в Steam (QR)</string>
     <string name="steam_dl_label">Проба загрузки Steam (RimWorld)</string>

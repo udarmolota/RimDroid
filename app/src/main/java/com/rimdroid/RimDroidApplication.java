@@ -16,9 +16,19 @@ public class RimDroidApplication extends Application {
         // Apply the user's theme choice (System / Light / Dark) before any activity is shown.
         androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
                 LauncherPreferences.requireSingleton().getThemeMode());
-        // Load native libraries built by CMake
-        System.loadLibrary("rimdroid");
-        System.loadLibrary("rimdroidlinker");
+        // Load native libraries built by CMake — ONLY in the main process. The ":fmoddec"
+        // process (the offline FMOD audio decoder) must NOT load librimdroidlinker, because it
+        // interposes dlopen process-wide and loads normal arm64 libs (libfmod) into box64's
+        // namespace, crashing them. In :fmoddec, dlopen stays the real bionic one. See
+        // FmodDecodeService / [[audio_fmod_plan]].
+        String proc = getProcessName();
+        boolean mainProcess = (proc == null) || proc.equals(getPackageName());
+        if (mainProcess) {
+            System.loadLibrary("rimdroid");
+            System.loadLibrary("rimdroidlinker");
+        } else {
+            Log.i("RimDroid", "Secondary process '" + proc + "' — skipping box64 native load");
+        }
         // Audio: preload the PulseAudio "simple" shim. Its DT_SONAME is "libpulse-simple.so.0", so once
         // loaded here the dynamic linker registers it under that soname — box64's wrappedpulsesimple
         // dlopen("libpulse-simple.so.0") then resolves to it and RimWorld's FMOD output gets sound via

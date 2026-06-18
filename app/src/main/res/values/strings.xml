@@ -14,9 +14,7 @@
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
     <string name="drag_pan_label">Drag the map with a finger to pan</string>
     <string name="haptic_label">Vibrate on button press</string>
-    <string name="audio_label">Game sound (experimental)</string>
-    <string name="audio_dialog_title">Game sound (experimental)</string>
-    <string name="audio_needs_mod">Sound needs the separate \"RimDroid Sound\" mod + Harmony installed and enabled — otherwise you\'ll just get noise. (Temporary for 0.1.6–0.1.7.)</string>
+    <string name="audio_label">Game sound</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
     <string name="driver_auto_set">Detected GPU: %1$s.\n\nThe recommended Vulkan driver was set for this instance: %2$s.\n\nIf you get a black screen or artifacts, change it in the instance settings (the gear icon on the instance card).</string>
@@ -102,6 +100,17 @@
     <string name="env_vars_title">Advanced: extra launch variables</string>
     <string name="env_vars_hint">KEY=VALUE pairs (space-separated), applied on launch and overriding the defaults. For diagnostics tests — leave empty unless you know what you\'re doing. </string>
     <string name="env_vars_hint_example">e.g. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
+
+    <!-- Settings cards -->
+    <string name="card_video">Video</string>
+    <string name="card_controls">Controls</string>
+    <string name="card_sound">Sound</string>
+    <string name="card_advanced">Advanced</string>
+    <string name="sound_generate">Install game sound</string>
+    <string name="sound_generate_note">Game sound is installed as a separate mod because of decoder issues. The toggle below turns that mod on or off.</string>
+    <string name="sound_installing_title">Installing sound</string>
+    <string name="sound_generate_toast">This may take up to 2 minutes. You can keep using the app.</string>
+    <string name="env_section_header">Environment variables</string>
     <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
     <string name="steam_dl_label">Steam download spike (RimWorld)</string>

@@ -123,23 +123,37 @@ public class InstallerService extends Service {
             throw new Exception("Instance '" + instanceName + "' already exists — pick another name "
                     + "(or delete it first).");
         }
-        instanceDir.mkdirs();
 
+        // Validate the archive BEFORE creating any folders (Zomdroid-style): it must contain the
+        // RimWorldLinux binary somewhere. Otherwise we'd extract a non-RimWorld archive and leave an
+        // orphaned instance folder that the launcher silently hides (fails isInstalled()).
+        broadcastProgress("Checking archive...");
+        if (!zipContainsEntry(zipFile, C.files.RIMWORLD_BIN)) {
+            throw new Exception("RimWorldLinux not found in the archive — this doesn't look like a "
+                    + "RimWorld Linux build. Nothing was installed.");
+        }
+
+        instanceDir.mkdirs();
         broadcastProgress("Extracting instance...");
         extractZip(zipFile, instanceDir);
 
-        // If zip had a single top-level subfolder, flatten it
-        File[] topLevel = instanceDir.listFiles();
-        if (topLevel != null && topLevel.length == 1 && topLevel[0].isDirectory()) {
-            broadcastProgress("Flattening directory structure...");
-            flattenDir(topLevel[0], instanceDir);
-        }
-
+        // Re-root: the game files may sit inside a wrapper folder (e.g. "game/RimWorldLinux") at any
+        // depth. Find RimWorldLinux and lift its folder's contents to the instance top, dropping the
+        // wrappers, so isInstalled() (which checks the root) passes. If it's somehow missing after
+        // extraction, delete the whole instance dir — never leave an orphaned, hidden instance.
         File bin = new File(instanceDir, C.files.RIMWORLD_BIN);
         if (!bin.exists()) {
-            bin = findFile(instanceDir, C.files.RIMWORLD_BIN);
-            if (bin == null) throw new Exception("RimWorldLinux binary not found inside zip");
-            // Already in instanceDir after flatten — if still not at root, something odd
+            File found = findFile(instanceDir, C.files.RIMWORLD_BIN);
+            if (found == null) {
+                deleteDir(instanceDir);
+                throw new Exception("RimWorldLinux not found after extraction — nothing was installed.");
+            }
+            File gameRoot = found.getParentFile();
+            if (gameRoot != null && !gameRoot.equals(instanceDir)) {
+                broadcastProgress("Flattening directory structure...");
+                reRoot(gameRoot, instanceDir);
+            }
+            bin = new File(instanceDir, C.files.RIMWORLD_BIN);
         }
         bin.setExecutable(true);
 
@@ -226,11 +240,44 @@ public class InstallerService extends Service {
         }
     }
 
-    private void flattenDir(File src, File dest) {
-        File[] files = src.listFiles();
-        if (files == null) return;
-        for (File f : files) f.renameTo(new File(dest, f.getName()));
-        src.delete();
+    /** True if the archive contains an entry whose file name (last path segment) equals {@code fileName}.
+     *  Uses ZipFile (reads the central directory directly) so it's instant even for a ~200MB game zip. */
+    private boolean zipContainsEntry(File zipFile, String fileName) throws IOException {
+        try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(zipFile)) {
+            java.util.Enumeration<? extends ZipEntry> en = zf.entries();
+            while (en.hasMoreElements()) {
+                String n = en.nextElement().getName();
+                int slash = n.lastIndexOf('/');
+                String base = (slash >= 0) ? n.substring(slash + 1) : n;
+                if (base.equals(fileName)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Move every child of {@code gameRoot} up to {@code instanceDir}, then remove the now-empty wrapper
+     * folders between them. {@code gameRoot} must be a descendant of {@code instanceDir}. This lifts a
+     * nested game ("instance/game/RimWorldLinux*") to the instance root so isInstalled() passes.
+     */
+    private void reRoot(File gameRoot, File instanceDir) throws IOException {
+        File[] kids = gameRoot.listFiles();
+        if (kids != null) {
+            for (File k : kids) {
+                File target = new File(instanceDir, k.getName());
+                if (target.exists())
+                    throw new IOException("Name clash while flattening: " + k.getName());
+                if (!k.renameTo(target))
+                    throw new IOException("Could not move " + k.getName() + " to the instance root");
+            }
+        }
+        // Delete the wrapper chain from gameRoot up to (but not including) instanceDir.
+        File p = gameRoot;
+        while (p != null && !p.equals(instanceDir)) {
+            File parent = p.getParentFile();
+            deleteDir(p);
+            p = parent;
+        }
     }
 
     private File findFile(File dir, String name) {

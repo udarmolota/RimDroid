@@ -73,8 +73,9 @@ public class GameLauncher {
             + "render scale  : " + s.getRenderScalePercent() + "%\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
+            + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1)" : "off") + "\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
-                + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=1\n"
+                + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=" + (s.isCompatibilityMode() ? "2 X87DOUBLE=1" : "1") + "\n"
             + "extra env     : " + envFieldReport(s) + "\n"
             + "(GL_RENDERER / GL_VERSION appear below once GL initialises)\n"
             + "==============================";
@@ -168,6 +169,19 @@ public class GameLauncher {
         if (gameInstance.settings().isInterpreter()) {
             Os.setenv("BOX64_DYNAREC", "0", true);
         }
+        // Compatibility mode → box64 dynarec FP/barrier tuning that dodges the deep "won't launch past the
+        // loading dots / black screen" bug on affected devices (Adreno 610/725, weak-Vulkan Mali). Tester-
+        // discovered: WEAKBARRIER=2 (looser memory barriers) + X87DOUBLE=1 (64-bit x87, no 80↔64 spill) →
+        // reshapes the FP↔GPR codegen so the bad pattern is avoided. Default OFF (Settings) so devices that
+        // already launch keep the safer/faster defaults. Applied before the env_vars field so a power user
+        // can still override. NOTE: a workaround, not the root fix (the deep bug is still being chased).
+        if (gameInstance.settings().isCompatibilityMode()) {
+            Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "2", true);
+            Os.setenv("BOX64_DYNAREC_X87DOUBLE", "1", true);
+            // NOTE: FORWARD=0 was tried here too but REMOVED — a tester reported it made things WORSE
+            // (smaller blocks → MORE block boundaries → more FP↔GPR-boundary leaks; the bug is at the
+            // boundary transition). The proven pair is WEAKBARRIER=2 + X87DOUBLE=1.
+        }
         // BOX64_PREFER_EMULATED intentionally NOT set:
         // with prefer_emulated=1 box64 skips initWrappedLib for all non-essential libs,
         // including SDL2 — our my2_SDL_DYNAPI_entry never fires.
@@ -179,6 +193,9 @@ public class GameLauncher {
         // Unity writes Player.log here
         Os.setenv("HOME", gameInstance.getGamePath(), true);
         Os.setenv("XDG_CONFIG_HOME", gameInstance.getGamePath(), true);
+        // (CJK text is handled by the standalone "RimDroid CJK Font" mod — a runtime font swap that keeps
+        // resources.assets untouched — not by the launcher. The old /usr/share/fonts OS-font redirect was
+        // a dead end: Unity never reads OS fonts under box64.)
 
         // Library path for box64 to find x86_64 .so files
         Os.setenv("BOX64_LD_LIBRARY_PATH", gameInstance.getLdLibraryPathForEmulation(), true);

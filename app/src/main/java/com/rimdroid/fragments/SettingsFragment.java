@@ -64,6 +64,7 @@ public class SettingsFragment extends Fragment {
         Switch swDebug        = view.findViewById(R.id.sw_debug);
         Switch swStrict       = view.findViewById(R.id.sw_strict_barriers);
         Switch swDragPan      = view.findViewById(R.id.sw_drag_pan);
+        Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
         Switch swAudio        = view.findViewById(R.id.sw_audio);
         final android.widget.Button btnSmoke = view.findViewById(R.id.btn_smoketest);
@@ -94,6 +95,21 @@ public class SettingsFragment extends Fragment {
         swStrict.setChecked(inst.isInterpreter());
         swDragPan.setChecked(inst.isDragPan());
         swDragPan.setOnCheckedChangeListener((btn, checked) -> inst.setDragPan(checked));
+        // Compatibility mode: box64 FP/barrier tuning (WEAKBARRIER=2 + X87DOUBLE=1) that lets the game launch
+        // on devices hit by the deep "won't start / black screen" bug (Adreno 610/725, weak-Vulkan Mali).
+        swCompat.setChecked(inst.isCompatibilityMode());
+        swCompat.setOnCheckedChangeListener((btn, checked) -> {
+            inst.setCompatibilityMode(checked);
+            if (checked) {
+                // Warn that compat mode is a temporary workaround (may not fully work) + point to the
+                // save-fix mod if pawns disappear. Dialog (not a toast) so the user actually reads it.
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.compat_mode_dialog_title)
+                        .setMessage(R.string.compat_mode_dialog_msg)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+            }
+        });
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
         // Audio is GLOBAL (experimental, default off) — the libasound→AAudio shim is loaded at game

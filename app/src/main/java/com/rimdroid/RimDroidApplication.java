@@ -7,9 +7,13 @@ import java.security.Security;
 
 public class RimDroidApplication extends Application {
 
+    /** Name of the file the crash logger appends uncaught stack traces to (in getFilesDir()). */
+    public static final String CRASH_LOG = "crash_uncaught.log";
+
     @Override
     public void onCreate() {
         super.onCreate();
+        installCrashLogger();          // FIRST — so even early-startup crashes get recorded
         installFullBouncyCastle();
         AppStorage.init(this);
         LauncherPreferences.init(this);
@@ -56,6 +60,32 @@ public class RimDroidApplication extends Application {
      * priority so it never overrides Conscrypt/AndroidOpenSSL for default (no-provider) lookups —
      * it only answers when code explicitly asks for provider "BC".
      */
+    /**
+     * Record EVERY uncaught exception (on ANY thread) to a file before the process dies.
+     *
+     * The in-app Steam downloader runs network work on threads owned by JavaSteam/ktor; if one of
+     * those throws (e.g. a socket dies when the user switches Wi-Fi↔mobile mid-download) the
+     * exception is uncaught and Android hard-crashes the app — and nothing lands in our own logs,
+     * so a regular user (not a tester) can't tell us what happened. This handler appends the full
+     * stack + thread name to {@link #CRASH_LOG} in the app's private files dir (picked up by
+     * Settings → "Export logs"), then chains to the platform's default handler so crash behaviour is
+     * otherwise unchanged. Best-effort: any failure writing the file is swallowed.
+     */
+    private void installCrashLogger() {
+        final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+        final java.io.File logFile = new java.io.File(getFilesDir(), CRASH_LOG);
+        Thread.setDefaultUncaughtExceptionHandler((thread, ex) -> {
+            try (java.io.PrintWriter w =
+                         new java.io.PrintWriter(new java.io.FileWriter(logFile, /* append */ true))) {
+                w.println("=== UNCAUGHT " + new java.util.Date() + "  thread='" + thread.getName() + "' ===");
+                ex.printStackTrace(w);
+                w.println();
+            } catch (Throwable ignored) { /* never make crash-logging itself crash */ }
+            Log.e("RimDroid", "Uncaught exception on thread '" + thread.getName() + "'", ex);
+            if (prev != null) prev.uncaughtException(thread, ex);   // keep default crash behaviour
+        });
+    }
+
     private static void installFullBouncyCastle() {
         try {
             Security.removeProvider("BC");

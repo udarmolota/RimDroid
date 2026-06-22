@@ -232,6 +232,21 @@
               android:layout_marginTop="12dp"
               android:text="@string/debug_mode" />
 
+          <Switch
+              android:id="@+id/sw_compat_mode"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="12dp"
+              android:text="@string/compat_mode_label" />
+
+          <TextView
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="2dp"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:alpha="0.7"
+              android:text="@string/compat_mode_hint" />
+
           <TextView
               android:layout_width="wrap_content"
               android:layout_height="wrap_content"

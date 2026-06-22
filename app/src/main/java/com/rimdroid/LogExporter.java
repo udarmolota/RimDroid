@@ -39,12 +39,18 @@ public final class LogExporter {
         File userDir  = gi.getUserDataDir();
         File configDir = new File(userDir, "Config");
 
+        // Global (not instance-scoped) uncaught-crash log — e.g. an in-app Steam download that
+        // hard-crashed the app. Lives in the app's private files dir.
+        File crashLog = new File(AppStorage.requireSingleton().getHomePath(),
+                RimDroidApplication.CRASH_LOG);
+
         File[] candidates = {
                 new File(userDir, "Player.log"),
                 new File(userDir, "Player-prev.log"),
                 new File(gamePath, "box64.log"),
                 new File(gamePath, "rimdroid.log"),
                 new File(configDir, "Prefs.xml"),
+                crashLog,
         };
 
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(rawOut))) {

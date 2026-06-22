@@ -106,6 +106,19 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "interpreter", v).apply();
     }
 
+    // --- Compatibility mode: box64 dynarec tuning that dodges the deep "won't launch past the loading
+    // dots / black screen" bug on affected devices (Adreno 610/725, weak-Vulkan Mali). Discovered via a
+    // tester: sets BOX64_DYNAREC_WEAKBARRIER=2 + BOX64_DYNAREC_X87DOUBLE=1 in GameLauncher (reshapes the
+    // FP/barrier codegen so the bad pattern is avoided). Default OFF — devices that already launch keep the
+    // safer/faster defaults; turn ON only if the game won't start. (A workaround, not the root fix.)
+    public boolean isCompatibilityMode() {
+        return p.getBoolean(pfx + "compat_mode", false);
+    }
+
+    public void setCompatibilityMode(boolean v) {
+        p.edit().putBoolean(pfx + "compat_mode", v).apply();
+    }
+
     // --- Extra env vars (KEY=VALUE, space-separated). Per-instance, falls back to the global value. ---
     // Power-user / diagnostic knob applied last in GameLauncher, so it can OVERRIDE the box64 defaults.
     // E.g. "BOX64_DYNAREC_ALIGNED_ATOMICS=1" (Mali/Cortex save-corruption test) or
@@ -158,6 +171,7 @@ public class InstanceSettings {
                 .remove(pfx + "driver_so")
                 .remove(pfx + "debug")
                 .remove(pfx + "interpreter")
+                .remove(pfx + "compat_mode")
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "render_scale_pct")

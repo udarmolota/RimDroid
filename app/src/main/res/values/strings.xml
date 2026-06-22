@@ -13,6 +13,10 @@
     <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If not works try another one.</string>
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
     <string name="drag_pan_label">Drag the map with a finger to pan</string>
+    <string name="compat_mode_label">Compatibility mode</string>
+    <string name="compat_mode_hint">Turn on if the game won\'t start (black screen / stuck on loading). A bit slower, but helps it launch on some devices.</string>
+    <string name="compat_mode_dialog_title">Compatibility mode — please read</string>
+    <string name="compat_mode_dialog_msg">This is a temporary workaround. It may not work, or only work partially (graphics glitches, missing textures, errors on load).\n\nIf you get save problems — colonists disappearing from your saves — download and install the <b>RimDroidSaveFix</b> mod.</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
@@ -107,9 +111,11 @@
     <string name="card_sound">Sound</string>
     <string name="card_advanced">Advanced</string>
     <string name="sound_generate">Install game sound</string>
-    <string name="sound_generate_note">Game sound is installed as a separate mod because of decoder issues. The toggle below turns that mod on or off.</string>
+    <string name="sound_generate_note">Game sound is installed as a separate mod because of decoder issues. The toggle below turns that mod on or off. With sound on, the game takes a bit longer to load.</string>
     <string name="sound_installing_title">Installing sound</string>
     <string name="sound_generate_toast">This may take up to 2 minutes. You can keep using the app.</string>
+    <string name="sound_done">Sound pack ready! Turn on \"Game sound\" in Settings to use it.</string>
+    <string name="sound_failed">Sound pack generation failed. See Download/_fmod_spike_result.txt.</string>
     <string name="env_section_header">Environment variables</string>
     <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>

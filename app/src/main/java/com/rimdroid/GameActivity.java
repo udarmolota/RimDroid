@@ -91,7 +91,11 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             boxLeft = 0; boxTop = 0; boxW = sw; boxH = sh;
         }
 
-        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        // Lock to a single fixed landscape and IGNORE the rotation sensor. Previously this was
+        // SENSOR_LANDSCAPE, which let the device flip 180° (landscape <-> reverse-landscape) whenever it
+        // was held unsteadily; each flip fired surfaceChanged and could leave the game stuck in a stretched
+        // menu (resolution drift). Fixed landscape = no flips, no sensor reaction, no stretch trigger.
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // True immersive fullscreen: hide BOTH status and navigation bars. The old
         // FLAG_FULLSCREEN only hid the status bar, so on devices with a 3-button

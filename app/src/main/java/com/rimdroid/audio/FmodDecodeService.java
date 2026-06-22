@@ -31,6 +31,7 @@ public class FmodDecodeService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         new Thread(() -> {
             String result;
+            boolean ok = false;
             try {
                 File inst = FmodDecodeSpike.findFirstInstance(getApplicationContext());
                 if (inst == null) {
@@ -38,6 +39,7 @@ public class FmodDecodeService extends Service {
                 } else {
                     result = "Generating sound pack for: " + inst.getName() + "\n"
                            + FmodDecodeSpike.generatePack(getApplicationContext(), inst);
+                    ok = true;
                 }
             } catch (Throwable t) {
                 result = "FmodDecodeService crashed: " + t;
@@ -52,6 +54,14 @@ public class FmodDecodeService extends Service {
             } catch (Throwable t) {
                 Log.e(TAG, "could not write result file", t);
             }
+            // User-visible completion message: the decode runs silently in this background :fmoddec
+            // process, so without this the user never knows when the sound pack is ready. Toast is
+            // system-level → shows over the app even from a separate process.
+            final boolean done = ok;
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() ->
+                android.widget.Toast.makeText(getApplicationContext(),
+                    getString(done ? com.rimdroid.R.string.sound_done : com.rimdroid.R.string.sound_failed),
+                    android.widget.Toast.LENGTH_LONG).show());
             stopSelf(startId);
         }, "FmodDecodeSvc").start();
         return START_NOT_STICKY;

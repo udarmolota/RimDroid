@@ -100,6 +100,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     }
 
     private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
+    /** Re-tries of the INITIAL sign-in if the CM connection drops mid-approval (Steam-Mobile excursion). */
+    private static final int MAX_AUTH_ATTEMPTS = 3;
 
     public interface Listener {
         /** Steam Guard code prompt (only if the account is not approved via the Steam Mobile push). */
@@ -147,6 +149,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private volatile boolean downloadCompleted;    // succeeded — stop everything
     private volatile Throwable lastError;          // set by onDownloadFailed; checked after awaitCompletion
     private int downloadAttempts;
+    private int authAttempts;                      // initial-sign-in attempts (drops during approval)
 
     /** GAME mode: download RimWorld into instances/&lt;name&gt; and make it launchable. */
     public SteamDownloadSpike(String username, String password, String instanceName,
@@ -234,6 +237,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             manager.subscribe(LicenseListCallback.class, this::onLicenseList);
 
             running = true;
+            progress("Tip: stay on ONE network (Wi-Fi or mobile) until the download finishes — "
+                    + "switching mid-download can drop the sign-in.");
             progress("Connecting to Steam...");
             steamClient.connect();
             while (running) {
@@ -246,6 +251,14 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         } catch (Throwable t) {
             Log.e(TAG, "SteamDownloadSpike crashed", t);
             done("crash: " + t);
+        } finally {
+            // ALWAYS tear the connection down on the way out. Otherwise a failed/finished session
+            // (e.g. auth cancelled when the device switched Wi-Fi↔mobile) leaves an ORPHANED
+            // SteamClient whose background ktor/reader thread keeps running; when the network then
+            // changes its socket dies and the coroutine throws an UNCAUGHT exception on its own
+            // thread — which hard-crashes the whole app (not caught by any try/catch here, never
+            // logged). Disconnecting here cancels those coroutines cleanly so nothing is left to die.
+            try { if (steamClient != null) steamClient.disconnect(); } catch (Throwable ignored) {}
         }
     }
 
@@ -259,6 +272,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             }
 
             progress("Connected. Authenticating '" + username + "'...");
+            authAttempts++;
             AuthSessionDetails details = new AuthSessionDetails();
             details.username = username;
             details.password = password;
@@ -278,8 +292,22 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             logOnWithToken();
         } catch (Throwable t) {
             Log.e(TAG, "Auth failed", t);
-            done("auth error: " + describe(t));
-            running = false;
+            // A CancellationException here = the CM connection DROPPED while we waited for the Steam
+            // Mobile approval (e.g. the user briefly switched to the Steam app to approve), NOT a real
+            // auth failure (wrong password / declined). Treat it as a transient drop: keep `running`
+            // true so onDisconnected reconnects and re-runs the sign-in (a fresh approval push), up to
+            // MAX_AUTH_ATTEMPTS. Only give up on a genuine failure or once attempts are exhausted.
+            boolean connectionDropped =
+                    (t instanceof java.util.concurrent.CancellationException)
+                            || (t.getCause() instanceof java.util.concurrent.CancellationException);
+            if (connectionDropped && !cancelled && authAttempts < MAX_AUTH_ATTEMPTS) {
+                progress("Sign-in interrupted by a connection drop — reconnecting and asking you to "
+                        + "approve again (attempt " + authAttempts + "/" + MAX_AUTH_ATTEMPTS + ")…");
+                // running stays true → onDisconnected reconnects → onConnected re-runs the sign-in.
+            } else {
+                done("auth error: " + describe(t));
+                running = false;
+            }
         }
     }
 
@@ -295,7 +323,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private void onDisconnected(DisconnectedCallback cb) {
         Log.i(TAG, "Disconnected (userInitiated=" + cb.isUserInitiated() + ")");
         // Stop for good on a user-initiated disconnect, on success, or once retries are exhausted.
-        if (cb.isUserInitiated() || downloadCompleted || downloadAttempts >= MAX_DOWNLOAD_ATTEMPTS) {
+        if (cb.isUserInitiated() || downloadCompleted || downloadAttempts >= MAX_DOWNLOAD_ATTEMPTS
+                || (refreshToken == null && authAttempts >= MAX_AUTH_ATTEMPTS)) {
             running = false;
             if (!downloadCompleted && !cb.isUserInitiated()) {
                 done("connection lost; gave up after " + downloadAttempts + " attempt(s). "
@@ -625,6 +654,16 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         downloadInProgress = true;
         downloadAttempts++;
         lastError = null;
+        // RESUME-FRIENDLY: we deliberately do NOT wipe installDir/.DepotDownloader. DepotDownloader
+        // uses that cache + the partial files to skip already-downloaded chunks, so re-tapping
+        // "Download" for the SAME instance + manifest CONTINUES a half-finished download instead of
+        // restarting from zero — essential for big multi-GB downloads (start at home, finish later
+        // on another network). The earlier hard-crash was the orphaned SteamClient (fixed in run()'s
+        // finally), not this cache, so wiping here would only cost the user their progress.
+        if (downloadAttempts == 1) {
+            File state = new File(installDir, ".DepotDownloader");
+            if (state.exists()) progress("Found partial download — resuming where it stopped…");
+        }
         // Always pin a manifest: a user-supplied build, else the recommended 1.5 one (NOT "latest",
         // which is now 1.6 / unsupported).
         long mid = manifestId > 0 ? manifestId : RIMWORLD_1_5_MANIFEST;

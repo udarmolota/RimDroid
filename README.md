@@ -38,9 +38,10 @@ device isn't here, try it and send us a log.
 **Boots, but may hit a "colonists missing after load" / crash bug — a reboot often helps:**
 - Poco X7 (Mali)
 - Poco F5 / Snapdragon 7+ Gen 2 (Adreno 725)
+- - Infinix Note 50s 5G (Mali-G615) and similar
 
 **Doesn't start yet:**
-- Infinix Note 50s 5G (Mali-G615) and similar — waiting on the software renderer
+- TECNO POVA 4 Pro
 
 ## System requirements
 

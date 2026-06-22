@@ -21,7 +21,7 @@ on Android phones, with real GPU rendering, touch controls, gamepad support, and
 - ✔️ **Gamepad support** — version 1.0 with a button-remapping wizard for controllers with swapped buttons
 - ✔️ **Save/Settings import/export**
 - ✔️ **Controls Haptics** with night mode and a Russian translation
-- ⭕ **Audio** temporarily disabled (work in progress)
+- ✔️ **Audio** temporarily disabled (work in progress)
 - ⭕ **On-screen keyboard** for text fields not yet available
 
 ## Device compatibility
@@ -53,7 +53,7 @@ device isn't here, try it and send us a log.
 
 - [ ] Expand GPU/device compatibility 
 - [ ] Fix the "colonists missing after load" / crash bug on affected devices
-- [ ] In-game audio
+- [X] In-game audio
 - [ ] On-screen keyboard for text fields
 
 ## How it works

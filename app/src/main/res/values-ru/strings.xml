@@ -57,7 +57,7 @@
     <string name="custom_driver_imported">Свой драйвер импортирован (%1$s)</string>
     <string name="custom_driver_import_failed">Не удалось импортировать: %1$s</string>
     <string name="custom_driver_removed">Свой драйвер удалён</string>
-    <string name="nav_new_instance">Добавить инстанс</string>
+    <string name="nav_new_instance">Добавить игру (инстанс)</string>
     <string name="nav_download_game">Загрузки из Steam</string>
     <string name="nav_install_content">Установить мод / DLC (ZIP)…</string>
     <string name="nav_custom_driver">Свой Vulkan-драйвер…</string>

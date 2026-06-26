@@ -60,7 +60,7 @@
     <string name="custom_driver_imported">Custom driver imported (%1$s)</string>
     <string name="custom_driver_import_failed">Import failed: %1$s</string>
     <string name="custom_driver_removed">Custom driver removed</string>
-    <string name="nav_new_instance">Add Instance</string>
+    <string name="nav_new_instance">Add game instance</string>
     <string name="nav_download_game">Steam Downloads</string>
     <string name="nav_install_content">Install mod / DLC (ZIP)…</string>
     <string name="nav_custom_driver">Custom Vulkan driver…</string>

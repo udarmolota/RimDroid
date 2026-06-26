@@ -107,11 +107,13 @@ public final class GpuInfo {
             case 8: return "libvulkan_freedreno.v25.so";   // Adreno 8xx (830/840) — tested best
             case 7: return "libvulkan.ad07XX_regular.so";  // Adreno 7xx
             case 6:
-                // a6xx is split: NEWER high a6xx (>=630: 630/640/642L/644/650/660/680/690) need a MODERN
-                // Turnip (Mesa 25) — the legacy ad06XX (old Mesa) HANGS Zink at context creation on them
-                // (field-confirmed: Adreno 644 / Snapdragon 7 Gen 1 / Huawei MatePad 11.5 2023). The legacy
-                // build is only for OLD budget a6xx (<=620: a610/a612/a619), which v25 in turn black-screens.
-                return (adrenoModel >= 630) ? "libvulkan_freedreno.v25.so" : "vulkan.ad06XX.so";
+                // a6xx is split: NEWER high a6xx (>=630: 630/640/642L/644/650/660/680/690) get the FRESH OneUI
+                // Turnip (v26.2, Mesa 25 / stevenmx) — the go-to for Adreno black/present issues; the legacy
+                // ad06XX (old Mesa) HANGS Zink at context creation on them (field-confirmed: Adreno 644 /
+                // Snapdragon 7 Gen 1 / Huawei MatePad 11.5 2023). The legacy build is NO LONGER recommended for
+                // modern a6xx — it stays only as a MANUAL fallback for OLD budget a6xx (<=620: a610/a612/a619),
+                // which the modern Turnip in turn black-screens.
+                return (adrenoModel >= 630) ? "libvulkan_freedreno_7xx_new.so" : "vulkan.ad06XX.so";
             default: return LauncherPreferences.SYSTEM_VULKAN_DRIVER_SO; // "" System
         }
     }

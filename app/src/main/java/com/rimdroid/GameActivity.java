@@ -129,7 +129,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             fpsView = new android.widget.TextView(this);
             fpsView.setText("FPS: --");
             fpsView.setTextColor(0xFF00FF66);                 // green, readable over any scene
-            fpsView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+            fpsView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
             fpsView.setShadowLayer(4f, 0f, 0f, 0xFF000000);   // outline so it reads on light scenes
             fpsView.setPadding(0, 0, 0, 0);
             int m = Math.round(8 * getResources().getDisplayMetrics().density);

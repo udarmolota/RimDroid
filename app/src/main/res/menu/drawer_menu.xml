@@ -1,40 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Steam -->
-    <group android:id="@+id/group_steam" android:checkableBehavior="none">
-    <item
-        android:id="@+id/action_download_game"
-        android:icon="@drawable/ic_steam"
-        android:title="@string/nav_download_game" />
-    </group>
-
-    <!-- Get content -->
-    <group android:id="@+id/group_content" android:checkableBehavior="none">
+    <!-- 1) Set up an instance: add it, pick a GPU driver, install mods/DLC -->
+    <group android:id="@+id/group_game" android:checkableBehavior="none">
         <item
             android:id="@+id/action_install_instance"
             android:icon="@drawable/mt_icon_add"
             android:title="@string/nav_new_instance" />
         <item
-            android:id="@+id/action_install_content"
-            android:icon="@drawable/mt_icon_mods"
-            android:title="@string/nav_install_content" />
-        <item
             android:id="@+id/action_custom_driver"
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/nav_custom_driver" />
+        <item
+            android:id="@+id/action_install_content"
+            android:icon="@drawable/mt_icon_mods"
+            android:title="@string/nav_install_content" />
     </group>
 
-    <!-- Settings -->
-    <group android:id="@+id/group_settings" android:checkableBehavior="none">
+    <!-- 2) Get the game from Steam -->
+    <group android:id="@+id/group_steam" android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_download_game"
+            android:icon="@drawable/ic_steam"
+            android:title="@string/nav_download_game" />
+    </group>
+
+    <!-- 3) Settings + data transfer (saves / settings / controls layout) -->
+    <group android:id="@+id/group_data" android:checkableBehavior="none">
         <item
             android:id="@+id/action_settings"
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/nav_settings" />
-    </group>
-
-    <!-- Backup &amp; files -->
-    <group android:id="@+id/group_files" android:checkableBehavior="none">
         <item
             android:id="@+id/action_export_saves"
             android:icon="@drawable/mt_icon_save"
@@ -59,6 +55,10 @@
             android:id="@+id/action_import_layout"
             android:icon="@drawable/mt_icon_folder_open"
             android:title="@string/nav_import_layout" />
+    </group>
+
+    <!-- 4) Diagnostics & storage -->
+    <group android:id="@+id/group_files" android:checkableBehavior="none">
         <item
             android:id="@+id/action_export_logs"
             android:icon="@drawable/mt_icon_logfile"
@@ -69,7 +69,7 @@
             android:title="@string/nav_manage_storage" />
     </group>
 
-    <!-- About -->
+    <!-- 5) About -->
     <group android:id="@+id/group_about" android:checkableBehavior="none">
         <item
             android:id="@+id/action_updates"

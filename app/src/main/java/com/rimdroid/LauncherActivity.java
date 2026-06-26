@@ -63,6 +63,11 @@ public class LauncherActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
                     uri -> { if (uri != null) importLayout(uri); });
 
+    /** Which user-data parts the pending export/import targets — saves vs. settings (set per menu item). */
+    private String[] pendingDataParts = { GameDataTransfer.SAVES, GameDataTransfer.CONFIG };
+    private static final String[] ZIP_MIME =
+            { "application/zip", "application/x-zip-compressed", "application/octet-stream" };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
@@ -106,11 +111,24 @@ public class LauncherActivity extends AppCompatActivity {
                 navController.navigate(R.id.action_open_custom_driver);   // device-global custom Vulkan driver import
                 return true;
             } else if (id == R.id.action_export_saves) {
-                chooseInstanceThen(gi -> { pendingInstance = gi; exportDataLauncher.launch("rimdroid_backup.zip"); });
+                chooseInstanceThen(gi -> { pendingInstance = gi;
+                        pendingDataParts = new String[]{ GameDataTransfer.SAVES };
+                        exportDataLauncher.launch(dataFileName("saves", gi)); });
                 return true;
             } else if (id == R.id.action_import_saves) {
-                chooseInstanceThen(gi -> { pendingInstance = gi; importDataLauncher.launch(new String[]{
-                        "application/zip", "application/x-zip-compressed", "application/octet-stream"}); });
+                chooseInstanceThen(gi -> { pendingInstance = gi;
+                        pendingDataParts = new String[]{ GameDataTransfer.SAVES };
+                        importDataLauncher.launch(ZIP_MIME); });
+                return true;
+            } else if (id == R.id.action_export_settings) {
+                chooseInstanceThen(gi -> { pendingInstance = gi;
+                        pendingDataParts = new String[]{ GameDataTransfer.CONFIG };
+                        exportDataLauncher.launch(dataFileName("settings", gi)); });
+                return true;
+            } else if (id == R.id.action_import_settings) {
+                chooseInstanceThen(gi -> { pendingInstance = gi;
+                        pendingDataParts = new String[]{ GameDataTransfer.CONFIG };
+                        importDataLauncher.launch(ZIP_MIME); });
                 return true;
             } else if (id == R.id.action_export_logs) {
                 chooseInstanceThen(gi -> { pendingInstance = gi;
@@ -285,18 +303,19 @@ public class LauncherActivity extends AppCompatActivity {
 
     // ---- Save / settings backup & restore -------------------------------------
 
-    /** Export the selected instance's saves + settings into a picked .zip. */
+    /** Export the selected instance's saves OR settings (per {@link #pendingDataParts}) into a picked .zip. */
     private void exportGameData(Uri uri) {
         final GameInstance instance = pendingInstance != null ? pendingInstance : currentInstance();
         if (instance == null) { toast("Create a game instance first."); return; }
         final File userDir = instance.getUserDataDir();
-        toast("Exporting saves + settings…");
+        final String[] parts = pendingDataParts;
+        toast("Exporting…");
 
         new Thread(() -> {
             GameDataTransfer.Result res;
             try (OutputStream out = getContentResolver().openOutputStream(uri)) {
                 if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
-                res = GameDataTransfer.export(userDir, out);
+                res = GameDataTransfer.export(userDir, out, parts);
             } catch (Exception ex) {
                 ui.post(() -> toast("Export failed: " + ex.getMessage()));
                 return;
@@ -309,12 +328,13 @@ public class LauncherActivity extends AppCompatActivity {
         }).start();
     }
 
-    /** Restore saves + settings from a picked .zip into the selected instance. */
+    /** Restore saves OR settings (per {@link #pendingDataParts}) from a picked .zip into the selected instance. */
     private void importGameData(Uri uri) {
         final GameInstance instance = pendingInstance != null ? pendingInstance : currentInstance();
         if (instance == null) { toast("Create a game instance first."); return; }
         final File userDir = instance.getUserDataDir();
-        toast("Importing saves + settings…");
+        final String[] parts = pendingDataParts;
+        toast("Importing…");
 
         new Thread(() -> {
             File cacheZip = new File(getCacheDir(), "import_data.zip");
@@ -327,7 +347,7 @@ public class LauncherActivity extends AppCompatActivity {
                 ui.post(() -> toast("Read failed: " + ex.getMessage()));
                 return;
             }
-            GameDataTransfer.Result res = GameDataTransfer.importZip(cacheZip, userDir);
+            GameDataTransfer.Result res = GameDataTransfer.importZip(cacheZip, userDir, parts);
             //noinspection ResultOfMethodCallIgnored
             cacheZip.delete();
             final GameDataTransfer.Result fr = res;
@@ -420,6 +440,13 @@ public class LauncherActivity extends AppCompatActivity {
     private static String timestamp() {
         return new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
                 .format(new java.util.Date());
+    }
+
+    /** rimdroid_&lt;kind&gt;_&lt;instance&gt;_&lt;yyyyMMdd_HHmmss&gt;.zip — dated + descriptive, never overwrites. */
+    private static String dataFileName(String kind, GameInstance gi) {
+        String n = (gi == null || gi.getName() == null) ? "instance"
+                : gi.getName().replaceAll("[^A-Za-z0-9._-]", "_");
+        return "rimdroid_" + kind + "_" + n + "_" + timestamp() + ".zip";
     }
 
     /** Open a URL in the user's browser (community / updates links). */

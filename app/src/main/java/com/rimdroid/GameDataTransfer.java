@@ -22,13 +22,18 @@ import java.util.zip.ZipOutputStream;
  * Both live under the instance's persistentDataPath
  * ({@code <instance>/unity3d/Ludeon Studios/RimWorld by Ludeon Studios/}).
  *
- * Export zips those folders; import extracts them back (restricted to Saves/ + Config/,
- * zip-slip guarded). Mirrors the mod importer's zip handling.
+ * Export zips the requested folders; import extracts them back (restricted to the allowed
+ * top-level folders, zip-slip guarded). Mirrors the mod importer's zip handling. Saves and
+ * settings are SEPARABLE — callers pass {@link #SAVES} and/or {@link #CONFIG} to back up or
+ * restore just one (e.g. cross-device save transfer must NOT carry the device-specific
+ * {@code Config/Prefs.xml}).
  */
 public final class GameDataTransfer {
 
-    /** Top-level folders included in a backup. */
-    private static final String[] PARTS = { "Saves", "Config" };
+    /** Top-level user-data folders. Kept separate so saves and settings can be moved independently. */
+    public static final String SAVES  = "Saves";   // game saves
+    public static final String CONFIG = "Config";  // settings: Prefs.xml, ModsConfig.xml, KeyPrefs.xml, mod settings
+    private static final String[] ALL_PARTS = { SAVES, CONFIG };
 
     public static final class Result {
         public final List<String> items = new ArrayList<>(); // which parts were handled
@@ -39,18 +44,20 @@ public final class GameDataTransfer {
 
     private GameDataTransfer() {}
 
-    /** Zip the Saves/ and Config/ folders of {@code userDir} into {@code rawOut}. */
-    public static Result export(File userDir, OutputStream rawOut) {
+    /** Zip the requested top-level folders of {@code userDir} into {@code rawOut}.
+     *  @param parts which folders to include ({@link #SAVES} / {@link #CONFIG}); empty = both. */
+    public static Result export(File userDir, OutputStream rawOut, String... parts) {
+        String[] use = (parts == null || parts.length == 0) ? ALL_PARTS : parts;
         Result r = new Result();
         try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(rawOut))) {
             byte[] buf = new byte[1 << 16];
-            for (String part : PARTS) {
+            for (String part : use) {
                 File dir = new File(userDir, part);
                 if (!dir.isDirectory()) continue;
                 zipDir(dir, part, zos, buf, r);
                 r.items.add(part);
             }
-            if (r.items.isEmpty()) r.error = "Nothing to export (no Saves/Config yet).";
+            if (r.items.isEmpty()) r.error = "Nothing to export (no " + String.join("/", use) + " yet).";
         } catch (IOException e) {
             r.error = msg(e);
         }
@@ -81,8 +88,12 @@ public final class GameDataTransfer {
         }
     }
 
-    /** Restore a backup zip into {@code userDir} (only Saves/ and Config/ entries). */
-    public static Result importZip(File zipFile, File userDir) {
+    /** Restore a backup zip into {@code userDir}.
+     *  @param allowedParts which top-level folders to extract ({@link #SAVES} / {@link #CONFIG});
+     *                      empty = both. Entries outside these folders are ignored. */
+    public static Result importZip(File zipFile, File userDir, String... allowedParts) {
+        Set<String> allow = new LinkedHashSet<>(java.util.Arrays.asList(
+                (allowedParts == null || allowedParts.length == 0) ? ALL_PARTS : allowedParts));
         Result r = new Result();
         if (!userDir.exists() && !userDir.mkdirs()) { r.error = "Cannot create user data dir"; return r; }
         final String destCanon;
@@ -95,7 +106,7 @@ public final class GameDataTransfer {
             while ((e = zis.getNextEntry()) != null) {
                 String name = e.getName().replace('\\', '/');
                 String top = name.contains("/") ? name.substring(0, name.indexOf('/')) : name;
-                if (!isAllowed(top)) { zis.closeEntry(); continue; }   // ignore anything outside Saves/Config
+                if (!allow.contains(top)) { zis.closeEntry(); continue; }   // ignore anything outside the allowed parts
 
                 File out = new File(userDir, name);
                 String oc = out.getCanonicalPath();
@@ -122,11 +133,6 @@ public final class GameDataTransfer {
             r.error = msg(ex);
         }
         return r;
-    }
-
-    private static boolean isAllowed(String top) {
-        for (String p : PARTS) if (p.equals(top)) return true;
-        return false;
     }
 
     private static String msg(Exception e) { return e.getMessage() != null ? e.getMessage() : "I/O error"; }

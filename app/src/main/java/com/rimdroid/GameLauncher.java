@@ -59,6 +59,41 @@ public class GameLauncher {
         return false;
     }
 
+    /** Device SoC fingerprint for the log: chip maker/model (API 31+) + the always-available hardware
+     *  string. Together with the GL_RENDERER line (GPU) this identifies a tester's device at a glance —
+     *  no more guessing which device a log came from. */
+    private static String deviceSoc() {
+        StringBuilder sb = new StringBuilder();
+        if (android.os.Build.VERSION.SDK_INT >= 31)
+            sb.append(android.os.Build.SOC_MANUFACTURER).append(' ').append(android.os.Build.SOC_MODEL).append(' ');
+        sb.append("[hw=").append(android.os.Build.HARDWARE).append(']');
+        return sb.toString().trim();
+    }
+
+    /** Active mods in load order, parsed from the instance's Config/ModsConfig.xml. Logged in the launch
+     *  config (rimdroid.log) so we have the mod set + ORDER even when the game crashes DURING mod load
+     *  (RimWorld's own mod-list log is lost to such a crash — exactly the case that hides mod/Harmony bugs).
+     *  Reveals at a glance: is our Harmony present, is it FIRST, how many mods, wrong order. */
+    private static String readActiveMods(GameInstance gi) {
+        try {
+            java.io.File cfg = new java.io.File(gi.getUserDataDir(), "Config/ModsConfig.xml");
+            if (!cfg.isFile()) return "(ModsConfig.xml not found — run the game once)";
+            StringBuilder x = new StringBuilder();
+            try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(cfg))) {
+                String line;
+                while ((line = r.readLine()) != null) x.append(line).append('\n');
+            }
+            String s = x.toString();
+            int a = s.indexOf("<activeMods>"), b = s.indexOf("</activeMods>");
+            if (a < 0 || b < 0) return "(no <activeMods> block)";
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("<li>([^<]+)</li>").matcher(s.substring(a, b));
+            StringBuilder sb = new StringBuilder();
+            int i = 1;
+            while (m.find()) sb.append("\n                  ").append(i++).append(". ").append(m.group(1).trim());
+            return sb.length() == 0 ? "(none active)" : sb.toString();
+        } catch (Exception e) { return "(read failed: " + e.getMessage() + ")"; }
+    }
+
     private static String buildLaunchConfig(GameInstance gi) {
         InstanceSettings s = gi.settings();
         String so = s.getVulkanDriverSo();
@@ -68,15 +103,19 @@ public class GameLauncher {
         return "=== RimDroid launch config ===\n"
             + "instance      : " + gi.getName() + "\n"
             + "app version   : " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
+            + "device        : " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                + " (Android " + android.os.Build.VERSION.RELEASE + ", API " + android.os.Build.VERSION.SDK_INT + ")\n"
+            + "soc           : " + deviceSoc() + "\n"
             + "renderer      : " + s.getRenderer().name() + "\n"
             + "vulkan driver : " + driverLabel + "  [" + soShown + "]\n"
             + "render scale  : " + s.getRenderScalePercent() + "%\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
-            + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1)" : "off") + "\n"
+            + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
-                + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=" + (s.isCompatibilityMode() ? "2 X87DOUBLE=1" : "1") + "\n"
+                + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=" + (s.isCompatibilityMode() ? "2 X87DOUBLE=1 MAXCPU=1" : "1") + "\n"
             + "extra env     : " + envFieldReport(s) + "\n"
+            + "active mods   : " + readActiveMods(gi) + "\n"
             + "(GL_RENDERER / GL_VERSION appear below once GL initialises)\n"
             + "==============================";
     }
@@ -181,6 +220,15 @@ public class GameLauncher {
             // NOTE: FORWARD=0 was tried here too but REMOVED — a tester reported it made things WORSE
             // (smaller blocks → MORE block boundaries → more FP↔GPR-boundary leaks; the bug is at the
             // boundary transition). The proven pair is WEAKBARRIER=2 + X87DOUBLE=1.
+            // MAXCPU=1 → guest sees a single CPU → RimWorld's parallel Def load (ShortHashGiver
+            // .GiveAllShortHashes via Parallel.ForEach) runs inline/serially, so it never takes the
+            // .NET self-replicating-task code path that box64 miscompiles into a worker NRE
+            // ("Caught exception while loading play data … Resetting mods config" → mods fail / black
+            // on 725 / Mali-G57). Needs the box64 my_sched_getaffinity cap (wrappedlibc.c) for Mono's
+            // ProcessorCount to actually drop. Folded into compat mode because the affected devices
+            // already run compat ON; cost (1-CPU view) is tiny for RimWorld (sim is single-threaded,
+            // render is -force-gfx-direct). See [[save_bug_investigation]] / [[known_bugs]].
+            Os.setenv("BOX64_MAXCPU", "1", true);
         }
         // BOX64_PREFER_EMULATED intentionally NOT set:
         // with prefer_emulated=1 box64 skips initWrappedLib for all non-essential libs,

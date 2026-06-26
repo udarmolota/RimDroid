@@ -59,6 +59,10 @@ public class LauncherPreferences {
         // ad07XX has env vars baked in for an anti-flicker fix; _regular is the plain build.
         new VulkanDriverOption("libvulkan.ad07XX.so",         "Turnip Adreno 7xx (anti-flicker)"),
         new VulkanDriverOption("libvulkan.ad07XX_regular.so", "Turnip Adreno 7xx (regular)"),
+        // Fresh Turnip (Mesa 25 / Vulkan 1.4.350, stevenmx OneUI build). Fixed present/init on Adreno 730
+        // (OnePlus 10 Pro) AND present-black on Adreno 725 — the go-to for Adreno black/present issues.
+        // Bundled 2026-06-24 (= the custom driver testers were importing; now built-in).
+        new VulkanDriverOption("libvulkan_freedreno_7xx_new.so", "Turnip Adreno 7XX_new (v26.2)"),
         // Older Turnip revision (Mesa ~23/24, 2024-03) for legacy Adreno 6xx (e.g. Snapdragon 685
         // = Adreno 610). The newer v25 freedreno builds black-screen on these; this is the build
         // that worked on old Adreno in Zomdroid.
@@ -240,6 +244,16 @@ public class LauncherPreferences {
 
     public void setLastInstanceName(String name) {
         prefs.edit().putString("last_instance", name).apply();
+    }
+
+    // --- FPS overlay (top-left "FPS: XX") — global. Off by default. ---
+
+    public boolean isShowFps() {
+        return prefs.getBoolean("show_fps", false);
+    }
+
+    public void setShowFps(boolean v) {
+        prefs.edit().putBoolean("show_fps", v).apply();
     }
 
     // --- Debug ---

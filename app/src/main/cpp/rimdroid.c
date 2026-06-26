@@ -151,6 +151,16 @@ void rimdroid_zfa_swap(void) {
     if (p_zfaFlushFront) p_zfaFlushFront();
 }
 
+// ---- FPS overlay ------------------------------------------------------------
+// Count actually-presented frames. box64's my2_SDL_GL_SwapWindow calls
+// rimdroid_frame_tick() (weak extern) exactly once per present, for EVERY
+// renderer (ZFA/Zink, softpipe/OSMesa, egl). The Java FPS overlay polls
+// nativeGetFrameCount() once a second and shows the delta = true presented FPS
+// (independent of the game's own frame estimate; needs no mod). The game runs
+// in-process (Unity relocatable, no fork), so this global is readable from JNI.
+volatile uint64_t g_rimdroid_frame_count = 0;
+void rimdroid_frame_tick(void) { g_rimdroid_frame_count++; }
+
 // ---- OSMesa (softpipe) software-renderer SMOKE TEST -------------------------
 // Milestone 1 of the CPU/software renderer: prove libOSMesa.so (built with
 // softpipe) renders natively on the device AND that we can blit its CPU buffer to

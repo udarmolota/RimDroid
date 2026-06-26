@@ -189,3 +189,10 @@ Java_com_rimdroid_GameActivity_nativeText(JNIEnv* env, jclass clazz, jstring jte
     const char* s = (*env)->GetStringUTFChars(env, jtext, NULL);
     if (s) { rd_input_text(s); (*env)->ReleaseStringUTFChars(env, jtext, s); }
 }
+
+// FPS overlay: total presented frames so far. The Java overlay reads this once a
+// second and shows the delta = true presented FPS.
+JNIEXPORT jlong JNICALL
+Java_com_rimdroid_GameActivity_nativeGetFrameCount(JNIEnv* env, jclass clazz) {
+    return (jlong)g_rimdroid_frame_count;
+}

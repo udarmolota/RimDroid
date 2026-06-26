@@ -18,12 +18,15 @@
     <string name="compat_mode_dialog_msg">Это временное решение. Оно может не сработать или сработать не полностью (артефакты графики, пропавшие текстуры, ошибки при загрузке).\n\nЕсли будут проблемы с сохранениями — пропадают колонисты из сейвов — скачай и установи мод <b>RimDroidSaveFix</b>.</string>
     <string name="haptic_label">Вибрация при нажатии кнопок</string>
     <string name="audio_label">Звук в игре</string>
+    <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
     <string name="driver_auto_set">Обнаружен GPU: %1$s.\n\nДля этого инстанса выставлен рекомендуемый Vulkan-драйвер: %2$s.\n\nЕсли получите чёрный экран или артефакты — смените его в настройках инстанса (шестерёнка на карточке).</string>
     <string name="nav_import_mods">Импорт модов (ZIP)…</string>
-    <string name="nav_export_saves">Экспорт сейвов/настроек</string>
-    <string name="nav_import_saves">Импорт сейвов/настроек</string>
+    <string name="nav_export_saves">Экспорт сейвов</string>
+    <string name="nav_import_saves">Импорт сейвов</string>
+    <string name="nav_export_settings">Экспорт настроек</string>
+    <string name="nav_import_settings">Импорт настроек</string>
     <string name="nav_export_logs">Экспорт логов (ZIP)…</string>
     <string name="nav_export_layout">Экспорт раскладки управления…</string>
     <string name="nav_import_layout">Импорт раскладки управления…</string>

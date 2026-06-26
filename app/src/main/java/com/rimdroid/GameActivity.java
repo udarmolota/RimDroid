@@ -30,6 +30,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     public static native void nativeScroll(int x, int y, int dy);
     public static native void nativeKey(int scancode, int keycode, int down);
     public static native void nativeText(String text);
+    // FPS overlay: total presented frames so far (counted in box64's SwapWindow).
+    public static native long nativeGetFrameCount();
 
     private float renderScale = 0.72f;
     // Letterbox the game at its native 4:3 (black side bars, no stretch). DEFAULT OFF: in-game the
@@ -49,6 +51,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private boolean scaling = false;
     private boolean prefsPinned = false;   // Prefs.xml resolution is pinned ONCE per launch (not per surface-change → no ping-pong)
     private com.rimdroid.input.InputControlsView controls;
+    private android.widget.TextView fpsView;          // top-left "FPS: XX" overlay (optional)
+    private long fpsLastCount = 0, fpsLastTimeMs = 0;  // for computing the per-second delta
     private com.rimdroid.input.GamepadHandler gamepad;   // physical controller -> MNK injection
     private String instanceName;   // the launched instance (null for the smoke test)
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -117,6 +121,24 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         root.addView(controls, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         controls.setGameRect(boxLeft, boxTop, boxW, boxH);   // so cursor/tap map into the game rect
+
+        // Optional FPS overlay ("FPS: XX", top-left). Global toggle in Settings → Video.
+        // Counts real presented frames (box64 SwapWindow), so it's the true on-screen rate.
+        if (LauncherPreferences.getSingleton() != null
+                && LauncherPreferences.getSingleton().isShowFps()) {
+            fpsView = new android.widget.TextView(this);
+            fpsView.setText("FPS: --");
+            fpsView.setTextColor(0xFF00FF66);                 // green, readable over any scene
+            fpsView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+            fpsView.setShadowLayer(4f, 0f, 0f, 0xFF000000);   // outline so it reads on light scenes
+            fpsView.setPadding(0, 0, 0, 0);
+            int m = Math.round(8 * getResources().getDisplayMetrics().density);
+            FrameLayout.LayoutParams fpsLp = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+            fpsLp.gravity = Gravity.TOP | Gravity.START;
+            fpsLp.setMargins(m, m, 0, 0);
+            root.addView(fpsView, fpsLp);   // on top of surface + controls
+        }
         setContentView(root);
         hideSystemBars();   // after setContentView — the decor view / insets controller now exist
         // CRITICAL for gamepad: analog joystick MotionEvents (sticks/triggers) are delivered only to
@@ -266,10 +288,37 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         return v < 0 ? 0 : (v > max ? max : v);
     }
 
+    // === FPS overlay: poll the native presented-frame counter once a second ===
+    private final Runnable fpsTick = new Runnable() {
+        @Override public void run() {
+            if (fpsView == null) return;
+            long now = android.os.SystemClock.elapsedRealtime();
+            long count;
+            try { count = nativeGetFrameCount(); }
+            catch (UnsatisfiedLinkError e) { return; }   // native not ready yet
+            if (fpsLastTimeMs != 0) {
+                long dFrames = count - fpsLastCount;
+                long dMs = now - fpsLastTimeMs;
+                if (dMs > 0) {
+                    int fps = (int) Math.round(dFrames * 1000.0 / dMs);
+                    fpsView.setText("FPS: " + fps);
+                }
+            }
+            fpsLastCount = count;
+            fpsLastTimeMs = now;
+            ui.postDelayed(this, 1000);
+        }
+    };
+
     @Override
     protected void onResume() {
         super.onResume();
         if (surfaceView != null) surfaceView.requestFocus();   // re-grab focus so sticks keep working
+        if (fpsView != null) {                         // (re)start the 1 Hz FPS poll
+            fpsLastTimeMs = 0;                          // reset so the first interval isn't skewed
+            ui.removeCallbacks(fpsTick);
+            ui.postDelayed(fpsTick, 1000);
+        }
         if (gamepad != null) gamepad.start();         // resume the gamepad analog frame loop
         // Auto-hide the on-screen controls while a physical gamepad is connected (like Zomdroid).
         inputManager = (android.hardware.input.InputManager) getSystemService(INPUT_SERVICE);
@@ -280,6 +329,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     protected void onPause() {
         super.onPause();
+        ui.removeCallbacks(fpsTick);                   // stop the FPS poll while backgrounded
         if (gamepad != null) gamepad.stop();          // stop the loop, release held gamepad inputs
         if (inputManager != null) inputManager.unregisterInputDeviceListener(deviceListener);
         releasePan();                                 // release held camera-pan arrows

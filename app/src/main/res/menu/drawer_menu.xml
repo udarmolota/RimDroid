@@ -44,6 +44,14 @@
             android:icon="@drawable/mt_icon_folder_open"
             android:title="@string/nav_import_saves" />
         <item
+            android:id="@+id/action_export_settings"
+            android:icon="@drawable/mt_icon_settings"
+            android:title="@string/nav_export_settings" />
+        <item
+            android:id="@+id/action_import_settings"
+            android:icon="@drawable/mt_icon_folder_open"
+            android:title="@string/nav_import_settings" />
+        <item
             android:id="@+id/action_export_layout"
             android:icon="@drawable/mt_icon_folder"
             android:title="@string/nav_export_layout" />

@@ -1,7 +1,13 @@
 #ifndef RIMDROID_H
 #define RIMDROID_H
 
+#include <stdint.h>
 #include <android/native_window.h>
+
+/* FPS overlay: presented-frame counter, bumped by rimdroid_frame_tick() from
+ * box64's SDL_GL_SwapWindow (once per present). The Java overlay polls it. */
+extern volatile uint64_t g_rimdroid_frame_count;
+void rimdroid_frame_tick(void);
 
 /**
  * Called from JNI before startGame.

@@ -67,6 +67,7 @@ public class SettingsFragment extends Fragment {
         Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
         Switch swAudio        = view.findViewById(R.id.sw_audio);
+        Switch swShowFps      = view.findViewById(R.id.sw_show_fps);
         final android.widget.Button btnSmoke = view.findViewById(R.id.btn_smoketest);
         final android.widget.Button btnSteamSpike = view.findViewById(R.id.btn_steam_spike);
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
@@ -112,6 +113,10 @@ public class SettingsFragment extends Fragment {
         });
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
+        // FPS overlay ("FPS: XX", top-left) — GLOBAL. Shows the true presented frame rate; helps
+        // compare devices / render scales (e.g. 720p vs native). Takes effect next game launch.
+        swShowFps.setChecked(prefs.isShowFps());
+        swShowFps.setOnCheckedChangeListener((btn, checked) -> prefs.setShowFps(checked));
         // Audio is GLOBAL (experimental, default off) — the libasound→AAudio shim is loaded at game
         // launch only when this is on. Off = clean silence (FMOD output under box64 is still garbled).
         swAudio.setChecked(LauncherPreferences.requireSingleton().isAudioEnabled());

@@ -50,6 +50,7 @@ public final class LogExporter {
                 new File(gamePath, "box64.log"),
                 new File(gamePath, "rimdroid.log"),
                 new File(configDir, "Prefs.xml"),
+                new File(configDir, "ModsConfig.xml"),   // active mods + load order — vital for mod/Harmony issues
                 crashLog,
         };
 

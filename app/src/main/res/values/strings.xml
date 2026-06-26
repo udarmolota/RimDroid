@@ -19,12 +19,15 @@
     <string name="compat_mode_dialog_msg">This is a temporary workaround. It may not work, or only work partially (graphics glitches, missing textures, errors on load).\n\nIf you get save problems — colonists disappearing from your saves — download and install the <b>RimDroidSaveFix</b> mod.</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
+    <string name="show_fps_label">Show FPS counter (top-left)</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
     <string name="driver_auto_set">Detected GPU: %1$s.\n\nThe recommended Vulkan driver was set for this instance: %2$s.\n\nIf you get a black screen or artifacts, change it in the instance settings (the gear icon on the instance card).</string>
     <string name="nav_import_mods">Import Mods (ZIP)…</string>
-    <string name="nav_export_saves">Export saves/settings</string>
-    <string name="nav_import_saves">Import saves/settings</string>
+    <string name="nav_export_saves">Export saves</string>
+    <string name="nav_import_saves">Import saves</string>
+    <string name="nav_export_settings">Export settings</string>
+    <string name="nav_import_settings">Import settings</string>
     <string name="nav_export_logs">Export logs (ZIP)…</string>
     <string name="nav_export_layout">Export controls layout…</string>
     <string name="nav_import_layout">Import controls layout…</string>

@@ -95,6 +95,13 @@
             android:layout_height="wrap_content"
             android:text="@string/driver_recommend"
             android:textSize="14dp" />
+
+        <Switch
+            android:id="@+id/sw_show_fps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/show_fps_label" />
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

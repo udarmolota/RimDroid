@@ -19,9 +19,12 @@ on Android phones, with real GPU rendering, touch controls, gamepad support, and
 - ✔️ **Mods** — Harmony patching works (tested: RimHUD, Pick Up And Haul, Camera+); needs Harmony 2.2.2
 - ✔️ **Multiple instances** — each install is a card with its own settings (renderer, driver, controls)
 - ✔️ **Gamepad support** — version 1.0 with a button-remapping wizard for controllers with swapped buttons
-- ✔️ **Save/Settings import/export**
-- ✔️ **Controls Haptics** with night mode and a Russian translation
-- ✔️ **Audio** temporary workaround mod
+- ✔️ **Saves work reliably** — the "colonists vanish after save / reload" bug is fixed, built in, **no mod needed**
+- ✔️ **Compatibility mode** — helps stubborn devices launch and lets mods load (Settings → Advanced)
+- ✔️ **On-screen FPS counter** (Settings → Video)
+- ✔️ **Game sound** — generate a sound pack from your own RimWorld audio (Settings → Sound)
+- ✔️ **Save / Settings / layout import & export**
+- ✔️ Haptics, night mode, and a Russian translation
 - ⭕ **On-screen keyboard** for text fields not yet available
 
 ## Device compatibility
@@ -35,10 +38,11 @@ device isn't here, try it and send us a log.
 - Lenovo Legion Y700 (Adreno 730)
 - Realme P4x (Mali)
 
-**Boots, but may hit a "colonists missing after load" / crash bug — a reboot often helps:**
+**Boots; with mods you may need Compatibility mode (Settings → Advanced), and a black screen on first load usually clears on a retry:**
 - Poco X7 (Mali)
 - Poco F5 / Snapdragon 7+ Gen 2 (Adreno 725)
-- - Infinix Note 50s 5G (Mali-G615) and similar
+- Infinix Note 50s 5G (Mali-G615) and similar
+- Tecno Pova 7 / Helio G100 (Mali-G57)
 
 **Doesn't start yet:**
 - TECNO POVA 4 Pro
@@ -52,10 +56,11 @@ device isn't here, try it and send us a log.
 
 ## Roadmap
 
-- [ ] Expand GPU/device compatibility 
-- [ ] Fix the "colonists missing after load" / crash bug on affected devices
-- [X] In-game audio
+- [ ] Expand GPU/device compatibility
+- [x] Fixed the "colonists missing after load" bug (built-in save fix)
+- [x] In-game audio
 - [ ] On-screen keyboard for text fields
+- [ ] Resolution / render-scale options for more FPS on weaker GPUs
 
 ## How it works
 

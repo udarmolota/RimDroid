@@ -37,9 +37,9 @@ it and send us a log.
 - Samsung Galaxy S25 Ultra (Adreno 830)
 - Lenovo Legion Y700 (Adreno 730)
 - Realme P4x (Mali)
+- Poco X7 (Mali)
 
 **Loads, but may need Compatibility mode (Settings → Advanced):**
-- Poco X7 (Mali)
 - Poco F5 / Snapdragon 7+ Gen 2 (Adreno 725)
 - Infinix Note 50s 5G (Mali-G615) and similar
 - Tecno Pova 7 / Helio G100 (Mali-G57)

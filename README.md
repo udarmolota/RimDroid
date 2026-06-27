@@ -54,7 +54,7 @@ it and send us a log.
 
 ## Roadmap
 
-- [ ] Expand GPU/device compatibility
+- [x] Expand GPU/device compatibility
 - [x] Fixed the "colonists missing after load" bug (built-in save fix)
 - [x] In-game audio
 - [ ] On-screen keyboard for text fields

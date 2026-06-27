@@ -8,8 +8,8 @@ on Android phones, with real GPU rendering, touch controls, gamepad support, and
 > You must own RimWorld — RimDroid does **not** include or distribute any game files.
 
 > [!WARNING]
-> **The app is still in beta.** It runs well on some devices and not yet on others — compatibility is
-> currently per-device, not per-GPU brand. See [Device compatibility](#device-compatibility).
+> **The app is still in beta.** All tested devices launch the game, but some need **Compatibility
+> mode** and behaviour is still per-device, not per-GPU brand. See [Device compatibility](#device-compatibility).
 
 ## Features
 
@@ -29,23 +29,21 @@ on Android phones, with real GPU rendering, touch controls, gamepad support, and
 
 ## Device compatibility
 
-Compatibility right now depends on the **specific phone** (GPU + driver + kernel), not just the GPU
-brand — some Mali phones run great while others don't start yet. This is a living list; if your
-device isn't here, try it and send us a log.
+All tested devices now launch the game. Some run great out of the box; others may need
+**Compatibility mode** (Settings → Advanced). This is a living list; if your device isn't here, try
+it and send us a log.
 
 **Works:**
 - Samsung Galaxy S25 Ultra (Adreno 830)
 - Lenovo Legion Y700 (Adreno 730)
 - Realme P4x (Mali)
 
-**Boots; with mods you may need Compatibility mode (Settings → Advanced), and a black screen on first load usually clears on a retry:**
+**Loads, but may need Compatibility mode (Settings → Advanced):**
 - Poco X7 (Mali)
 - Poco F5 / Snapdragon 7+ Gen 2 (Adreno 725)
 - Infinix Note 50s 5G (Mali-G615) and similar
 - Tecno Pova 7 / Helio G100 (Mali-G57)
-
-**Doesn't start yet:**
-- TECNO POVA 4 Pro
+- Tecno Pova 4 Pro
 
 ## System requirements
 

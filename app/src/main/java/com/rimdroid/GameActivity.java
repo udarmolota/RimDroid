@@ -54,6 +54,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private android.widget.TextView fpsView;          // top-left "FPS: XX" overlay (optional)
     private long fpsLastCount = 0, fpsLastTimeMs = 0;  // for computing the per-second delta
     private com.rimdroid.input.GamepadHandler gamepad;   // physical controller -> MNK injection
+    private com.rimdroid.input.MouseKeyboardHandler mouseKb;  // physical mouse + keyboard -> SDL injection
     private String instanceName;   // the launched instance (null for the smoke test)
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
     private float tapDownX, tapDownY; private long tapDownT; private boolean tapMoved;
@@ -112,6 +113,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         scaleDetector = new android.view.ScaleGestureDetector(this, new ScaleListener());
         controls = new com.rimdroid.input.InputControlsView(this, renderScale, instanceName);
         gamepad = new com.rimdroid.input.GamepadHandler(this, controls);
+        mouseKb = new com.rimdroid.input.MouseKeyboardHandler(controls);
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF000000);   // black letterbox bars
@@ -121,6 +123,17 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         root.addView(controls, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         controls.setGameRect(boxLeft, boxTop, boxW, boxH);   // so cursor/tap map into the game rect
+
+        // Physical mouse: hide Android's OWN pointer (TYPE_NULL) so it doesn't double up with our overlay
+        // cursor. Set on every in-game view the pointer can rest on (controls is on top; surface/root for when
+        // the controls overlay is hidden). Our InputControlsView cursor remains the single visible cursor.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            android.view.PointerIcon nullIcon =
+                    android.view.PointerIcon.getSystemIcon(this, android.view.PointerIcon.TYPE_NULL);
+            root.setPointerIcon(nullIcon);
+            controls.setPointerIcon(nullIcon);
+            surfaceView.setPointerIcon(nullIcon);
+        }
 
         // Optional FPS overlay ("FPS: XX", top-left). Global toggle in Settings → Video.
         // Counts real presented frames (box64 SwapWindow), so it's the true on-screen rate.
@@ -132,12 +145,19 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             fpsView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
             fpsView.setShadowLayer(4f, 0f, 0f, 0xFF000000);   // outline so it reads on light scenes
             fpsView.setPadding(0, 0, 0, 0);
-            int m = Math.round(8 * getResources().getDisplayMetrics().density);
+            final int m = Math.round(8 * getResources().getDisplayMetrics().density);
             FrameLayout.LayoutParams fpsLp = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
             fpsLp.gravity = Gravity.TOP | Gravity.START;
             fpsLp.setMargins(m, m, 0, 0);
             root.addView(fpsView, fpsLp);   // on top of surface + controls
+            // Shift it RIGHT by its own width once laid out, so it clears RimWorld's top-left resource
+            // readout (the top-right corner has the early-game tutorial text we don't want to cover).
+            fpsView.post(() -> {
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) fpsView.getLayoutParams();
+                lp.leftMargin = m + fpsView.getWidth();
+                fpsView.setLayoutParams(lp);
+            });
         }
         setContentView(root);
         hideSystemBars();   // after setContentView — the decor view / insets controller now exist
@@ -379,6 +399,10 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     // if it consumes the event, don't let the system treat it as focus/back navigation.
     @Override
     public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        // Keyboard FIRST: a key with an SDL scancode (letters/space/digits/arrows) is injected as a key; only
+        // if it has no scancode does it fall through to the gamepad handler. This stops the gamepad handler
+        // (which swallows everything from a gamepad-ish source) from eating a combo keyboard+touchpad's keys.
+        if (mouseKb != null && mouseKb.onKey(event)) return true;   // physical keyboard
         if (gamepad != null && gamepad.onKey(event)) return true;
         return super.dispatchKeyEvent(event);
     }
@@ -386,7 +410,16 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public boolean onGenericMotionEvent(MotionEvent event) {
         if (gamepad != null && gamepad.onMotion(event)) return true;
+        if (mouseKb != null && mouseKb.onGenericMotion(event)) return true;   // mouse move/wheel/buttons
         return super.onGenericMotionEvent(event);
+    }
+
+    // A physical mouse press+drag streams as TOUCH events (TOOL_TYPE_MOUSE). Intercept them HERE (before the
+    // on-screen controls view) so they move the cursor instead of panning the map; finger touches fall through.
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (mouseKb != null && mouseKb.onTouch(event)) return true;
+        return super.dispatchTouchEvent(event);
     }
 
     @Override

@@ -52,7 +52,11 @@ public class WasdStickElement extends ControlElement {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                if (pointerId < 0 && isPointOver(e.getX(idx), e.getY(idx))) {
+                // Claim ANY down on the stick even if we still "own" a stale pointerId whose UP never
+                // arrived (re-claim only when the owned pointer is a GHOST, never steal an active finger) —
+                // keeps the stick from going "transparent" after a menu and dropping the touch to map-pan.
+                if (isPointOver(e.getX(idx), e.getY(idx))
+                        && (pointerId < 0 || e.findPointerIndex(pointerId) < 0)) {
                     pointerId = pid;
                     update(e.getX(idx), e.getY(idx));
                     view.invalidate();

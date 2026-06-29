@@ -449,29 +449,49 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.btn_gamepad_mapper).setOnClickListener(v ->
             startActivity(new android.content.Intent(requireContext(), com.rimdroid.GamepadMapperActivity.class)));
 
-        // --- Render scale (UI size / GPU load) seek bar: device-floor..100% ---
-        // The floor keeps the internal resolution >=1280x720 (RimWorld UI minimum) and
-        // is per-device: a 1080p screen floors at ~67%, a 1440p screen at ~50%, so weak
-        // high-res phones can scale further down for more FPS. Lower = bigger UI, lighter.
-        SeekBar sbScale  = view.findViewById(R.id.sb_render_scale);
-        TextView tvScale = view.findViewById(R.id.tv_render_scale_label);
+        // --- Render resolution dropdown (Video card): per-device presets, floor (~720p) .. native ---
+        // RE-ENABLED 2026-06-28: the "flicker" that caused the hold was RimWorld's missing-mods grey screen, not a
+        // render bug, so reduced res is safe. (Weak FPS lever — CPU-bound — but exposed for user agency + A/B test.)
+        // Lower internal resolution = more FPS on weak GPUs + a bigger in-game UI (slightly blurry); native is
+        // sharpest. The floor keeps the render >= ~1280x720 (RimWorld UI minimum) and is per-device (a 1440p
+        // screen floors at ~50%, a 1080p screen at ~67%). Width auto-fits the panel aspect so the game still
+        // fills the whole screen. Stored as a render-scale %, applied at the next launch.
+        android.widget.Spinner spRes = view.findViewById(R.id.spinner_render_res);
         android.graphics.Rect bounds =
                 requireActivity().getWindowManager().getCurrentWindowMetrics().getBounds();
-        int sLong  = Math.max(bounds.width(), bounds.height());
-        int sShort = Math.min(bounds.width(), bounds.height());
+        final int sLong  = Math.max(bounds.width(), bounds.height());   // landscape width
+        final int sShort = Math.min(bounds.width(), bounds.height());   // landscape height = native render height
         final int MIN = LauncherPreferences.minRenderScalePercent(sLong, sShort);
-        int pct = Math.max(MIN, inst.getRenderScalePercent());
-        sbScale.setMax(100 - MIN);
-        sbScale.setProgress(pct - MIN);
-        tvScale.setText("Render scale: " + pct + "%");
-        sbScale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
-                tvScale.setText("Render scale: " + (progress + MIN) + "%");
+        // Exactly 3 presets on every device: ~720p floor (fastest) · halfway (balanced) · native.
+        final int MID = Math.max(MIN + 1, Math.min(99, (MIN + 100) / 2));
+        java.util.LinkedHashSet<Integer> pctSet = new java.util.LinkedHashSet<>();
+        pctSet.add(MIN); pctSet.add(MID); pctSet.add(100);
+        final java.util.List<Integer> pcts = new java.util.ArrayList<>(pctSet);
+        java.util.Collections.sort(pcts);
+        java.util.List<String> resLabels = new java.util.ArrayList<>();
+        for (int p : pcts) {
+            int W = Math.round(sLong * p / 100f), H = Math.round(sShort * p / 100f);
+            String tag = (p == 100) ? " — native" : (p == MIN) ? " — fastest" : " — balanced";
+            resLabels.add(W + "×" + H + tag);
+        }
+        android.widget.ArrayAdapter<String> resAd = new android.widget.ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_spinner_item, resLabels);
+        resAd.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spRes.setAdapter(resAd);
+        int curPct = Math.max(MIN, inst.getRenderScalePercent());
+        int resSel = 0, resBest = Integer.MAX_VALUE;
+        for (int i = 0; i < pcts.size(); i++) {
+            int d = Math.abs(pcts.get(i) - curPct);
+            if (d < resBest) { resBest = d; resSel = i; }
+        }
+        spRes.setSelection(resSel);
+        spRes.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            boolean first = true;   // skip the programmatic initial selection — only react to the user
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View v, int pos, long id) {
+                if (first) { first = false; return; }
+                inst.setRenderScalePercent(pcts.get(pos));
             }
-            @Override public void onStartTrackingTouch(SeekBar s) {}
-            @Override public void onStopTrackingTouch(SeekBar s) {
-                inst.setRenderScalePercent(s.getProgress() + MIN);
-            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
     }
 }

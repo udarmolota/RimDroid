@@ -50,7 +50,14 @@ public class MouseStickElement extends ControlElement {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                if (pointerId < 0 && isPointOver(e.getX(idx), e.getY(idx))) {
+                // Claim ANY down landing on the stick — even if we still "own" a stale pointerId whose
+                // UP never arrived (an in-game menu can swallow it). Re-claim only when the owned pointer
+                // is a GHOST (not present in this event), so we never steal a genuinely active finger.
+                // Without this the stick stays "transparent" after a menu and the touch falls through to
+                // the map-pan gesture (the "camera drifts when I press the stick" bug). Covers POINTER_DOWN
+                // too (a second finger while another is held), which the DOWN-only clearStalePointer missed.
+                if (isPointOver(e.getX(idx), e.getY(idx))
+                        && (pointerId < 0 || e.findPointerIndex(pointerId) < 0)) {
                     pointerId = pid;
                     lastX = downX = e.getX(idx); lastY = downY = e.getY(idx);
                     downT = e.getEventTime(); moved = false;

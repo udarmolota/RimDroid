@@ -188,6 +188,18 @@ public class InputControlsView extends View {
         invalidate();   // repaint the overlay cursor (the gamepad path has no touch to trigger it)
     }
 
+    /** Set the cursor to an ABSOLUTE view position (physical mouse). Same clamp/inject as moveCursorBy. */
+    public void moveCursorTo(float x, float y) {
+        float minX = gameW > 0 ? gameLeft : 0;
+        float maxX = gameW > 0 ? gameLeft + gameW - 1 : getWidth()  - 1;
+        float minY = gameH > 0 ? gameTop  : 0;
+        float maxY = gameH > 0 ? gameTop  + gameH - 1 : getHeight() - 1;
+        curX = Math.max(minX, Math.min(maxX, x));
+        curY = Math.max(minY, Math.min(maxY, y));
+        try { GameActivity.nativeTouch(0, gx(), gy()); } catch (UnsatisfiedLinkError ignored) {}
+        invalidate();
+    }
+
     /** Inject a binding press/release. Mouse buttons act at the cursor. */
     public void inject(Binding b, boolean pressed) {
         if (b == null) return;

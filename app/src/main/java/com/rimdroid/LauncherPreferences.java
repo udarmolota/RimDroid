@@ -56,9 +56,10 @@ public class LauncherPreferences {
         new VulkanDriverOption("libvulkan_freedreno_8xx.so", "Freedreno 8xx (newer)"),
         new VulkanDriverOption("libvulkan_freedreno_840.so", "Turnip Adreno 830/840"),
         new VulkanDriverOption("libvulkan_freedreno.so",     "Freedreno 7xx/8xx"),
-        // ad07XX has env vars baked in for an anti-flicker fix; _regular is the plain build.
-        new VulkanDriverOption("libvulkan.ad07XX.so",         "Turnip Adreno 7xx (anti-flicker)"),
-        new VulkanDriverOption("libvulkan.ad07XX_regular.so", "Turnip Adreno 7xx (regular)"),
+        // Plain Turnip for Adreno 7xx. (The ad07XX "anti-flicker" variant — Turnip with env vars baked in
+        // to fight a flicker — was retired 2026-06-28: that "flicker" was RimWorld's missing-mods grey
+        // screen, NOT a driver bug, so the special build was dead weight.)
+        new VulkanDriverOption("libvulkan.ad07XX_regular.so", "Turnip Adreno 7xx"),
         // Fresh Turnip (Mesa 25 / Vulkan 1.4.350, stevenmx OneUI build). Fixed present/init on Adreno 730
         // (OnePlus 10 Pro) AND present-black on Adreno 725 — the go-to for Adreno black/present issues.
         // Bundled 2026-06-24 (= the custom driver testers were importing; now built-in).

@@ -20,6 +20,8 @@
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
     <string name="show_fps_label">Show FPS counter (top-left)</string>
+    <string name="render_res_label">Render resolution</string>
+    <string name="render_res_hint">Lower = more FPS on weak GPUs and a bigger UI. Native = sharpest.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
     <string name="driver_auto_set">Detected GPU: %1$s.\n\nThe recommended Vulkan driver was set for this instance: %2$s.\n\nIf you get a black screen or artifacts, change it in the instance settings (the gear icon on the instance card).</string>

@@ -19,6 +19,8 @@
     <string name="haptic_label">Вибрация при нажатии кнопок</string>
     <string name="audio_label">Звук в игре</string>
     <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
+    <string name="render_res_label">Разрешение рендера</string>
+    <string name="render_res_hint">Ниже = больше FPS на слабых GPU и крупнее интерфейс. Нативное = резче.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
     <string name="driver_auto_set">Обнаружен GPU: %1$s.\n\nДля этого инстанса выставлен рекомендуемый Vulkan-драйвер: %2$s.\n\nЕсли получите чёрный экран или артефакты — смените его в настройках инстанса (шестерёнка на карточке).</string>

@@ -102,6 +102,27 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/show_fps_label" />
+
+        <!-- Render resolution (re-enabled 2026-06-28; the "flicker" hold reason was the missing-mods grey, not a render bug) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/render_res_label"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/render_res_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="4dp" />
+
+        <Spinner
+            android:id="@+id/spinner_render_res"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

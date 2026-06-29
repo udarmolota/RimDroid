@@ -329,6 +329,14 @@ public class GameLauncher {
                 // (rimdroid.c treats empty as NULL and skips the bundled Turnip ICD).
                 // Software path needs no Vulkan ICD; GPU (Zink) path uses the chosen driver.
                 String vkDriver = soft ? "" : gameInstance.settings().getVulkanDriverSo();
+                // Safety: a stored driver that's no longer bundled (e.g. the retired ad07XX anti-flicker
+                // build) keeps its non-empty so-name but resolves to index 0 → force System so a fresh
+                // install doesn't try to load a missing ICD (would otherwise black-screen).
+                if (vkDriver != null && !vkDriver.isEmpty()
+                        && gameInstance.settings().getVulkanDriverIndex() == 0) {
+                    Log.w(TAG, "Vulkan driver '" + vkDriver + "' no longer bundled → using System");
+                    vkDriver = "";
+                }
                 Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vkDriver == null ? "" : vkDriver, true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our
                 // my2_SDL_GL_CreateContext/SwapWindow route to ZFA.

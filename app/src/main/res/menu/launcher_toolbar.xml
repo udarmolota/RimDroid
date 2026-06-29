@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Toolbar action(s) for the launcher main screen. The "+" is a quick path to add an instance,
+     in addition to the drawer item (same global nav action). Shown only on the launcher destination
+     (see LauncherActivity.onPrepareOptionsMenu). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_install_instance"
+        android:icon="@drawable/mt_icon_add"
+        android:title="@string/nav_new_instance"
+        app:showAsAction="always" />
+</menu>

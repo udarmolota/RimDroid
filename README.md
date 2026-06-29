@@ -58,7 +58,7 @@ it and send us a log.
 - [x] Fixed the "colonists missing after load" bug (built-in save fix)
 - [x] In-game audio
 - [ ] On-screen keyboard for text fields
-- [ ] Resolution / render-scale options for more FPS on weaker GPUs
+- [x] Resolution / render-scale options for more FPS on weaker GPUs
 
 ## How it works
 

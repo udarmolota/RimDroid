@@ -244,7 +244,7 @@ public class SettingsFragment extends Fragment {
         btnSteamSpike.setVisibility(View.VISIBLE);
         btnSteamSpike.setOnClickListener(v -> {
             final android.content.Context appCtx = requireContext().getApplicationContext();
-            com.rimdroid.audio.FmodDecodeService.start(appCtx);
+            com.rimdroid.audio.FmodDecodeService.start(appCtx, instanceName);
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
                     .setTitle(R.string.sound_installing_title)
                     .setMessage(R.string.sound_generate_toast)

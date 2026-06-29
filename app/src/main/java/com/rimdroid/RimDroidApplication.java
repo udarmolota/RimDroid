@@ -10,9 +10,13 @@ public class RimDroidApplication extends Application {
     /** Name of the file the crash logger appends uncaught stack traces to (in getFilesDir()). */
     public static final String CRASH_LOG = "crash_uncaught.log";
 
+    /** App context for code paths that have no Context handy (e.g. the Steam download finalizer). */
+    public static Application APP;
+
     @Override
     public void onCreate() {
         super.onCreate();
+        APP = this;
         installCrashLogger();          // FIRST — so even early-startup crashes get recorded
         installFullBouncyCastle();
         AppStorage.init(this);

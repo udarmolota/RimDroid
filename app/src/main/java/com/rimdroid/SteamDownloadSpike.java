@@ -760,6 +760,9 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         try {
             File bin = new File(installDir, C.files.RIMWORLD_BIN);
             if (bin.exists()) bin.setExecutable(true, false);
+            // Install-time save fix (box64 IMT-thunk bypass) if this RimWorld build is covered; else no-op.
+            if (RimDroidApplication.APP != null)
+                SaveFixInstaller.applyTo(RimDroidApplication.APP, new File(installDir));
             LauncherPreferences.requireSingleton().setLastInstanceName(instanceName);
             GameInstanceManager.requireSingleton().reload();
             progress("Instance '" + instanceName + "' is now installed (" + RIMWORLD_APP_ID + ").");

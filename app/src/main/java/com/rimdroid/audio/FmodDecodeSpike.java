@@ -35,9 +35,12 @@ public final class FmodDecodeSpike {
                                               long offset, long size, String outWavPath,
                                               int srcRate, int targetRate, int outChannels);
 
-    /** Mod identity (also recognised by GameLauncher.isSoundModInstalled / the audio shim gate). */
+    /** Mod identity (also used by the GameLauncher audio shim gate via FmodDecodeSpike.isSoundReady). */
     public static final String PACK_ID = "rimdroid.sound";
     public static final String PACK_DIR = "RimDroidSoundGenerated";
+    /** Written as the LAST step of generatePack — marks the pack fully decoded + activated. The audio
+     *  shim gate (isSoundReady) requires it, so a half-generated pack never triggers the un-modded screech. */
+    public static final String COMPLETE_MARKER = ".rd_complete";
     private static final int SFX_RATE = 16000;  // SFX + ambience (mono); menu music is decoded stereo at native rate
 
     /** Finds an extracted libfmod.so anywhere under the app's deps dir; returns {path, versionHex} or null. */
@@ -185,7 +188,13 @@ public final class FmodDecodeSpike {
         writeFile(new File(patches, "Audio.xml"),
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Patch>\n" + ops + "</Patch>\n");
 
-        String modsCfg = enableInModsConfig(instanceDir);
+        // Generation only BUILDS the pack — it does NOT auto-activate. The user enables it via the
+        // "Game sound" toggle when ready (that adds rimdroid.sound to ModsConfig). Decoupling build from
+        // activation removes the "did generation finish before I launched" race entirely.
+        // Mark the pack fully ready LAST — the launcher's audio gate (isSoundReady) checks this so a
+        // partially-written pack (generation still running, or the process killed) is never treated as
+        // ready → no un-modded screech if the user launches mid-generation.
+        writeFile(new File(mod, COMPLETE_MARKER), "ok\n");
 
         sb.append("pack: ").append(mod.getAbsolutePath()).append('\n')
           .append("decoded ").append(ok).append(" ok, ").append(fail).append(" fail of ").append(work.size())
@@ -193,7 +202,7 @@ public final class FmodDecodeSpike {
           .append("patches: ").append(plan.folderPatches.size()).append(" folder + ")
           .append(plan.singlePatches.size()).append(" single\n")
           .append("music: all SongDefs silenced; menu music ").append(menuMusicOk ? "decoded" : "MISSING").append('\n')
-          .append("ModsConfig: ").append(modsCfg).append('\n');
+          .append("mod built — enable via the \"Game sound\" toggle\n");
         Log.i("RimDroid/SoundPack", sb.toString());
         return sb.toString();
     }
@@ -240,17 +249,12 @@ public final class FmodDecodeSpike {
         o.writeByte(v & 0xff); o.writeByte((v >> 8) & 0xff); o.writeByte((v >> 16) & 0xff); o.writeByte((v >> 24) & 0xff);
     }
 
-    /** Add our packageId to the instance ModsConfig activeMods (used right after generating the pack). */
-    private static String enableInModsConfig(File instanceDir) {
-        return setSoundModActive(instanceDir, true);
-    }
-
     /** Toggle the generated sound mod in an instance's ModsConfig.xml — add the packageId to
      *  &lt;activeMods&gt; when {@code active}, remove it when not. This is what the Sound toggle drives,
      *  so enabling/disabling sound needs no in-game mod fiddling. Requires the game to have run once
      *  (RimWorld creates ModsConfig.xml on first launch). Returns a short status. */
     public static String setSoundModActive(File instanceDir, boolean active) {
-        File cfg = new File(instanceDir, "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Config/ModsConfig.xml");
+        File cfg = modsConfig(instanceDir);
         if (!cfg.isFile()) return "ModsConfig.xml not found (run the game once first)";
         try {
             String x = new String(Files.readAllBytes(cfg.toPath()), StandardCharsets.UTF_8);
@@ -269,6 +273,31 @@ public final class FmodDecodeSpike {
                 return "disabled (removed " + PACK_ID + ")";
             }
         } catch (Throwable t) { return "edit failed: " + t; }
+    }
+
+    /** This instance's RimWorld ModsConfig.xml (created by the game on first launch). */
+    private static File modsConfig(File instanceDir) {
+        return new File(instanceDir, "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Config/ModsConfig.xml");
+    }
+
+    /** Audio gate for the launcher: the generated pack is FULLY written (completion marker present) AND
+     *  its mod is in this instance's ModsConfig activeMods. A half-generated or not-yet-active pack
+     *  returns false → the launcher keeps the audio shim unloaded (clean silence, never the un-modded
+     *  screech). This makes "flip the toggle, jump in early" safe: that run is silent, and the next
+     *  launch (pack done + active) gets clean sound automatically. */
+    /** True once generatePack has fully written the pack (completion marker present). */
+    public static boolean isPackComplete(File instanceDir) {
+        return new File(instanceDir, "Mods/" + PACK_DIR + "/" + COMPLETE_MARKER).isFile();
+    }
+
+    public static boolean isSoundReady(File instanceDir) {
+        if (!isPackComplete(instanceDir)) return false;
+        File cfg = modsConfig(instanceDir);
+        if (!cfg.isFile()) return false;
+        try {
+            String x = new String(Files.readAllBytes(cfg.toPath()), StandardCharsets.UTF_8);
+            return x.contains(">" + PACK_ID + "<");
+        } catch (Throwable t) { return false; }
     }
 
     private FmodDecodeSpike() {}

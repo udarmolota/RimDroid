@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.DocumentsContract;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowInsets;
 import android.widget.Toast;
@@ -91,6 +93,8 @@ public class LauncherActivity extends AppCompatActivity {
         navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.launcherNv, navController);
+        // Refresh the toolbar menu on navigation so the "+" (add instance) shows only on the main screen.
+        navController.addOnDestinationChangedListener((c, dest, args) -> invalidateOptionsMenu());
 
         binding.launcherNv.setNavigationItemSelectedListener(item -> {
             binding.drawerLayout.close();
@@ -165,6 +169,34 @@ public class LauncherActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         return NavigationUI.navigateUp(navController, appBarConfiguration)
                 || super.onSupportNavigateUp();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.launcher_toolbar, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // The "+" lives only on the launcher main screen (sub-screens show the back arrow + their title).
+        MenuItem add = menu.findItem(R.id.action_install_instance);
+        if (add != null) {
+            add.setVisible(navController != null
+                    && navController.getCurrentDestination() != null
+                    && navController.getCurrentDestination().getId() == R.id.launcher_fragment);
+        }
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_install_instance) {
+            navController.navigate(R.id.action_install_instance);   // global action -> new_instance_fragment
+            return true;
+        }
+        return NavigationUI.onNavDestinationSelected(item, navController)
+                || super.onOptionsItemSelected(item);
     }
 
     // ---- Smart mod import -----------------------------------------------------

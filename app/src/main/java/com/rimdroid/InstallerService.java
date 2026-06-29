@@ -157,6 +157,11 @@ public class InstallerService extends Service {
         }
         bin.setExecutable(true);
 
+        // Install-time save fix: bspatch the user's Assembly-CSharp.dll if this RimWorld build is covered
+        // (box64 IMT-thunk corruption bypass). Unknown build → no-op. Never fatal to the install.
+        broadcastProgress("Applying save fix...");
+        SaveFixInstaller.applyTo(getApplicationContext(), instanceDir);
+
         prefs.setLastInstanceName(instanceName);
         prefs.setDependenciesInstalled(true);
 

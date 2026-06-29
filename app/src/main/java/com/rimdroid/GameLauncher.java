@@ -29,36 +29,6 @@ public class GameLauncher {
         if (logCallback != null) logCallback.onLogLine(line);
     }
 
-    /**
-     * Build the human-readable "launch config" block recorded at the top of rimdroid.log (and shown
-     * in the launcher log). Lists the per-instance settings + the key box64 knobs this run uses.
-     * GL_RENDERER/GL_VERSION are added later by the native side once GL initialises.
-     */
-    /** True if the RimDroidSound (PCM audio) mod is present in this instance's Mods folder. Matched by
-     *  folder name (contains "rimdroidsound") or by About.xml packageId "rimdroid.sound" (in case the
-     *  folder was renamed). Used to gate audio so the un-modded screech never plays. */
-    private static boolean isSoundModInstalled(GameInstance gi) {
-        java.io.File[] dirs = new java.io.File(gi.getGamePath(), "Mods").listFiles();
-        if (dirs == null) return false;
-        for (java.io.File d : dirs) {
-            if (!d.isDirectory()) continue;
-            if (d.getName().toLowerCase().contains("rimdroidsound")) return true;
-            java.io.File about = new java.io.File(d, "About/About.xml");
-            if (about.isFile() && fileContains(about, "rimdroid.sound")) return true;
-        }
-        return false;
-    }
-
-    private static boolean fileContains(java.io.File f, String needle) {
-        String lneedle = needle.toLowerCase();
-        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) {
-            String line;
-            while ((line = r.readLine()) != null)
-                if (line.toLowerCase().contains(lneedle)) return true;
-        } catch (Exception ignore) {}
-        return false;
-    }
-
     /** Device SoC fingerprint for the log: chip maker/model (API 31+) + the always-available hardware
      *  string. Together with the GL_RENDERER line (GPU) this identifies a tester's device at a glance —
      *  no more guessing which device a log came from. */
@@ -159,10 +129,21 @@ public class GameLauncher {
         // for plain PCM (clean). Without the mod, enabling sound = screech — so if the mod isn't there,
         // we keep the shim unloaded (silence) even when the toggle is on. Sound effectively turns on
         // together with the mod; no screech on a first launch before the mod is added.
-        if (LauncherPreferences.requireSingleton().isAudioEnabled()) {
-            if (!isSoundModInstalled(gameInstance)) {
-                postLog("Audio: RimDroidSound mod not installed in this instance — sound stays off "
-                        + "until you add it (this avoids the un-modded screech).");
+        java.io.File rdInstRoot = new java.io.File(gameInstance.getGamePath());
+        boolean rdAudioOn = LauncherPreferences.requireSingleton().isAudioEnabled();
+        // Reliable activation: sync the generated-sound mod's ModsConfig entry to the audio toggle right
+        // here, at launch. The in-Settings toggle can fire BEFORE ModsConfig exists (RimWorld creates it
+        // on first launch), so the toggle alone wasn't enough; by launch time ModsConfig exists (2nd
+        // launch onward) and we add/remove rimdroid.sound to match the toggle. Build-only generation +
+        // this = activation never depends on when the toggle was flipped.
+        if (com.rimdroid.audio.FmodDecodeSpike.isPackComplete(rdInstRoot)) {
+            com.rimdroid.audio.FmodDecodeSpike.setSoundModActive(rdInstRoot, rdAudioOn);
+        }
+        if (rdAudioOn) {
+            if (!com.rimdroid.audio.FmodDecodeSpike.isSoundReady(rdInstRoot)) {
+                postLog("Audio: sound pack not ready/active in this instance yet — staying silent this "
+                        + "run (this avoids the un-modded screech). Sound turns on by itself once the pack "
+                        + "finishes generating and is active in ModsConfig; relaunch to hear it.");
             } else {
                 try {
                     System.loadLibrary("asoundshim");

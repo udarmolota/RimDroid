@@ -33,9 +33,9 @@
     <string name="nav_export_logs">Export logs (ZIP)…</string>
     <string name="nav_export_layout">Export controls layout…</string>
     <string name="nav_import_layout">Import controls layout…</string>
-    <string name="nav_reddit">Community (Reddit)</string>
+    <string name="nav_reddit">Community (X)</string>
     <string name="nav_updates">New versions (GitHub)</string>
-    <string name="url_reddit" translatable="false">https://www.reddit.com/r/RimDroid/</string>
+    <string name="url_reddit" translatable="false">https://x.com/rimdroid</string>
     <string name="url_github_releases" translatable="false">https://github.com/udarmolota/rimdroid/releases</string>
     <string name="on_screen_controls">On-screen controls</string>
     <string name="edit_controls">Edit on-screen controls…</string>

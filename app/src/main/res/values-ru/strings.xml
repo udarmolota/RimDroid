@@ -32,7 +32,7 @@
     <string name="nav_export_logs">Экспорт логов (ZIP)…</string>
     <string name="nav_export_layout">Экспорт раскладки управления…</string>
     <string name="nav_import_layout">Импорт раскладки управления…</string>
-    <string name="nav_reddit">Сообщество (Reddit)</string>
+    <string name="nav_reddit">Сообщество (X)</string>
     <string name="nav_updates">Новые версии (GitHub)</string>
     <string name="on_screen_controls">Экранное управление</string>
     <string name="edit_controls">Редактировать экранные кнопки…</string>

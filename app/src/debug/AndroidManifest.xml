@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DEBUG-ONLY manifest overlay: export GameActivity so on-device test runs can be
+     driven from adb (am start -n com.rimdroid/.GameActivity - -es instance_name X)
+     during the RimWorld 1.6 X11/Vulkan bring-up. Release builds keep it unexported. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <activity
+            android:name=".GameActivity"
+            android:exported="true"
+            tools:node="merge" />
+    </application>
+</manifest>

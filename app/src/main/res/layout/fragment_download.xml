@@ -92,6 +92,33 @@
                     android:layout_height="wrap_content"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Shared game-version selector: applies to BOTH the game download and the DLC
+                 download (a 1.5 base + 1.6 DLC, or vice-versa, would version-mismatch). -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/download_version_label"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp" />
+            <RadioGroup
+                android:id="@+id/rg_dl_version"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/rb_dl_15"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="@string/download_version_15" />
+                <RadioButton
+                    android:id="@+id/rb_dl_16"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/download_version_16" />
+            </RadioGroup>
         </LinearLayout>
 
         <!-- ============ GAME ============ -->

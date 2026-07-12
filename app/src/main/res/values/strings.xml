@@ -79,6 +79,9 @@
     <string name="download_game_title">Download RimWorld from Steam</string>
     <string name="download_version_note">RimDroid currently supports RimWorld 1.5. (Steam\'s latest is already 1.6.) Downloads the Linux build straight into a new instance — no Termux, no PC.</string>
     <string name="download_instance_hint">Instance name (e.g. RimWorld 1.5)</string>
+    <string name="download_version_label">Game version</string>
+    <string name="download_version_15">RimWorld 1.5</string>
+    <string name="download_version_16">RimWorld 1.6</string>
     <string name="download_user_hint">Steam username</string>
     <string name="download_pass_hint">Steam password</string>
     <string name="download_login_note">Your login is sent to Steam (the same way DepotDownloader works) and is NOT stored. Approve the sign-in in your Steam Mobile app, or enter the Steam Guard code when asked.</string>

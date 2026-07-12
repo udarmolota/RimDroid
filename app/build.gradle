@@ -13,8 +13,8 @@ android {
         applicationId "com.rimdroid"
         minSdk = 30
         targetSdk = 35
-        versionCode 19
-        versionName "0.1.9"
+        versionCode 21
+        versionName "0.2.1"
         // JavaSteam + protobuf + kotlin push us past the 64K method limit. minSdk 30 has
         // native multidex, but the build still needs this flag to split the dex.
         multiDexEnabled true
@@ -48,6 +48,9 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            // Test-cycle convenience: debug-signed release so adb install -r replaces the
+            // debug build without wiping app data. Real distribution re-signs anyway.
+            signingConfig signingConfigs.debug
         }
         debug {
             jniDebuggable true

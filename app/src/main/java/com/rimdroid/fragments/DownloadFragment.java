@@ -45,6 +45,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     private EditText etInstance, etUser, etPass, etManifest, etModsIds, etModsBrowserId;
     private Button btnStart, btnDlcStart, btnModsStart, btnModsBrowser, btnCancel;
     private CheckBox cbRoyalty, cbIdeology, cbBiotech, cbAnomaly;
+    private android.widget.RadioGroup rgVersion;
     private ProgressBar progress;
     private TextView tvStatus;
     private View blockLogin, sectionGame, sectionDlc, sectionMods, sectionModsBrowser, tvLoginNote, btnInstallContent;
@@ -63,6 +64,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         etUser     = v.findViewById(R.id.et_dl_user);
         etPass     = v.findViewById(R.id.et_dl_pass);
         etManifest = v.findViewById(R.id.et_dl_manifest);
+        rgVersion  = v.findViewById(R.id.rg_dl_version);
         btnStart   = v.findViewById(R.id.btn_dl_start);
         btnDlcStart = v.findViewById(R.id.btn_dlc_start);
         cbRoyalty  = v.findViewById(R.id.cb_dlc_royalty);
@@ -153,9 +155,11 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             if (!mt.isEmpty()) manifestId = Long.parseLong(mt);
         } catch (NumberFormatException ignored) { /* blank/invalid → default */ }
 
+        SteamDownloadSpike.Version version = (rgVersion != null && rgVersion.getCheckedRadioButtonId() == R.id.rb_dl_16)
+                ? SteamDownloadSpike.Version.V1_6 : SteamDownloadSpike.Version.V1_5;
         SteamDownloadState st = SteamDownloadState.get();
         SteamDownloadSpike dl = new SteamDownloadSpike(text(etUser), etPass.getText().toString(), name,
-                /* manifestOnly */ false, manifestId, st);
+                /* manifestOnly */ false, manifestId, version, st);
         st.begin(appCtx, name);          // adviseInstance = name → auto-set GPU driver on success
         st.setActive(dl);
         beginUi();
@@ -190,8 +194,10 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             return;
         }
 
+        SteamDownloadSpike.Version version = (rgVersion != null && rgVersion.getCheckedRadioButtonId() == R.id.rb_dl_16)
+                ? SteamDownloadSpike.Version.V1_6 : SteamDownloadSpike.Version.V1_5;
         SteamDownloadState st = SteamDownloadState.get();
-        SteamDownloadSpike dl = SteamDownloadSpike.forDlc(text(etUser), etPass.getText().toString(), dlcs, st);
+        SteamDownloadSpike dl = SteamDownloadSpike.forDlc(text(etUser), etPass.getText().toString(), dlcs, version, st);
         st.begin(appCtx, null);
         st.setActive(dl);
         beginUi();

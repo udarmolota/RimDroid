@@ -67,6 +67,14 @@ RimDroidSurface g_rimdroid_surface = {
     .ready_for_destroy_cond = PTHREAD_COND_INITIALIZER
 };
 
+// RimWorld 1.6 (X11/Vulkan path): box64's wrappedvulkan weak-externs this to turn a guest
+// vkCreateXlibSurfaceKHR/vkCreateXcbSurfaceKHR into a real Android WSI surface on OUR window
+// (Turnip has no X11 WSI). See memory rimworld_16_port.
+__attribute__((visibility("default")))
+void* rimdroid_get_native_window(void) {
+    return (void*)g_rimdroid_surface.native_window;
+}
+
 // Log file — extern in logger.h, used by the LOGI/LOGW/LOGE macros
 FILE* g_rimdroid_log_file = NULL;
 
@@ -1037,6 +1045,20 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
     }
 
     char binary_path[1024];
+    // RIMDROID_EXEC override (X11 bring-up, see memory rimworld_16_port): run an
+    // arbitrary guest ELF (e.g. xdpyinfo) instead of the game, WITHOUT the Unity
+    // -screen-* args (foreign tools reject unknown options).
+    const char* rd_exec = getenv("RIMDROID_EXEC");
+    if (rd_exec && rd_exec[0]) {
+        snprintf(binary_path, sizeof(binary_path), "%s", rd_exec);
+        const char** exec_argv = malloc((argc + 1) * sizeof(char*));
+        exec_argv[0] = binary_path;
+        for (int i = 0; i < argc; i++) exec_argv[i + 1] = argv[i];
+        LOGI("Executing (RIMDROID_EXEC override): %s", binary_path);
+        run_elf_file(binary_path, argc + 1, exec_argv);
+        free(exec_argv);
+        return;
+    }
     snprintf(binary_path, sizeof(binary_path), "%s/RimWorldLinux", game_dir_path);
 
     // RIMDROID: windowed at the NATIVE surface size, so Unity's window == our GL
@@ -1051,6 +1073,13 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
         "-screen-fullscreen", "0",
         "-screen-width",  rd_w_str,
         "-screen-height", rd_h_str,
+        // RimDroid 1.6/X11: Unity 2022's Vulkan backend was creating our surface and then never
+        // touching it (no caps/formats/swapchain, offscreen rendering leaking ~1-2GB GPU/min).
+        // This UnityPlayer.so flag (string present in the binary) forces the onscreen swapchain.
+        "-force-vulkan-onscreen-swapchain",
+        // Borderless window: with Prefs pinned to fullscreen=False this fully avoids SDL's
+        // WM-less legacy-fullscreen unmap/reparent dance (present-gate root cause suspect).
+        "-popupwindow",
     };
     const int extra_n = (int)(sizeof(extra_argv) / sizeof(extra_argv[0]));
 
@@ -1148,7 +1177,11 @@ void rimdroid_start_game(const char* game_dir_path,
     // GL4ES and ZINK_ZFA both need GPU/window init done in the PARENT (Vulkan and
     // EGL both use libbinder IPC, which refuses to operate after fork()).  The
     // child only rebinds the context to its thread.
-    if (g_rimdroid_renderer == RD_GL4ES || g_rimdroid_renderer == RD_ZINK_ZFA) {
+    const char* direct_vulkan_env = getenv("RIMDROID_DIRECT_VULKAN");
+    const bool direct_vulkan = direct_vulkan_env && direct_vulkan_env[0] &&
+                               strcmp(direct_vulkan_env, "0") != 0;
+    if (!direct_vulkan &&
+        (g_rimdroid_renderer == RD_GL4ES || g_rimdroid_renderer == RD_ZINK_ZFA)) {
         const char* rname = (g_rimdroid_renderer == RD_GL4ES) ? "GL4ES" : "ZFA";
         LOGI("%s: waiting for native_window (up to 5 s)...", rname);
         for (int i = 0; i < 500 && !g_rimdroid_surface.native_window; i++) {
@@ -1176,6 +1209,8 @@ void rimdroid_start_game(const char* game_dir_path,
         } else {
             LOGE("%s: timed out waiting for native_window — GL will fail", rname);
         }
+    } else if (direct_vulkan) {
+        LOGI("DIRECT_VULKAN: skipping legacy GL/ZFA context init; Unity owns ANativeWindow WSI");
     }
 
     // RD_SOFTPIPE: CPU software renderer (OSMesa + softpipe). No GPU/Vulkan/EGL →
@@ -1617,6 +1652,10 @@ void rimdroid_deinit() {
 
 void rimdroid_surface_init(ANativeWindow* wnd, int width, int height) {
     pthread_mutex_lock(&g_rimdroid_surface.mutex);
+    // Release the previously acquired window before replacing it — repeated surfaceChanged
+    // leaked one ANativeWindow reference per call (kept the old BufferQueue pinned).
+    if (g_rimdroid_surface.native_window && g_rimdroid_surface.native_window != wnd)
+        ANativeWindow_release(g_rimdroid_surface.native_window);
     g_rimdroid_surface.native_window = wnd;
     g_rimdroid_surface.width  = width;
     g_rimdroid_surface.height = height;

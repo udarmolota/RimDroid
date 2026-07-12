@@ -28,6 +28,27 @@ target_link_libraries(rimdroid
 )
 
 # ---------------------------------------------------------------------------
+# librimdroidxserver.so — native side of the ported Winlator X server (LGPL-2.1,
+# from brunodev85/winlator-app): unix-socket epoll transport (xconnector), 2D
+# drawable primitives, SysV-SHM emulation. JNI symbols renamed com_winlator ->
+# com_rimdroid. Used by the RimWorld 1.6 X11/Vulkan path (memory rimworld_16_port).
+# ---------------------------------------------------------------------------
+add_library(rimdroidxserver SHARED
+    xserver/xconnector_epoll.c
+    xserver/xinput_stream.c
+    xserver/xoutput_stream.c
+    xserver/drawable.c
+    xserver/sysvshared_memory.c
+    xserver/arrays.c
+)
+target_include_directories(rimdroidxserver PRIVATE xserver)
+target_link_libraries(rimdroidxserver
+    log
+    android
+    jnigraphics
+)
+
+# ---------------------------------------------------------------------------
 # libfmoddecode.so — STANDALONE offline FSB5-Vorbis -> PCM WAV decoder (native FMOD).
 # Deliberately does NOT link linkernsbypass/box64: it is loaded ONLY in the separate
 # ":fmoddec" process (where librimdroidlinker is NOT loaded), so its dlopen of the

@@ -195,6 +195,38 @@ public class GameLauncher {
         // reshapes the FP↔GPR codegen so the bad pattern is avoided. Default OFF (Settings) so devices that
         // already launch keep the safer/faster defaults. Applied before the env_vars field so a power user
         // can still override. NOTE: a workaround, not the root fix (the deep bug is still being chased).
+        // RimWorld 1.6 (rd_x11): the load hangs in an ASYNC LongEvent whose worker thread SPINS (R
+        // state) — the SAME box64 miscompile of .NET self-replicating Parallel tasks that black-
+        // screened 1.5 def-load (ShortHashGiver.GiveAllShortHashes via Parallel.ForEach). Isolate the
+        // known fix WITHOUT the FP/barrier tuning: cap ProcessorCount to 1 so Parallel.ForEach runs
+        // inline/serial and never spawns the self-replicating workers. If this lets the load finish
+        // and a frame present, the "OnGUI repaint spin" was just the main thread waiting on the stuck
+        // parallel loader. Needs the box64 my_sched_getaffinity + syscall-204 cap (already in tree).
+        if (new java.io.File(gameInstance.getGamePath(), "rd_x11").exists()) {
+            // FPS (2026-07-11 night): 1.6 is CPU/thread-bound (GPU ~90% idle). BOX64_MAXCPU=1
+            // collapsed Mono onto 1 CPU and HALVED gameplay FPS (26-39 capped vs 62-65 uncapped,
+            // Adreno 830). The cap is NOT needed by default — it belongs to COMPAT MODE, which the
+            // devices hit by the deep box64/Mono bug (def-load SIGSEGV + destroyed-mutex abort;
+            // e.g. Adreno 644/725 — NOT a GPU-vendor split) turn on. So DEFAULT = all cores; compat
+            // mode (below) applies MAXCPU=1 + -force-gfx-direct together.
+            // textureCompression: OFF by default (the BC-compress shader hangs Turnip/A830). The
+            // "rd_texcompress" marker flips it ON to TEST the box64 CompressBC loop-bounding shim
+            // (see rd_bc_bound_loops in wrappedsdl2.c) — if that shim tames the hang, compression
+            // comes back and DLC fits in memory on 8GB devices.
+            boolean testCompress = new java.io.File(gameInstance.getGamePath(), "rd_texcompress").exists();
+            PrefsXml.pinTextureCompression(new java.io.File(gameInstance.getGamePath(),
+                    "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Config"), testCompress);
+            if (testCompress)
+                android.util.Log.i("RimDroid", "GameLauncher: rd_texcompress -> textureCompression=True (loop-cap shim test)");
+        }
+        // RimWorld 1.6 GLES pivot: presence of an "rd_force_gles" marker denies Vulkan to Unity
+        // (my_vkCreateInstance -> VK_ERROR_INCOMPATIBLE_DRIVER) so its auto graphics-API selection
+        // falls back to the GfxDeviceGLES backend, which presents via native EGL and bypasses the
+        // stuck Vulkan display/present gate. Make-or-break test: does Unity fall back to GLES?
+        if (new java.io.File(gameInstance.getGamePath(), "rd_force_gles").exists()) {
+            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> RIMDROID_FORCE_GLES=1 (deny Vulkan, force GLES fallback)");
+            Os.setenv("RIMDROID_FORCE_GLES", "1", true);
+        }
         if (gameInstance.settings().isCompatibilityMode()) {
             Os.setenv("BOX64_DYNAREC_WEAKBARRIER", "2", true);
             Os.setenv("BOX64_DYNAREC_X87DOUBLE", "1", true);
@@ -231,6 +263,27 @@ public class GameLauncher {
 
         // Renderer-specific env vars
         LauncherPreferences.Renderer renderer = gameInstance.settings().getRenderer();
+        // RimWorld 1.6 GLES pivot: the "rd_force_gles" marker forces the ZINK_ZFA renderer
+        // (real desktop GL Core over Zink/Turnip). Unity 1.6 creates its GL context via GLX;
+        // box64's wrappedlibgl.c routes glX* -> ZFA, so Unity renders GL and presents via
+        // glXSwapBuffers -> zfa_swap -> ANativeWindow, bypassing the broken Vulkan present-gate.
+        // Must run BEFORE the switch below so the full ZFA env (BOX64_LIBGL=libzfa etc.) applies.
+        boolean forceGlesZfa = new java.io.File(gameInstance.getGamePath(), "rd_force_gles").exists();
+        if (forceGlesZfa) {
+            renderer = LauncherPreferences.Renderer.ZINK_ZFA;
+            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> renderer=ZINK_ZFA (GLX->ZFA pivot for 1.6)");
+            // (2026-07-10 cleanup: the earlier CALLRET=0/FORWARD=0/NODYNAREC/DYNACACHE=0 dynarec
+            // suspicion was DISPROVEN — the real bug was our bridge writing through shifted args.
+            // Removed: FORWARD=0 fragments dynablocks (slower + more RAM), and RAM is now the
+            // limiting factor for the 1.6 loading peak on 12GB devices.)
+            // CONFIRMED dynarec miscompile (interpreter run passes this point and creates 3 GL
+            // contexts): SDL's statically-linked X11_GL_LoadLibrary (runtime 0x3f019457d4, fault
+            // 0x3f01945a6e) reloads the Display pointer as garbage after the bridged
+            // glXQueryExtension call. Surgical fix: interpret ONLY that loader (runs once at GL
+            // init, zero steady-state cost); dynarec stays on everywhere else. Range covers the
+            // loader + its visual-picking helper (0x3f019460fb).
+            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> dynarec fully on (diag knobs removed)");
+        }
         // The enum name maps 1:1 to the native renderer token parsed in rimdroid.c
         // (GL4ES / ZINK_ZFA / ZINK_OSMESA / SOFTPIPE).
         Os.setenv("RIMDROID_RENDERER", renderer.name(), true);  // read by rimdroid.c on init
@@ -318,6 +371,15 @@ public class GameLauncher {
                     Log.w(TAG, "Vulkan driver '" + vkDriver + "' no longer bundled → using System");
                     vkDriver = "";
                 }
+                // RimWorld 1.6 GLES pivot: the SYSTEM Adreno Vulkan driver crashes inside
+                // vkCmdPipelineBarrier2 (NULL+0xbc, vulkan.adreno.so, deterministic at RimWorld
+                // startup) under Zink's present path. Same as 1.5: Zink needs Turnip, not the
+                // proprietary driver. If the instance is on "System", force the Adreno 830/840
+                // Turnip for the rd_force_gles path.
+                if (forceGlesZfa && (vkDriver == null || vkDriver.isEmpty())) {
+                    vkDriver = "libvulkan_freedreno_840.so";
+                    android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> Vulkan driver System->Turnip 830/840 (" + vkDriver + ")");
+                }
                 Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vkDriver == null ? "" : vkDriver, true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our
                 // my2_SDL_GL_CreateContext/SwapWindow route to ZFA.
@@ -369,6 +431,64 @@ public class GameLauncher {
                     Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vulkanDriverName, true);
                 }
                 break;
+        }
+
+        // RimWorld 1.6 GLES pivot — AI-consensus one-run Zink diagnostics (brief v12). Applied
+        // AFTER the renderer switch so they override ZINK_DEBUG=compact from the ZINK_ZFA case.
+        // Goal: name what silently kills zink's batch state at the splash-unload present.
+        if (forceGlesZfa) {
+            // Verdict from the serialized-Zink diagnostic runs (brief v12): VK_ERROR_DEVICE_LOST
+            // during the splash-unload frame, detected at the pre-flush glFinish (swap_phase=1),
+            // on BOTH drivers, NOT caused by threading (full serialization didn't change it), NOT
+            // by rebinds/ConfigureNotify (both eliminated), NOT by missing GL entry points (libzfa
+            // exports all suspects incl. glFenceSync family). => Mesa 25.0.2 zink/kopper bug class
+            // fixed upstream in 25.2.4/25.3 ("reset batch states on destroy", "kopper dt without
+            // swapchain when pruning batch usage"). Real fix = rebuild libzfa on newer Mesa.
+            // Keep only the cheap always-useful markers; the heavy ZINK_DEBUG serialization is
+            // removed (caused visible flicker, changed nothing about the bug).
+            // AI-brief-v13 consensus batch:
+            // - NO MESA_VK_ABORT_ON_DEVICE_LOSS: it abort()s before Turnip/kgsl emit their fault
+            //   report (and stdio buffering already ate the mesa.log message once). Let the process
+            //   live past the device-lost so logcat captures the fault details.
+            // - NO MESA_LOG_FILE: default Android mesa logging goes to logcat (unbuffered).
+            // - TU_DEBUG=syncdraw: Turnip waits for the GPU after every draw/dispatch/blit → the
+            //   fault becomes synchronous with the guilty submission instead of surfacing at glFinish.
+            // CONTROL RUN (Codex consensus): both diagnostic overrides REMOVED — no TU_DEBUG=syncdraw,
+            // no -GL_ARB_buffer_storage hide — back to the ORIGINAL death mode, with the sanity shims
+            // (now incl. glBufferStorage) + external VmSize/maps polling as the only observers. The
+            // buffer_storage hide reshaped the failure into a staging-BO mmap flood; measure clean.
+            // Remaining crash after upload-pacing: a NATIVE zink worker thread dies at
+            // libzfa+0xdc8e1c (NULL+0x30) ~768MB into the atlas bake (guest RIP parked at an
+            // unrelated mprotect bridge = fault is on a mesa-internal thread). Prime suspect:
+            // the shader/pipeline DISK-CACHE worker. Test: disable the mesa shader cache.
+            // SYMBOLIZED (unstripped libzfa): the crash is zink_kopper_present_queue ->
+            // destroy_swapchain — a race on kopper's threaded present queue while old swapchains
+            // are pruned (our ROTATE_90 surface makes every present SUBOPTIMAL -> constant
+            // swapchain recreation). flushsync makes presents synchronous on the caller thread:
+            // no present-queue thread, no race. (Tested before, but the kgsl-3GB OOM layer was
+            // masking everything then; now upload-pacing has removed that layer.)
+            // FPS LEVER (2026-07-11 eve): flushsync forces a SYNCHRONOUS present on the caller
+            // thread every frame — it was the cheap guard against the kopper present-queue race
+            // (destroy_swapchain on the SUBOPTIMAL-recreation storm). That race is now closed at
+            // the source (zink_kopper NULL-dt guard + no-SUBOPTIMAL-recreate, both in libzfa), so
+            // the per-frame sync should be droppable. 1.5 runs 68 FPS vs 1.6's 25-29 with flushsync
+            // on → prime FPS suspect. Gated behind a marker so we can flip it per-instance without a
+            // rebuild: create "rd_flushsync" in the instance dir to force it back on if the race
+            // returns. Default (no marker) = OFF = try for the FPS win.
+            boolean forceFlushsync = new java.io.File(gameInstance.getGamePath(), "rd_flushsync").exists();
+            if (forceFlushsync) {
+                Os.setenv("ZINK_DEBUG", "flushsync", true);
+                android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> ZINK_DEBUG=flushsync (rd_flushsync marker present)");
+            } else {
+                android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> flushsync OFF (FPS lever; kopper race guarded in libzfa)");
+            }
+            // GPU-hang hunt CLOSED (2026-07-11): the killer was Unity's runtime BC-compression
+            // shader (Hidden/CompressBC: fragment shader + writeonly uimage2D imageStore) that
+            // RimWorld runs on the baked atlases when textureCompression=True — Turnip/A830
+            // hangs the GPU executing it (kgsl hang-class fault, no pagefault). Fixed by setting
+            // <textureCompression>False</textureCompression> in RimWorld's Config/Prefs.xml.
+            // The diagnostic envs (RIMDROID_GL_LOG_AFTER_SUB / RIMDROID_PACE_MB / swap-skip)
+            // are gone; the box64 shims stay but are inert without them.
         }
 
         // Debug extras — when debug mode is on, keep box64 log modest.
@@ -453,6 +573,86 @@ public class GameLauncher {
         // the library as "libmonobdwgc-2.0.so".
         setupMonoSymlink(gameInstance.getGamePath());
 
+        // RimWorld 1.6 X11 runtime (spike, marker-driven like rd_batchmode): boot the
+        // in-process X server (ported from Winlator) and point the guest at it. The guest's
+        // glibc libX11 connects to the hardcoded "/tmp/.X11-unix/X0"; box64's connect()
+        // redirect maps that to RIMDROID_X11_SOCKET_DIR. See memory rimworld_16_port.
+        boolean x11Test = new java.io.File(gameInstance.getGamePath(), "rd_x11_test").exists();
+        if (x11Test || new java.io.File(gameInstance.getGamePath(), "rd_x11").exists()) {
+            // Unity 2022 uses Vulkan directly on the X11 route. Do not let the legacy
+            // ZFA/GL renderer bind its own Kopper swapchain to the same ANativeWindow first.
+            // EXCEPTION — the rd_force_gles pivot: we WANT ZFA to bind its swapchain, because
+            // Unity 1.6 renders via GLX->ZFA (not direct Vulkan). So skip DIRECT_VULKAN then.
+            if (!forceGlesZfa) {
+                Os.setenv("RIMDROID_DIRECT_VULKAN", "1", true);
+            } else {
+                Os.unsetenv("RIMDROID_DIRECT_VULKAN");
+                android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> DIRECT_VULKAN OFF, ZFA binds swapchain");
+            }
+            // Match the X screen to the actual Android buffer size (fallback 1280x720 if the
+            // surface isn't up yet) — Unity requests fullscreen at "desktop" size, and any
+            // mismatch with our -screen-width args causes an endless resize/swapchain loop.
+            // Wait here (COMMON launch path, not just autolaunch) until the surface size has
+            // been stable for 500 ms — surfaceChanged can fire twice at startup.
+            try {
+                int lw = 0, lh = 0; long stableSince = 0;
+                for (int i = 0; i < 100; ++i) {
+                    int w = lastSurfaceWidth, h = lastSurfaceHeight;
+                    if (w > 0 && w == lw && h == lh) {
+                        if (stableSince == 0) stableSince = System.currentTimeMillis();
+                        else if (System.currentTimeMillis() - stableSince >= 500) break;
+                    } else { lw = w; lh = h; stableSince = 0; }
+                    Thread.sleep(50);
+                }
+            } catch (InterruptedException ignored) {}
+            int xw = lastSurfaceWidth  > 0 ? lastSurfaceWidth  : 1280;
+            int xh = lastSurfaceHeight > 0 ? lastSurfaceHeight : 720;
+            String sock = com.rimdroid.xserver.XServerRunner.start(
+                    gameInstance.getGamePath(), xw, xh);
+            Os.setenv("DISPLAY", ":0", true);
+            Os.setenv("RIMDROID_X11_SOCKET_DIR", new java.io.File(sock).getParent(), true);
+            // Unity 2022's STATIC SDL (no dynapi) must use its x11 video driver against OUR
+            // X server — override the unconditional "dummy" set above (dummy leaves SDL video
+            // uninitialised in 2022 → "Error getting num native displays" → crash on an empty
+            // displays array).
+            Os.setenv("SDL_VIDEODRIVER", "x11", true);
+            // Force SDL to use our root visual by id (bypasses XMatchVisualInfo, which was failing to
+            // match our depth-32 TrueColor visual → SDL added 0 displays → Unity crashed). See
+            // memory rimworld_16_port.
+            int visualId = com.rimdroid.xserver.XServerRunner.getRootVisualId();
+            Os.setenv("SDL_VIDEO_X11_VISUALID", "0x" + Integer.toHexString(visualId), true);
+            postLog("X server started: " + sock + " (visualid=0x" + Integer.toHexString(visualId) + ")");
+            if (x11Test) {
+                // M1 smoke test: run a guest x86_64 X client instead of the game. The marker
+                // file's first line names the binary in deps/linux-x86_64 (empty = xdpyinfo).
+                String tool = "xdpyinfo";
+                try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(
+                        new java.io.File(gameInstance.getGamePath(), "rd_x11_test")))) {
+                    String line = r.readLine();
+                    if (line != null && !line.trim().isEmpty()) tool = line.trim();
+                } catch (Exception ignored) {}
+                String path = new java.io.File(
+                        AppStorage.requireSingleton().getLibsLinuxX86Path(), tool).getAbsolutePath();
+                Os.setenv("RIMDROID_EXEC", path, true);
+                // Reference SDL clients must use the REAL (emulated Debian) libSDL2 from the
+                // instance dir, not our wrapped 1.5 stub — box64 force-wraps libSDL2 otherwise.
+                Os.setenv("BOX64_EMULATED_LIBS", "libSDL2-2.0.so.0:libdrm.so.2:libgbm.so.1"
+                        + ":libwayland-client.so.0:libwayland-cursor.so.0:libwayland-egl.so.1"
+                        + ":libdecor-0.so.0:libsamplerate.so.0:libxkbcommon.so.0:libxkbcommon-x11.so.0"
+                        + ":libpulse.so.0:libasound.so.2:libffi.so.8:libwayland-server.so.0:libexpat.so.1",
+                        true);  // NOT libpulse/asound/dbus — box64 can't wrap them on Android (no native)
+                Os.setenv("BOX64_LOG", "1", true);   // verbose: name the fatal needed-lib precisely
+                Os.setenv("BOX64_ALLOWMISSINGLIBS", "1", true);  // skip Android-absent libpulse etc.
+                Os.setenv("BOX64_NOPULSE", "0", true);   // let our x86_64 pulse STUB load (global default=1 dummies it)
+                postLog("X11 SMOKE TEST: exec " + path);
+            } else {
+                Os.unsetenv("RIMDROID_EXEC");
+            }
+        } else {
+            Os.unsetenv("RIMDROID_EXEC");
+            Os.unsetenv("RIMDROID_DIRECT_VULKAN");
+        }
+
         postLog("Launching " + gameInstance.getName() + " [" + renderer.name() + "]...");
         postLog("Path: " + gameInstance.getGamePath());
 
@@ -472,10 +672,16 @@ public class GameLauncher {
             // renderer detection.  Log goes to <game>/rimdroid_game.log.
             postLog("Launching via STANDALONE EXEC (no-fork process)...");
             Log.i(TAG, "Launching via execStandaloneGame (no-fork)");
+            // 1.6/X11+Vulkan: multithreaded rendering REQUIRED — with -force-gfx-direct the
+            // render runs on the main thread, so during RimWorld's blocking LongEventHandler
+            // load no frame ever completes/presents and Unity's 2MB device-memory pool chunks
+            // are never recycled → "Vulkan - Out of memory" at ~3GB. The gfx thread presents
+            // between load steps like on desktop. 1.5 (SDL/GL path) keeps gfx-direct.
+            boolean rdX11 = new java.io.File(gameInstance.getGamePath(), "rd_x11").exists();
             int code = execStandaloneGame(
                     gameInstance.getGamePath(),
                     gameInstance.getNativeLibraryPath(),
-                    "-force-gfx-direct");
+                    rdX11 ? null : "-force-gfx-direct");
             postLog("Standalone exec exited, code=" + code);
             Log.i(TAG, "execStandaloneGame returned code=" + code);
         } else {
@@ -554,6 +760,18 @@ public class GameLauncher {
 
     public static native int initRimDroidWindow();
     public static native void destroyRimDroidWindow();
+    // RimDroid 1.6/X11: remember the buffer size so the X server screen matches the surface —
+    // a mismatched screen (hardcoded 1280x720) made Unity loop resize→fullscreen→swapchain
+    // forever until lmkd killed the process (PSS grew to 8 GB). See memory rimworld_16_port.
+    public static volatile int lastSurfaceWidth = 0;
+    public static volatile int lastSurfaceHeight = 0;
+
+    public static int setSurfaceTracked(Surface surface, int width, int height) {
+        lastSurfaceWidth = width;
+        lastSurfaceHeight = height;
+        return setSurface(surface, width, height);
+    }
+
     public static native int setSurface(Surface surface, int width, int height);
     public static native void destroySurface();
 

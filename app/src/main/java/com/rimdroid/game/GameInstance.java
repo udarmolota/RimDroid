@@ -101,6 +101,42 @@ public class GameInstance {
 
     /** Args passed to RimWorldLinux binary */
     public String[] getArgs() {
+        // SPIKE toggle (RimWorld 1.6 bring-up, see [[rimworld_16_port]]): if a marker file
+        // "rd_batchmode" exists in the instance dir, run HEADLESS (-batchmode -nographics).
+        // This proves Mono-2022 + Burst + managed boot under box64 with the whole
+        // window/render plane taken out of the equation. Toggle via adb, no rebuild:
+        //   adb shell run-as com.rimdroid touch files/instances/<name>/rd_batchmode
+        if (new File(getGamePath(), "rd_batchmode").exists()) {
+            return new String[]{ "-batchmode", "-nographics" };
+        }
+        // X11 smoke test (RIMDROID_EXEC runs a foreign tool like xdpyinfo): no Unity args —
+        // foreign binaries reject unknown options.
+        if (new File(getGamePath(), "rd_x11_test").exists()) {
+            return new String[]{};
+        }
+        // 1.6/X11+Vulkan render mode — see the rd_x11 block below. Threaded rendering is the
+        // DEFAULT now (it ~doubles FPS: the GLX->zink bridge work moves off the main thread). The
+        // earlier bring-up forced -force-gfx-direct because threaded rendering had a command-buffer
+        // stall (never EndCommandBuffer -> kgsl climbs to ~2.8GB -> SIGABRT); the day's fixes healed
+        // it on tested hardware, and devices that still can't survive the deep box64/Mono bug fall
+        // back to single-threaded via COMPAT MODE.
+        if (new File(getGamePath(), "rd_x11").exists()) {
+            // Render mode (2026-07-11): threaded rendering ~doubles 1.6 FPS (62-65 vs 26-39) by
+            // moving the GLX->zink bridge work off the main thread. DEFAULT = threaded for everyone.
+            // Devices that can't survive the deep box64/Mono bug (SIGSEGV in libmonobdwgc during
+            // def-load + destroyed-mutex abort — seen on e.g. Adreno 644/725, NOT a GPU-vendor
+            // thing) use COMPAT MODE, which forces the safe single-threaded path (-force-gfx-direct
+            // here + BOX64_MAXCPU=1 in GameLauncher). Marker "rd_gfxdirect" also forces single.
+            boolean gfxDirect = settings().isCompatibilityMode()
+                    || new File(getGamePath(), "rd_gfxdirect").exists();
+            if (gfxDirect) {
+                android.util.Log.i("RimDroid", "getArgs: rd_x11 -> single-threaded (-force-gfx-direct, compat/marker)");
+                return new String[]{ "-force-gfx-direct" };
+            }
+            android.util.Log.i("RimDroid", "getArgs: rd_x11 -> threaded rendering (default 2-thread)");
+            return new String[]{};
+        }
+        android.util.Log.i("RimDroid", "getArgs: default -force-gfx-direct (gamePath=" + getGamePath() + ")");
         // -force-gfx-direct: disable Unity's threaded render device (threaded=1).
         // Our single ZFA/Zink GL context is made current on one thread only;
         // a separate render thread would have no current GL context. Forcing the

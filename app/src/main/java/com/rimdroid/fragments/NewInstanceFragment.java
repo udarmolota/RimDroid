@@ -132,7 +132,13 @@ public class NewInstanceFragment extends Fragment {
 
     private void startInstall() {
         if (selectedZipUri == null) return;
-        String instanceName = etInstanceName.getText().toString().trim();
+        String rawName = etInstanceName.getText().toString().trim();
+        // Instance name = directory name = part of every game path. RimWorld 1.6 loads mod audio
+        // via UnityWebRequest/curl "file://" URLs WITHOUT escaping, so a space (or other URL-hostile
+        // char) in the path silently kills all mod sounds ("Curl error 3: URL rejected", found
+        // 2026-07-11). Sanitize to a URL/path-safe name up front.
+        final String instanceName = rawName.replaceAll("[^A-Za-z0-9._-]+", "-")
+                                           .replaceAll("^-+|-+$", "");
         if (instanceName.isEmpty()) {
             etInstanceName.setError(getString(R.string.error_name_required));
             return;

@@ -82,6 +82,11 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     // (older public 1.5 builds, newest→oldest, are listed in memory/in_app_game_downloader.md).
     private static final long RIMWORLD_1_5_MANIFEST = 2197714010033731403L;
 
+    /** Target game version. 1.5 pins the frozen manifest (Steam "public" is now 1.6, so "latest"
+     *  would silently pull 1.6). 1.6 uses "latest" = the current public branch = 1.6, so no manifest
+     *  id needs hard-coding — an empty manifest list resolves to the newest build. */
+    public enum Version { V1_5, V1_6 }
+
     /**
      * Pin DLC to the last 1.5 build too — otherwise DepotDownloader pulls "latest" (= 1.6), which is
      * a version mismatch with the 1.5 base game. Keyed by the DLC's Linux DEPOT id (resolved from base
@@ -127,6 +132,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private final String installDir;      // GAME mode: ABSOLUTE path = AppStorage.getInstanceDir(name)
     private final boolean manifestOnly;
     private final long manifestId;        // 0 = default to the recommended 1.5 build; >0 = pin this build
+    private final Version version;        // which RimWorld version to fetch (base game + DLC pinning)
     private final List<Dlc> dlcs;         // DLC mode (non-null) → download these into /Download/RimDroid as zips
     private final List<Long> workshopIds; // MODS mode (non-null) → download these Workshop items (logged-in)
     private final Listener listener;
@@ -153,7 +159,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
 
     /** GAME mode: download RimWorld into instances/&lt;name&gt; and make it launchable. */
     public SteamDownloadSpike(String username, String password, String instanceName,
-                              boolean manifestOnly, long manifestId, Listener listener) {
+                              boolean manifestOnly, long manifestId, Version version, Listener listener) {
         this.username = username;
         this.password = password;
         this.instanceName = instanceName;
@@ -162,6 +168,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         this.installDir = AppStorage.requireSingleton().getInstanceDir(instanceName).getAbsolutePath();
         this.manifestOnly = manifestOnly;
         this.manifestId = manifestId;
+        this.version = version != null ? version : Version.V1_5;
         this.dlcs = null;
         this.workshopIds = null;
         this.listener = listener;
@@ -170,7 +177,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     // DLC + MODS share one private ctor (separate public 4-arg ctors would clash on erasure:
     // both List<Dlc> and List<Long> erase to List). Use the factories below.
     private SteamDownloadSpike(String username, String password,
-                               List<Dlc> dlcs, List<Long> workshopIds, Listener listener) {
+                               List<Dlc> dlcs, List<Long> workshopIds, Version version, Listener listener) {
         this.username = username;
         this.password = password;
         this.dlcs = dlcs;
@@ -180,11 +187,13 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         this.installDir = null;
         this.manifestOnly = false;
         this.manifestId = 0L;
+        this.version = version != null ? version : Version.V1_5;
     }
 
     /** DLC mode: download each owned DLC and pack it into a zip under /Download/RimDroid. */
-    public static SteamDownloadSpike forDlc(String username, String password, List<Dlc> dlcs, Listener listener) {
-        return new SteamDownloadSpike(username, password, dlcs, null, listener);
+    public static SteamDownloadSpike forDlc(String username, String password, List<Dlc> dlcs,
+                                            Version version, Listener listener) {
+        return new SteamDownloadSpike(username, password, dlcs, null, version, listener);
     }
 
     /**
@@ -193,7 +202,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
      * the UGC; same as `depotdownloader -app 294100 -pubfile <id>`, which runs under your account).
      */
     public static SteamDownloadSpike forMods(String username, String password, List<Long> workshopIds, Listener listener) {
-        return new SteamDownloadSpike(username, password, null, workshopIds, listener);
+        // Workshop items resolve their own content version — no base-game manifest pin needed.
+        return new SteamDownloadSpike(username, password, null, workshopIds, Version.V1_5, listener);
     }
 
     private void progress(String m) {
@@ -417,18 +427,24 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                 if (!work.mkdirs()) { progress("✗ " + d.name + ": cannot create work dir"); skipped++; continue; }
                 lastError = null;
                 boolean got = false;
-                // Pin to 1.5 only if we know the 1.5 manifest for EVERY resolved depot (AppItem needs
-                // depot[i] ↔ manifest[i] parallel). Otherwise fall back to latest for this DLC.
+                // Version pinning: 1.6 → empty manifests = latest (= public branch 1.6). 1.5 → pin the
+                // frozen 1.5 manifest for EVERY resolved depot (AppItem needs depot[i]↔manifest[i]
+                // parallel); if any depot lacks a known 1.5 pin, fall back to latest for this DLC.
                 List<Long> manifests = new ArrayList<>();
-                for (Integer dep : depots) {
-                    Long m = DLC_DEPOT_1_5_MANIFEST.get(dep);
-                    if (m == null) { manifests = List.of(); break; }
-                    manifests.add(m);
-                }
-                if (manifests.isEmpty()) {
-                    progress("  (no pinned 1.5 manifest for depots " + depots + " → downloading LATEST = 1.6)");
+                if (version == Version.V1_6) {
+                    manifests = List.of();
+                    progress("  (1.6 → downloading LATEST)");
                 } else {
-                    progress("  (pinned to 1.5 manifests " + manifests + ")");
+                    for (Integer dep : depots) {
+                        Long m = DLC_DEPOT_1_5_MANIFEST.get(dep);
+                        if (m == null) { manifests = List.of(); break; }
+                        manifests.add(m);
+                    }
+                    if (manifests.isEmpty()) {
+                        progress("  (no pinned 1.5 manifest for depots " + depots + " → downloading LATEST = 1.6)");
+                    } else {
+                        progress("  (pinned to 1.5 manifests " + manifests + ")");
+                    }
                 }
                 try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true)) {
                     dd.addListener(this);
@@ -465,7 +481,10 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                 }
                 if (got) {
                     try {
-                        File zip = new File(downloadsDir, sanitizeName(d.name) + ".zip");
+                        // Tag the archive with the game version it was downloaded for (e.g.
+                        // "Biotech_1.5.zip") so 1.5 and 1.6 DLC downloads don't get confused.
+                        String verTag = (version == Version.V1_6) ? "_1.6" : "_1.5";
+                        File zip = new File(downloadsDir, sanitizeName(d.name) + verTag + ".zip");
                         ZipUtil.zipDir(work, zip);
                         progress("✓ " + d.name + " → " + zip.getAbsolutePath());
                         ok++;
@@ -664,14 +683,24 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             File state = new File(installDir, ".DepotDownloader");
             if (state.exists()) progress("Found partial download — resuming where it stopped…");
         }
-        // Always pin a manifest: a user-supplied build, else the recommended 1.5 one (NOT "latest",
-        // which is now 1.6 / unsupported).
-        long mid = manifestId > 0 ? manifestId : RIMWORLD_1_5_MANIFEST;
-        List<Long> manifests = List.of(mid);
+        // Manifest selection:
+        //  - explicit user build (manifestId>0) always wins;
+        //  - 1.6 → empty list = "latest" = the current Steam public branch (= 1.6), no pin needed;
+        //  - 1.5 → pin the frozen 1.5 manifest ("latest" would now pull 1.6).
+        List<Long> manifests;
+        String verLabel;
+        if (manifestId > 0) {
+            manifests = List.of(manifestId);
+            verLabel = "manifest " + manifestId;
+        } else if (version == Version.V1_6) {
+            manifests = List.of();
+            verLabel = "latest 1.6 build";
+        } else {
+            manifests = List.of(RIMWORLD_1_5_MANIFEST);
+            verLabel = "recommended 1.5 build " + RIMWORLD_1_5_MANIFEST;
+        }
         progress((manifestOnly ? "[manifest-only] " : "")
-                + "[attempt " + downloadAttempts + "] "
-                + (manifestId > 0 ? ("manifest " + mid) : ("recommended 1.5 build " + mid))
-                + " → " + installDir);
+                + "[attempt " + downloadAttempts + "] " + verLabel + " → " + installDir);
         try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true)) {
             dd.addListener(this);
 

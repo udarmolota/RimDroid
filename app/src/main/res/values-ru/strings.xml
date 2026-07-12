@@ -76,6 +76,9 @@
     <string name="download_game_title">Загрузка RimWorld из Steam</string>
     <string name="download_version_note">RimDroid сейчас поддерживает RimWorld 1.5. (В Steam актуальна уже 1.6.) Загружает Linux-сборку прямо в новый инстанс — без Termux и без ПК.</string>
     <string name="download_instance_hint">Имя инстанса (например, RimWorld 1.5)</string>
+    <string name="download_version_label">Версия игры</string>
+    <string name="download_version_15">RimWorld 1.5</string>
+    <string name="download_version_16">RimWorld 1.6</string>
     <string name="download_user_hint">Логин Steam</string>
     <string name="download_pass_hint">Пароль Steam</string>
     <string name="download_login_note">Логин отправляется в Steam (так же, как это делает DepotDownloader) и НЕ сохраняется. Подтвердите вход в приложении Steam Mobile или введите код Steam Guard, когда попросят.</string>

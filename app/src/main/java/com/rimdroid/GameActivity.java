@@ -33,6 +33,109 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     // FPS overlay: total presented frames so far (counted in box64's SwapWindow).
     public static native long nativeGetFrameCount();
 
+    // Input wrappers: the native path feeds synthetic SDL events (RimWorld 1.5's SDL video
+    // driver). Under the 1.6 X11 path Unity's SDL takes input from CORE X EVENTS instead, so
+    // taps produced zero ButtonPress on the wire and nothing was clickable at the menu. Mirror
+    // every pointer action into the in-process X server whenever one is running (1.6 sessions
+    // only — getXServer() is null for 1.5, making the mirror a no-op there).
+    private static com.rimdroid.xserver.Pointer.Button xBtn(int button) {
+        switch (button) {
+            case 2:  return com.rimdroid.xserver.Pointer.Button.BUTTON_MIDDLE;
+            case 3:  return com.rimdroid.xserver.Pointer.Button.BUTTON_RIGHT;
+            default: return com.rimdroid.xserver.Pointer.Button.BUTTON_LEFT;
+        }
+    }
+    public static void touchInput(int action, int x, int y) {
+        try { nativeTouch(action, x, y); } catch (UnsatisfiedLinkError ignored) {}
+        com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+        if (xs == null) return;
+        xs.injectPointerMove(x, y);
+        if (action == 1) xs.injectPointerButtonPress(com.rimdroid.xserver.Pointer.Button.BUTTON_LEFT);
+        else if (action == 2) xs.injectPointerButtonRelease(com.rimdroid.xserver.Pointer.Button.BUTTON_LEFT);
+    }
+    public static void buttonInput(int button, int down, int x, int y) {
+        try { nativeButton(button, down, x, y); } catch (UnsatisfiedLinkError ignored) {}
+        com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+        if (xs == null) return;
+        xs.injectPointerMove(x, y);
+        if (down != 0) xs.injectPointerButtonPress(xBtn(button));
+        else xs.injectPointerButtonRelease(xBtn(button));
+    }
+    /** SDL scancode → XKeycode for the on-screen KEY buttons (physical keyboards go through
+     *  Keyboard.onKeyEvent with the full Android map; this covers only what layouts use). */
+    private static com.rimdroid.xserver.XKeycode xKey(int sdlScancode) {
+        switch (sdlScancode) {
+            case 26: return com.rimdroid.xserver.XKeycode.KEY_W;
+            case 4:  return com.rimdroid.xserver.XKeycode.KEY_A;
+            case 22: return com.rimdroid.xserver.XKeycode.KEY_S;
+            case 7:  return com.rimdroid.xserver.XKeycode.KEY_D;
+            case 20: return com.rimdroid.xserver.XKeycode.KEY_Q;
+            case 8:  return com.rimdroid.xserver.XKeycode.KEY_E;
+            case 6:  return com.rimdroid.xserver.XKeycode.KEY_C;
+            case 9:  return com.rimdroid.xserver.XKeycode.KEY_F;
+            case 44: return com.rimdroid.xserver.XKeycode.KEY_SPACE;
+            case 41: return com.rimdroid.xserver.XKeycode.KEY_ESC;
+            case 40: return com.rimdroid.xserver.XKeycode.KEY_ENTER;
+            case 43: return com.rimdroid.xserver.XKeycode.KEY_TAB;
+            case 225: return com.rimdroid.xserver.XKeycode.KEY_SHIFT_L;
+            case 224: return com.rimdroid.xserver.XKeycode.KEY_CTRL_L;
+            case 30: return com.rimdroid.xserver.XKeycode.KEY_1;
+            case 31: return com.rimdroid.xserver.XKeycode.KEY_2;
+            case 32: return com.rimdroid.xserver.XKeycode.KEY_3;
+            case 33: return com.rimdroid.xserver.XKeycode.KEY_4;
+            case 34: return com.rimdroid.xserver.XKeycode.KEY_5;
+            case 35: return com.rimdroid.xserver.XKeycode.KEY_6;
+            case 36: return com.rimdroid.xserver.XKeycode.KEY_7;
+            case 37: return com.rimdroid.xserver.XKeycode.KEY_8;
+            case 38: return com.rimdroid.xserver.XKeycode.KEY_9;
+            case 39: return com.rimdroid.xserver.XKeycode.KEY_0;
+            // arrows — the on-screen pan stick emits these scancodes (camera panning)
+            case 79: return com.rimdroid.xserver.XKeycode.KEY_RIGHT;
+            case 80: return com.rimdroid.xserver.XKeycode.KEY_LEFT;
+            case 81: return com.rimdroid.xserver.XKeycode.KEY_DOWN;
+            case 82: return com.rimdroid.xserver.XKeycode.KEY_UP;
+            // function row (RimWorld: F1 help etc.; SDL scancodes 58..69 = F1..F12)
+            case 58: return com.rimdroid.xserver.XKeycode.KEY_F1;
+            case 59: return com.rimdroid.xserver.XKeycode.KEY_F2;
+            case 60: return com.rimdroid.xserver.XKeycode.KEY_F3;
+            case 61: return com.rimdroid.xserver.XKeycode.KEY_F4;
+            case 62: return com.rimdroid.xserver.XKeycode.KEY_F5;
+            case 63: return com.rimdroid.xserver.XKeycode.KEY_F6;
+            case 64: return com.rimdroid.xserver.XKeycode.KEY_F7;
+            case 65: return com.rimdroid.xserver.XKeycode.KEY_F8;
+            case 66: return com.rimdroid.xserver.XKeycode.KEY_F9;
+            case 67: return com.rimdroid.xserver.XKeycode.KEY_F10;
+            case 68: return com.rimdroid.xserver.XKeycode.KEY_F11;
+            case 69: return com.rimdroid.xserver.XKeycode.KEY_F12;
+            case 74: return com.rimdroid.xserver.XKeycode.KEY_HOME;
+            case 77: return com.rimdroid.xserver.XKeycode.KEY_END;
+            case 76: return com.rimdroid.xserver.XKeycode.KEY_DEL;
+            default: return null;
+        }
+    }
+    public static void keyInput(int scancode, int keycode, int down) {
+        try { nativeKey(scancode, keycode, down); } catch (UnsatisfiedLinkError ignored) {}
+        com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+        if (xs == null) return;
+        com.rimdroid.xserver.XKeycode xk = xKey(scancode);
+        if (xk == null) return;
+        if (down != 0) xs.injectKeyPress(xk);
+        else xs.injectKeyRelease(xk);
+    }
+    public static void scrollInput(int x, int y, int dy) {
+        try { nativeScroll(x, y, dy); } catch (UnsatisfiedLinkError ignored) {}
+        com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+        if (xs == null) return;
+        xs.injectPointerMove(x, y);
+        com.rimdroid.xserver.Pointer.Button b = dy > 0
+                ? com.rimdroid.xserver.Pointer.Button.BUTTON_SCROLL_UP
+                : com.rimdroid.xserver.Pointer.Button.BUTTON_SCROLL_DOWN;
+        for (int i = 0, n = Math.min(Math.abs(dy), 5); i < n; i++) {
+            xs.injectPointerButtonPress(b);
+            xs.injectPointerButtonRelease(b);
+        }
+    }
+
     private float renderScale = 0.72f;
     // Letterbox the game at its native 4:3 (black side bars, no stretch). DEFAULT OFF: in-game the
     // world is already aspect-correct (RimWorld's camera adapts); only the loading screen/menus
@@ -66,6 +169,35 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         smokeTest = getIntent().getBooleanExtra(EXTRA_SMOKETEST, false);
         instanceName = getIntent().getStringExtra(EXTRA_INSTANCE_NAME);
 
+        // adb-driven test runs (debug builds export this activity): "autolaunch" makes this
+        // activity ALSO start the game itself — normally LauncherFragment does that half.
+        //   am start -n com.rimdroid/.GameActivity --es instance_name X --ez autolaunch true
+        if (getIntent().getBooleanExtra("autolaunch", false) && instanceName != null) {
+            final com.rimdroid.game.GameInstance gi =
+                    com.rimdroid.game.GameInstanceManager.requireSingleton().getByName(instanceName);
+            if (gi != null) {
+                new Thread(() -> {
+                    try {
+                        // Wait for the Android surface AND for its size to settle: surfaceChanged
+                        // fires twice (2340x1080 full-window, then the 1685x778 fixed-size buffer
+                        // ~20 ms later). Launching on the first value made the Vulkan swapchain
+                        // extent mismatch the buffer. Settle = no change for 500 ms.
+                        int lastW = 0, lastH = 0; long stableSince = 0;
+                        for (int i = 0; i < 200; ++i) {
+                            int w = GameLauncher.lastSurfaceWidth, h = GameLauncher.lastSurfaceHeight;
+                            if (w > 0 && w == lastW && h == lastH) {
+                                if (stableSince == 0) stableSince = System.currentTimeMillis();
+                                else if (System.currentTimeMillis() - stableSince >= 500) break;
+                            } else { lastW = w; lastH = h; stableSince = 0; }
+                            Thread.sleep(50);
+                        }
+                        GameLauncher.launch(gi);
+                    }
+                    catch (Throwable t) { android.util.Log.e("RimDroid", "autolaunch failed", t); }
+                }, "rd-autolaunch").start();
+            }
+        }
+
         android.graphics.Rect b = getWindowManager().getCurrentWindowMetrics().getBounds();
         int sw = Math.max(b.width(), b.height());   // landscape width
         int sh = Math.min(b.width(), b.height());   // landscape height
@@ -76,6 +208,11 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             com.rimdroid.InstanceSettings is = new com.rimdroid.InstanceSettings(instanceName);
             renderScale = is.getEffectiveRenderScale(sw, sh);
             dragPanEnabled = is.isDragPan();
+            // 1.6/X11 render scale ENABLED (2026-07-11): the bring-up force-1.0 is gone. The old
+            // race is covered — GameLauncher's settle loop waits for the FIXED-SIZE surfaceChanged
+            // before starting the X server, so the buffer, the X screen and -screen-width/-height
+            // all agree; on the GL/ZFA path kopper sizes the swapchain from the ANativeWindow
+            // directly. Lower scale = fewer pixels for the GPU AND a bigger-looking game UI.
         } else {
             LauncherPreferences lp = LauncherPreferences.getSingleton();
             if (lp != null) renderScale = lp.getEffectiveRenderScale(sw, sh);
@@ -108,6 +245,9 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         getWindow().setDecorFitsSystemWindows(false);
 
         surfaceView = new SurfaceView(this);
+        // RGBA_8888 explicitly — the default logged as RGB_565 (format=4); Vulkan WSI replaces the
+        // format anyway, but keep the BufferQueue consistent from the start (hygiene, Codex rec).
+        surfaceView.getHolder().setFormat(android.graphics.PixelFormat.RGBA_8888);
         surfaceView.getHolder().addCallback(this);
 
         scaleDetector = new android.view.ScaleGestureDetector(this, new ScaleListener());
@@ -222,8 +362,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 if (panGestureOwned && !tapMoved && !scaling && System.currentTimeMillis() - tapDownT < 250) {
                     final int gx = gameX(e.getX()), gy = gameY(e.getY());
                     try {
-                        nativeButton(1, 1, gx, gy);   // direct tap = left click at finger
-                        ui.postDelayed(() -> { try { nativeButton(1, 0, gx, gy); } catch (UnsatisfiedLinkError ig) {} }, 50);
+                        buttonInput(1, 1, gx, gy);   // direct tap = left click at finger
+                        ui.postDelayed(() -> buttonInput(1, 0, gx, gy), 50);
                     } catch (UnsatisfiedLinkError ig) {}
                 }
                 panGestureOwned = false;
@@ -293,7 +433,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         }
         @Override public void onScaleEnd(android.view.ScaleGestureDetector dt) { scaling = false; }
     }
-    private void safeScroll(int x, int y, int dy) { try { nativeScroll(x, y, dy); } catch (UnsatisfiedLinkError ignored) {} }
+    private void safeScroll(int x, int y, int dy) { scrollInput(x, y, dy); }
 
     // Map a screen coordinate (px) to a game/buffer coordinate, accounting for the letterbox
     // offset + render scale, clamped to the buffer (taps in the black bars clamp to the edge).
@@ -402,6 +542,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // Keyboard FIRST: a key with an SDL scancode (letters/space/digits/arrows) is injected as a key; only
         // if it has no scancode does it fall through to the gamepad handler. This stops the gamepad handler
         // (which swallows everything from a gamepad-ish source) from eating a combo keyboard+touchpad's keys.
+        // 1.6/X11: ALSO mirror the key into the in-process X server (Unity's SDL x11 driver only sees
+        // core X KeyPress/KeyRelease; the SDL injection below is invisible to it — same as pointer).
+        // Winlator's Keyboard.onKeyEvent carries the full Android→XKeycode map and was never wired.
+        com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+        if (xs != null) {
+            try { xs.keyboard.onKeyEvent(event); } catch (Throwable ignored) {}
+        }
         if (mouseKb != null && mouseKb.onKey(event)) return true;   // physical keyboard
         if (gamepad != null && gamepad.onKey(event)) return true;
         return super.dispatchKeyEvent(event);
@@ -431,6 +578,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     // === SurfaceHolder.Callback ==================================================
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        // At scale 1.0 skip setFixedSize entirely — it would fire a second surfaceChanged and
+        // recycle the BufferQueue for no gain (1.6/X11 path runs at native size; Codex: early
+        // Surface/BufferQueue generation churn makes Unity's Vulkan WSI leak swapchains).
+        if (renderScale >= 0.999f) {
+            Log.i(TAG, "surfaceCreated: scale=1.0, native size " + surfaceView.getWidth() + "x" + surfaceView.getHeight());
+            return;
+        }
         int bw = Math.max(1, Math.round(surfaceView.getWidth()  * renderScale));
         int bh = Math.max(1, Math.round(surfaceView.getHeight() * renderScale));
         Log.i(TAG, "surfaceCreated: scale=" + renderScale + " buffer=" + bw + "x" + bh);
@@ -440,7 +594,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged: " + width + "x" + height);
-        GameLauncher.setSurface(holder.getSurface(), width, height);
+        GameLauncher.setSurfaceTracked(holder.getSurface(), width, height);
         if (smokeTest) {
             // Software-renderer smoke test: render+blit one OSMesa frame, no game launch.
             try {
@@ -501,7 +655,12 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             mgr.reload();
             com.rimdroid.game.GameInstance gi = mgr.getByName(name);
             if (gi == null) return;
-            PrefsXml.forceFullscreen(new java.io.File(gi.getUserDataDir(), "Config"), width, height);
+            // 1.6/X11 route: WINDOWED at surface size (fullscreen triggers SDL's WM-less
+            // legacy-fullscreen dance → window loses SHOWN → Unity never presents).
+            if (new java.io.File(gi.getGamePath(), "rd_x11").exists())
+                PrefsXml.forceWindowed(new java.io.File(gi.getUserDataDir(), "Config"), width, height);
+            else
+                PrefsXml.forceFullscreen(new java.io.File(gi.getUserDataDir(), "Config"), width, height);
         } catch (Throwable t) {
             Log.w(TAG, "pinGamePrefs failed: " + t.getMessage());
         }

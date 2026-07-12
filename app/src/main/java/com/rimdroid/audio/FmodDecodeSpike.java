@@ -182,7 +182,7 @@ public final class FmodDecodeSpike {
                 "  <packageId>" + PACK_ID + "</packageId>\n" +
                 "  <name>RimDroid Sound (generated)</name>\n" +
                 "  <author>RimDroid</author>\n" +
-                "  <supportedVersions><li>1.5</li></supportedVersions>\n" +
+                "  <supportedVersions><li>1.5</li><li>1.6</li></supportedVersions>\n" +
                 "  <description>Game sound decoded on-device from your own RimWorld copy.</description>\n" +
                 "</ModMetaData>\n");
         writeFile(new File(patches, "Audio.xml"),

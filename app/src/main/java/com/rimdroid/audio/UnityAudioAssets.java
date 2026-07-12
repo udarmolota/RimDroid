@@ -90,11 +90,24 @@ public final class UnityAudioAssets {
         // header is big-endian
         long metaSize = beU32(d, 0), fileSize = beU32(d, 4), version = beU32(d, 8), dataOffset = beU32(d, 12);
         int endian = d[16] & 0xff;
-        if (version != 21 || endian != 0) {
-            Log.w(TAG, "Unexpected SerializedFile version=" + version + " endian=" + endian + " (need v21 LE)");
+        if ((version != 21 && version != 22) || endian != 0) {
+            Log.w(TAG, "Unexpected SerializedFile version=" + version + " endian=" + endian + " (need v21/v22 LE)");
             return null;
         }
-        Cur c = new Cur(d, 20);
+        int metaStart = 20;
+        if (version == 22) {
+            // v22 = "LargeFilesSupport" (Unity 2020.1+ / RimWorld 1.6's 2022.3): the classic 32-bit
+            // header fields are superseded by an extension right after the endian byte+padding —
+            // u32 metadataSize, i64 fileSize, i64 dataOffset, i64 reserved — still big-endian
+            // (the endian byte only governs the metadata that follows). Object byteStart also
+            // widens to i64 (see below). Everything else matches v21.
+            metaSize = beU32(d, 20);
+            fileSize = beI64(d, 24);
+            dataOffset = beI64(d, 32);
+            metaStart = 48;
+        }
+        final boolean v22 = (version == 22);
+        Cur c = new Cur(d, metaStart);
         c.cstring();              // unity_version
         c.i32le();               // target_platform
         int enableTypeTree = c.u8();
@@ -115,7 +128,7 @@ public final class UnityAudioAssets {
             c.align4();
             Obj o = new Obj();
             o.pathId = c.i64le();
-            o.absStart = dataOffset + c.u32le();
+            o.absStart = dataOffset + (v22 ? c.i64le() : c.u32le());
             o.size = c.u32le();
             int typeId = c.i32le();
             o.classId = (typeId >= 0 && typeId < typeCount) ? classIds[typeId] : -1;
@@ -126,6 +139,10 @@ public final class UnityAudioAssets {
 
     private static long beU32(byte[] d, int o) {
         return ((long)(d[o]&0xff)<<24) | ((d[o+1]&0xff)<<16) | ((d[o+2]&0xff)<<8) | (d[o+3]&0xff);
+    }
+
+    private static long beI64(byte[] d, int o) {
+        return (beU32(d, o) << 32) | beU32(d, o + 4);
     }
 
     /** resources.assets -> {pathID -> Clip}. */
@@ -282,7 +299,11 @@ public final class UnityAudioAssets {
         if (out.containsKey(clipPath)) return;
         WorkItem w = new WorkItem();
         w.clipPath = clipPath;
-        w.rdPath = "rd/" + clipPath.toLowerCase(Locale.ROOT);
+        // Sanitize OUR output filename: some vanilla clip names contain spaces (e.g.
+        // "ThroneSpeech_male/Speech_royal_ 8") and RimWorld 1.6 loads mod audio via curl
+        // file:// URLs that reject unescaped spaces. We control both the .wav name and the
+        // patched clipPath value, so replace URL-hostile chars consistently here.
+        w.rdPath = ("rd/" + clipPath.toLowerCase(Locale.ROOT)).replaceAll("[^a-z0-9/._-]+", "_");
         w.clip = clip;
         out.put(clipPath, w);
     }

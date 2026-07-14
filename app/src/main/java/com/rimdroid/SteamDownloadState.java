@@ -43,6 +43,10 @@ public final class SteamDownloadState
     private volatile boolean cancelling;
     /** Instance to auto-set the recommended GPU driver on after a successful GAME download (else null). */
     private volatile String adviseInstance;
+    /** Completion must survive a detached/recreated DownloadFragment: driver setup is triggered there. */
+    private String pendingFinishedMessage;
+    /** Driver selection is applied by the worker; the UI only consumes this result for its dialog. */
+    private GpuDriverAdvisor.Result pendingDriverResult;
 
     public boolean isDownloading() { return downloading; }
     public boolean isCancelling() { return cancelling; }
@@ -50,6 +54,12 @@ public final class SteamDownloadState
     public int getPercent() { return percent; }
     public boolean isIndeterminate() { return indeterminate; }
     public String getAdviseInstance() { return adviseInstance; }
+
+    public synchronized GpuDriverAdvisor.Result takeDriverResult() {
+        GpuDriverAdvisor.Result result = pendingDriverResult;
+        pendingDriverResult = null;
+        return result;
+    }
 
     /** Register the running downloader so the user can cancel it. */
     public void setActive(Cancellable c) { active = c; cancelling = false; }
@@ -65,8 +75,11 @@ public final class SteamDownloadState
     }
 
     /** Called on the main thread by the fragment when it (re)appears or goes away. */
-    public void setView(View v) { this.view = v; }
-    public void clearView(View v) { if (this.view == v) this.view = null; }
+    public synchronized void setView(View v) {
+        this.view = v;
+        if (pendingFinishedMessage != null) main.post(this::deliverPendingFinished);
+    }
+    public synchronized void clearView(View v) { if (this.view == v) this.view = null; }
 
     /** Start a new download session: clears the log and raises the keep-alive service.
      *  @param adviseInstance instance to auto-set the recommended driver on (GAME download), else null. */
@@ -77,6 +90,10 @@ public final class SteamDownloadState
         indeterminate = true;
         percent = -1;
         this.adviseInstance = adviseInstance;
+        synchronized (this) {
+            pendingFinishedMessage = null;
+            pendingDriverResult = null;
+        }
         DownloadKeepAliveService.start(appCtx);
     }
 
@@ -107,10 +124,31 @@ public final class SteamDownloadState
         downloading = false;
         cancelling = false;
         active = null;
+        GpuDriverAdvisor.Result driverResult = null;
+        String instance = adviseInstance;
+        if (instance != null && !isError(message)) {
+            driverResult = GpuDriverAdvisor.applyRecommendedDriver(instance);
+        }
+        synchronized (this) {
+            pendingFinishedMessage = message;
+            pendingDriverResult = driverResult;
+        }
         if (appCtx != null) DownloadKeepAliveService.stop(appCtx);
-        main.post(() -> {
-            if (view != null) { view.onLog(getLog()); view.onFinished(message); }
-        });
+        main.post(this::deliverPendingFinished);
+    }
+
+    /** Deliver completion exactly once, now or when the download screen is attached again. */
+    private void deliverPendingFinished() {
+        final View target;
+        final String message;
+        synchronized (this) {
+            target = view;
+            message = pendingFinishedMessage;
+            if (target == null || message == null) return;
+            pendingFinishedMessage = null;
+        }
+        target.onLog(getLog());
+        target.onFinished(message);
     }
 
     @Override

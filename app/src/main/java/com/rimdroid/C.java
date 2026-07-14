@@ -6,6 +6,12 @@ public class C {
 
     public static class deps {
         public static final String ROOT = "dependencies";
+        // Content revision of assets/bundles/libs.tar.xz. BUMP whenever the bundle changes so existing
+        // installs (which already have areDependenciesInstalled=true) re-extract it on next app open and
+        // pick up added/updated libs — a plain boolean flag would leave updaters on the old libs.
+        //   v1 = original bundle (renderer + 7 basic x86_64 libs)
+        //   v2 = + 24 Debian x86_64 X11 client libs (libX11/xcb/Xrandr…) for RimWorld 1.6 SDL video
+        public static final int BUNDLE_VERSION = 2;
         // x86_64 game libs (libgcc_s.so.1, libjniwrapper.so, etc.)
         public static final String LIBS_LINUX_X86_64 = ROOT + "/linux-x86_64";
         // Android ARM64 renderer libs — all in one flat directory
@@ -30,6 +36,7 @@ public class C {
             public static final String GAME_INSTANCES            = "gameInstances";
             public static final String LAUNCHER_PREFS            = "launcherPrefs";
             public static final String ARE_DEPENDENCIES_INSTALLED = "areDependenciesInstalled";
+            public static final String DEPENDENCIES_BUNDLE_VERSION = "dependenciesBundleVersion";
             public static final String IS_LEGAL_NOTICE_ACCEPTED  = "isLegalNoticeAccepted";
         }
     }

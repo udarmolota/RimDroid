@@ -411,6 +411,8 @@ public abstract class WindowRequests {
         short x = window != null ? window.getX() : 0;
         short y = window != null ? window.getY() : 0;
         short borderWidth = window != null ? window.getBorderWidth() : 0;
+        android.util.Log.i("RimDroid/XServer", "GetGeometry win=0x" + Integer.toHexString(drawableId)
+                + " -> " + drawable.width + "x" + drawable.height + "+" + x + "+" + y);
 
         try (XStreamLock lock = outputStream.lock()) {
             outputStream.writeByte(RESPONSE_CODE_SUCCESS);

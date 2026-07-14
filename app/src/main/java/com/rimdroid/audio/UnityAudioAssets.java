@@ -5,8 +5,11 @@ import android.util.Log;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -135,6 +138,65 @@ public final class UnityAudioAssets {
             objs.add(o);
         }
         return objs;
+    }
+
+    /**
+     * Force {@code m_PreloadAudioData = false} on every AudioClip in an instance's resources.assets.
+     *
+     * RimWorld 1.5 and 1.6 both ship ~2400 AudioClips with PreloadAudioData=true, so Unity mass-decodes
+     * ALL of them (FSB5-Vorbis) up front during startup. Under box64 that decode is slow and memory-hungry
+     * and can hang the "Loading defs" phase / OOM on tight-memory devices. Flipping the flag to false makes
+     * each clip decode lazily on first play instead — the game still sounds identical (raw Vorbis decodes
+     * clean since the box64 qsort_r fix), it just doesn't front-load thousands of decodes.
+     *
+     * One byte per clip, patched in place via RandomAccessFile (no rewrite of the ~10 MB file). Idempotent
+     * (clips already false are skipped) and version-agnostic (the SerializedFile parser handles v21 and v22,
+     * and the AudioClip field layout up to m_PreloadAudioData is identical in Unity 2019.4 and 2022.3).
+     * Returns the number of clips flipped (0 if none / already patched), -1 on read/parse/write failure.
+     */
+    public static int patchPreloadAudioData(File instanceDir) {
+        File assets = new File(instanceDir, "RimWorldLinux_Data/resources.assets");
+        if (!assets.isFile()) return 0;
+        byte[] d;
+        try {
+            d = Files.readAllBytes(assets.toPath());
+        } catch (IOException e) {
+            Log.w(TAG, "PreloadAudioData patch: read failed: " + e);
+            return -1;
+        }
+        List<Obj> objs = parseObjects(d);
+        if (objs == null) return -1;
+        List<Long> flip = new ArrayList<>();
+        for (Obj o : objs) {
+            if (o.classId != 83) continue;                  // 83 = AudioClip
+            long off = preloadByteOffset(d, (int) o.absStart);
+            if (off < 0 || off >= d.length) continue;
+            if (d[(int) off] == 1) flip.add(off);
+        }
+        if (flip.isEmpty()) return 0;
+        try (RandomAccessFile raf = new RandomAccessFile(assets, "rw")) {
+            for (long off : flip) { raf.seek(off); raf.write(0); }
+        } catch (IOException e) {
+            Log.w(TAG, "PreloadAudioData patch: write failed: " + e);
+            return -1;
+        }
+        Log.i(TAG, "PreloadAudioData: set false on " + flip.size() + " AudioClips (lazy on-demand decode).");
+        return flip.size();
+    }
+
+    /**
+     * File offset of the {@code m_PreloadAudioData} byte inside an AudioClip object that starts at
+     * {@code start}. Layout (Unity 2019.4 / 2022.3, type-tree stripped): m_Name (aligned string),
+     * m_LoadType/m_Channels/m_Frequency/m_BitsPerSample/m_Length (5×4 B), m_IsTrackerFormat (bool, then
+     * align4), m_SubsoundIndex (4 B), then m_PreloadAudioData (bool).
+     */
+    private static int preloadByteOffset(byte[] d, int start) {
+        Cur c = new Cur(d, start);
+        c.alignedString();      // m_Name
+        c.p += 20;              // m_LoadType, m_Channels, m_Frequency, m_BitsPerSample, m_Length
+        c.p += 1; c.align4();   // m_IsTrackerFormat (bool) + align
+        c.p += 4;               // m_SubsoundIndex
+        return c.p;             // m_PreloadAudioData
     }
 
     private static long beU32(byte[] d, int o) {

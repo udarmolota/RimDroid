@@ -789,15 +789,59 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         try {
             File bin = new File(installDir, C.files.RIMWORLD_BIN);
             if (bin.exists()) bin.setExecutable(true, false);
+            if (version == Version.V1_6) {
+                // The Unity 2022 build must use RimDroid's proven X11 -> GLX -> ZFA/Zink path.
+                // Without these markers a freshly downloaded instance selects direct Vulkan and
+                // crashes in UnityPlayer while beginning its first command buffer, before Mono or
+                // any mods load. Texture compression is safe with the CompressBC low-quality shim
+                // and is required to keep 1.6 + DLC within the RAM budget on 6-8 GB devices.
+                RimWorldInstanceSetup.configure(new File(installDir), true);
+                progress("Configured RimWorld 1.6 renderer (X11 + ZFA/Zink + texture compression).");
+            }
             // Install-time save fix (box64 IMT-thunk bypass) if this RimWorld build is covered; else no-op.
             if (RimDroidApplication.APP != null)
                 SaveFixInstaller.applyTo(RimDroidApplication.APP, new File(installDir));
             LauncherPreferences.requireSingleton().setLastInstanceName(instanceName);
             GameInstanceManager.requireSingleton().reload();
             progress("Instance '" + instanceName + "' is now installed (" + RIMWORLD_APP_ID + ").");
+            backupInstanceZip(new File(installDir));
         } catch (Throwable t) {
             Log.e(TAG, "finalizeInstance failed", t);
         }
+    }
+
+    /**
+     * Copy the freshly-installed instance into a version-tagged zip under /Download/RimDroid,
+     * same folder DLC/mod archives already land in. Purely a safety net for a botched or
+     * corrupted app-private install (uninstall/reinstall wipes files/instances/, but the public
+     * Downloads copy survives) — never fatal if it fails, and never blocks re-download: a fresh
+     * download's finalizeInstance() always overwrites the previous backup for that version.
+     */
+    private void backupInstanceZip(File instanceDir) {
+        try {
+            AppStorage storage = AppStorage.requireSingleton();
+            String versionTag = readVersionTag(instanceDir);
+            File zip = new File(storage.getDownloadsDir(), "RimWorld_" + versionTag + ".zip");
+            progress("Backing up install to " + zip.getAbsolutePath() + "...");
+            ZipUtil.zipDir(instanceDir, zip);
+            progress("Backup saved: " + zip.getName());
+        } catch (Throwable t) {
+            Log.e(TAG, "backupInstanceZip failed (non-fatal)", t);
+            progress("Backup copy skipped: " + describe(t));
+        }
+    }
+
+    /** Version.txt's own content (e.g. "1.6.4871") if readable, else the requested Version enum. */
+    private String readVersionTag(File instanceDir) {
+        File versionFile = new File(instanceDir, "Version.txt");
+        if (versionFile.isFile()) {
+            try {
+                String raw = new String(java.nio.file.Files.readAllBytes(versionFile.toPath()),
+                        java.nio.charset.StandardCharsets.UTF_8).trim();
+                if (!raw.isEmpty()) return sanitizeName(raw);
+            } catch (java.io.IOException ignored) {}
+        }
+        return version == Version.V1_6 ? "1.6" : "1.5";
     }
 
     /** Exception class + message + first useful cause/frame — getMessage() alone is often null. */

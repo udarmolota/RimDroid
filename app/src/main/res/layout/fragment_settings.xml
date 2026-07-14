@@ -176,49 +176,8 @@
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- ============================ SOUND ============================ -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="14dp"
-        app:cardElevation="2dp">
-
-      <LinearLayout
-          android:layout_width="match_parent"
-          android:layout_height="wrap_content"
-          android:orientation="vertical"
-          android:padding="16dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/card_sound"
-            android:textAppearance="?attr/textAppearanceTitleLarge"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/btn_steam_spike"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/sound_generate" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/sound_generate_note"
-            android:textAppearance="?attr/textAppearanceBodySmall"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="8dp" />
-
-        <Switch
-            android:id="@+id/sw_audio"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/audio_label" />
-      </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    <!-- SOUND card removed: audio is always on (raw Vorbis works since the box64 qsort_r fix), so
+         there's no toggle and no on-device pack generation to expose. -->
 
     <!-- ============================ ADVANCED ============================ -->
     <com.google.android.material.card.MaterialCardView

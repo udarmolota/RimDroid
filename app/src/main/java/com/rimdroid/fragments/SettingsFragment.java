@@ -66,10 +66,8 @@ public class SettingsFragment extends Fragment {
         Switch swDragPan      = view.findViewById(R.id.sw_drag_pan);
         Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
-        Switch swAudio        = view.findViewById(R.id.sw_audio);
         Switch swShowFps      = view.findViewById(R.id.sw_show_fps);
         final android.widget.Button btnSmoke = view.findViewById(R.id.btn_smoketest);
-        final android.widget.Button btnSteamSpike = view.findViewById(R.id.btn_steam_spike);
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
         final TextView tvSteamDlStatus = view.findViewById(R.id.tv_steam_dl_status);
 
@@ -117,18 +115,8 @@ public class SettingsFragment extends Fragment {
         // compare devices / render scales (e.g. 720p vs native). Takes effect next game launch.
         swShowFps.setChecked(prefs.isShowFps());
         swShowFps.setOnCheckedChangeListener((btn, checked) -> prefs.setShowFps(checked));
-        // Audio is GLOBAL (experimental, default off) — the libasound→AAudio shim is loaded at game
-        // launch only when this is on. Off = clean silence (FMOD output under box64 is still garbled).
-        swAudio.setChecked(LauncherPreferences.requireSingleton().isAudioEnabled());
-        // The Sound toggle is the real master switch: it flips BOTH the audio output shim (global) AND
-        // the generated sound mod's active state in THIS instance's ModsConfig — so turning sound on/off
-        // needs no in-game mod fiddling. (Generate the pack once with the button; then just toggle.)
-        swAudio.setOnCheckedChangeListener((btn, checked) -> {
-            LauncherPreferences.requireSingleton().setAudioEnabled(checked);
-            java.io.File instDir = com.rimdroid.AppStorage.requireSingleton().getInstanceDir(instanceName);
-            String r = com.rimdroid.audio.FmodDecodeSpike.setSoundModActive(instDir, checked);
-            android.util.Log.i("RimDroid/Settings", "sound mod " + (checked ? "on" : "off") + ": " + r);
-        });
+        // Audio has no UI: it's always on. Raw Vorbis decodes clean since the box64 qsort_r fix, so the
+        // launcher loads the libasound→AAudio shim on every launch (GameLauncher) — no toggle, no pack.
 
         // Advanced: per-instance extra env vars (KEY=VALUE, space-separated). Applied last in
         // GameLauncher so they override the box64 defaults. Diagnostic/perf knob (e.g.
@@ -166,92 +154,10 @@ public class SettingsFragment extends Fragment {
             startActivity(i);
         });
 
-        // Milestone-0 auth-only spike (tag RimDroid/SteamSpike): PASSED, now redundant and easy to
-        // confuse with the download spike below (it just logs in then logs off → "nothing happens").
-        // Hidden to avoid mis-taps; the download spike does auth + download itself. Click logic kept.
-        btnSteamSpike.setVisibility(View.GONE);
-        btnSteamSpike.setOnClickListener(v -> {
-            final android.content.Context appCtx = requireContext().getApplicationContext();
-            final android.app.Activity act = requireActivity();
-            final android.os.Handler mainH = new android.os.Handler(android.os.Looper.getMainLooper());
-            final float dp = getResources().getDisplayMetrics().density;
-
-            android.widget.LinearLayout box = new android.widget.LinearLayout(act);
-            box.setOrientation(android.widget.LinearLayout.VERTICAL);
-            int pad = (int) (16 * dp);
-            box.setPadding(pad, pad, pad, 0);
-            final android.widget.EditText etUser = new android.widget.EditText(act);
-            etUser.setHint("Steam username");
-            etUser.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                    | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-            final android.widget.EditText etPass = new android.widget.EditText(act);
-            etPass.setHint("Steam password");
-            etPass.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                    | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
-            box.addView(etUser);
-            box.addView(etPass);
-
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
-                    .setTitle("Steam login (spike)")
-                    .setMessage("Sent to Steam like DepotDownloader. Then approve in Steam Mobile, or enter the Steam Guard code.")
-                    .setView(box)
-                    .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Sign in", (d, w) -> {
-                        String u = etUser.getText().toString().trim();
-                        String p = etPass.getText().toString();
-                        mainH.post(() -> android.widget.Toast.makeText(appCtx,
-                                "Steam: connecting…", android.widget.Toast.LENGTH_SHORT).show());
-                        new Thread(new com.rimdroid.SteamSpike(u, p, new com.rimdroid.SteamSpike.Listener() {
-                            @Override public java.util.concurrent.CompletableFuture<String> requestSteamGuardCode(boolean prevWrong, String email) {
-                                final java.util.concurrent.CompletableFuture<String> fut = new java.util.concurrent.CompletableFuture<>();
-                                mainH.post(() -> {
-                                    final android.widget.EditText etCode = new android.widget.EditText(act);
-                                    etCode.setHint(email != null ? ("Code emailed to " + email) : "Steam Guard code");
-                                    etCode.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                                            | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-                                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
-                                            .setTitle(prevWrong ? "Code incorrect — try again" : "Enter Steam Guard code")
-                                            .setView(etCode)
-                                            .setCancelable(false)
-                                            .setPositiveButton("OK", (dd, ww) -> fut.complete(etCode.getText().toString().trim()))
-                                            .show();
-                                });
-                                return fut;
-                            }
-                            @Override public void onResult(String account, String token) {
-                                mainH.post(() -> android.widget.Toast.makeText(appCtx,
-                                        "Steam auth OK: " + account, android.widget.Toast.LENGTH_LONG).show());
-                            }
-                            @Override public void onDone(String message) {
-                                mainH.post(() -> android.widget.Toast.makeText(appCtx,
-                                        "Steam spike: " + message, android.widget.Toast.LENGTH_LONG).show());
-                            }
-                        }), "SteamSpike").start();
-                    })
-                    .show();
-        });
+        // (The old Steam auth-only spike + on-device sound-pack generator shared this button; both are
+        //  gone now — Steam auth moved to the Download screen, and audio is always-on raw Vorbis.)
 
         // Anon-mod-download spike — REMOVED (the real anonymous downloader shipped). Button hidden.
-        btnSteamSpike.setVisibility(View.GONE);
-
-        // FMOD decode SPIKE (repurposes the redundant Steam-login spike button). Proves on-device
-        // FSB5-Vorbis -> PCM WAV via the bundled native libfmod.so (bypasses box64's broken Vorbis).
-        // Test: adb push _spike_entry.fsb / _spike_toggle.fsb to /sdcard/Download, tap, then pull
-        // /sdcard/Download/rd_spike_*.wav and compare to the oracle. (Overrides the GONE/onClick above.)
-        // Label/caption come from the layout ("Generate / update sound pack"). Decode runs in the
-        // ":fmoddec" process (clean dlopen → libfmod loads OK), writes the mod into the instance and
-        // enables it. Completion is reported by FmodDecodeService (toast); here we just kick it off.
-        btnSteamSpike.setVisibility(View.VISIBLE);
-        btnSteamSpike.setOnClickListener(v -> {
-            final android.content.Context appCtx = requireContext().getApplicationContext();
-            com.rimdroid.audio.FmodDecodeService.start(appCtx, instanceName);
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                    .setTitle(R.string.sound_installing_title)
-                    .setMessage(R.string.sound_generate_toast)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show();
-        });
-
         // Steam downloader SPIKE button (full game download) HIDDEN — superseded by the real
         // "Download game (Steam)" screen. Click logic kept but unreachable.
         btnSteamDl.setVisibility(View.GONE);

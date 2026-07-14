@@ -44,7 +44,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
 
     private EditText etInstance, etUser, etPass, etManifest, etModsIds, etModsBrowserId;
     private Button btnStart, btnDlcStart, btnModsStart, btnModsBrowser, btnCancel;
-    private CheckBox cbRoyalty, cbIdeology, cbBiotech, cbAnomaly;
+    private CheckBox cbRoyalty, cbIdeology, cbBiotech, cbAnomaly, cbOdyssey;
     private android.widget.RadioGroup rgVersion;
     private ProgressBar progress;
     private TextView tvStatus;
@@ -71,6 +71,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         cbIdeology = v.findViewById(R.id.cb_dlc_ideology);
         cbBiotech  = v.findViewById(R.id.cb_dlc_biotech);
         cbAnomaly  = v.findViewById(R.id.cb_dlc_anomaly);
+        cbOdyssey  = v.findViewById(R.id.cb_dlc_odyssey);
         etModsIds  = v.findViewById(R.id.et_mods_ids);
         btnModsStart = v.findViewById(R.id.btn_mods_start);
         etModsBrowserId = v.findViewById(R.id.et_mods_browser_id);
@@ -113,6 +114,10 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             btnInstallContent.setVisibility(game ? View.GONE : View.VISIBLE);
         });
         toggle.check(R.id.btn_type_game);   // default to Game
+
+        rgVersion.setOnCheckedChangeListener((group, checkedId) ->
+                updateOdysseyVisibility(checkedId == R.id.rb_dl_16));
+        updateOdysseyVisibility(rgVersion.getCheckedRadioButtonId() == R.id.rb_dl_16);
 
         // Re-attach to a download already running in the background (the worker thread outlives this
         // fragment via SteamDownloadState), restoring the log + progress + "busy" state on return.
@@ -176,6 +181,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         if (cbIdeology.isChecked()) dlcs.add(new SteamDownloadSpike.Dlc(1392840, "Ideology"));
         if (cbBiotech.isChecked())  dlcs.add(new SteamDownloadSpike.Dlc(1826140, "Biotech"));
         if (cbAnomaly.isChecked())  dlcs.add(new SteamDownloadSpike.Dlc(2380740, "Anomaly"));
+        if (cbOdyssey.isChecked())  dlcs.add(new SteamDownloadSpike.Dlc(3022790, "Odyssey"));
         if (dlcs.isEmpty()) {
             Toast.makeText(requireContext(), "Pick at least one DLC", Toast.LENGTH_SHORT).show();
             return;
@@ -311,6 +317,12 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     }
 
     // ---- shared ----
+    private void updateOdysseyVisibility(boolean rimWorld16) {
+        if (cbOdyssey == null) return;
+        cbOdyssey.setVisibility(rimWorld16 ? View.VISIBLE : View.GONE);
+        if (!rimWorld16) cbOdyssey.setChecked(false);
+    }
+
     private boolean loginFilled() {
         if (text(etUser).isEmpty()) { etUser.setError("Required"); return false; }
         if (etPass.getText().toString().isEmpty()) { etPass.setError("Required"); return false; }
@@ -362,12 +374,10 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         if (isAdded()) {
             Toast.makeText(requireContext().getApplicationContext(), message, Toast.LENGTH_LONG).show();
         }
-        // After a successful GAME download, detect the GPU and set the recommended Vulkan driver on
-        // the new instance (the state remembers which instance to advise on).
-        String advise = SteamDownloadState.get().getAdviseInstance();
-        if (advise != null && !SteamDownloadState.isError(message) && isAdded()) {
-            adviseDriverFor(advise);
-        }
+        // The worker already applied the recommendation, even if this fragment was detached when
+        // the download finished. Here we only show its one-time explanation.
+        com.rimdroid.GpuDriverAdvisor.Result driver = SteamDownloadState.get().takeDriverResult();
+        if (driver != null && driver.applied && isAdded()) showDriverResult(driver);
     }
 
     @Override
@@ -389,19 +399,12 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
     }
 
     /** Off-thread GPU detect → set the instance's recommended driver → inform the user. */
-    private void adviseDriverFor(final String instanceName) {
-        new Thread(() -> {
-            final com.rimdroid.GpuDriverAdvisor.Result r =
-                    com.rimdroid.GpuDriverAdvisor.applyRecommendedDriver(instanceName);
-            mainH.post(() -> {
-                if (!isAdded() || !r.applied) return;
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
-                        .setTitle(R.string.driver_auto_set_title)
-                        .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-            });
-        }, "rd-gpu-advise").start();
+    private void showDriverResult(com.rimdroid.GpuDriverAdvisor.Result r) {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
+                .setTitle(R.string.driver_auto_set_title)
+                .setMessage(getString(R.string.driver_auto_set, r.gpuName, r.driverLabel))
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     private void scrollLogToBottom() {

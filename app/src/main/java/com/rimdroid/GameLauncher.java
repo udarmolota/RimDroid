@@ -118,40 +118,20 @@ public class GameLauncher {
 
     public static void launch(GameInstance gameInstance) throws ErrnoException {
 
-        // --- Audio (experimental, GLOBAL toggle, default OFF) ---
-        // Load the libasound→AAudio shim only when audio is enabled, right before launch, so the
-        // toggle takes effect on the very next game start (no app restart). Its DT_SONAME is
-        // "libasound.so.2", so loading it here registers it under that soname before the guest's FMOD
-        // dlopen("libasound.so.2") runs → sound via AAudio. OFF (default) = FMOD finds no audio device
-        // = clean silence (FMOD output under box64 is currently garbled noise). Best-effort.
-        // Gate on the RimDroidSound mod being present in THIS instance: box64's Vorbis/codec decode is
-        // broken, so RimWorld's stock audio plays as a screech. The RimDroidSound mod swaps those clips
-        // for plain PCM (clean). Without the mod, enabling sound = screech — so if the mod isn't there,
-        // we keep the shim unloaded (silence) even when the toggle is on. Sound effectively turns on
-        // together with the mod; no screech on a first launch before the mod is added.
-        java.io.File rdInstRoot = new java.io.File(gameInstance.getGamePath());
-        boolean rdAudioOn = LauncherPreferences.requireSingleton().isAudioEnabled();
-        // Reliable activation: sync the generated-sound mod's ModsConfig entry to the audio toggle right
-        // here, at launch. The in-Settings toggle can fire BEFORE ModsConfig exists (RimWorld creates it
-        // on first launch), so the toggle alone wasn't enough; by launch time ModsConfig exists (2nd
-        // launch onward) and we add/remove rimdroid.sound to match the toggle. Build-only generation +
-        // this = activation never depends on when the toggle was flipped.
-        if (com.rimdroid.audio.FmodDecodeSpike.isPackComplete(rdInstRoot)) {
-            com.rimdroid.audio.FmodDecodeSpike.setSoundModActive(rdInstRoot, rdAudioOn);
-        }
-        if (rdAudioOn) {
-            if (!com.rimdroid.audio.FmodDecodeSpike.isSoundReady(rdInstRoot)) {
-                postLog("Audio: sound pack not ready/active in this instance yet — staying silent this "
-                        + "run (this avoids the un-modded screech). Sound turns on by itself once the pack "
-                        + "finishes generating and is active in ModsConfig; relaunch to hear it.");
-            } else {
-                try {
-                    System.loadLibrary("asoundshim");
-                    postLog("Audio: libasound→AAudio shim loaded (experimental)");
-                } catch (Throwable t) {
-                    Log.e(TAG, "asound shim load failed; game will be silent", t);
-                }
-            }
+        // --- Audio (always on) ---
+        // Load the libasound→AAudio output shim on every launch. Its DT_SONAME is "libasound.so.2", so
+        // loading it here registers it under that soname before the guest FMOD's dlopen("libasound.so.2")
+        // runs → FMOD output reaches AAudio. Best-effort: if it fails to load, the game just runs silent.
+        // HISTORY: this used to be GATED behind a global toggle + the RimDroidSound PCM pack, because
+        // box64 mis-decoded Vorbis (screech) so raw stock audio was unusable. The box64 qsort_r fix
+        // (wrappedlibc.c) repaired FMOD's Vorbis codebook build, so RAW Vorbis now decodes clean —
+        // verified 2026-07-14 (DLC mech SFX + the full instrumental soundtrack). Sound just works now,
+        // so there's no toggle and no pack dependency: the shim always loads.
+        try {
+            System.loadLibrary("asoundshim");
+            postLog("Audio: libasound→AAudio shim loaded (raw Vorbis)");
+        } catch (Throwable t) {
+            Log.e(TAG, "asound shim load failed; game will be silent", t);
         }
 
         // --- Box64 tuning ---
@@ -219,6 +199,14 @@ public class GameLauncher {
             if (testCompress)
                 android.util.Log.i("RimDroid", "GameLauncher: rd_texcompress -> textureCompression=True (loop-cap shim test)");
         }
+        // Native box64 save-fix scanner OFF for EVERY launch (2026-07-14). The save-bug ROOT was
+        // PROVEN to be box64's broken Android qsort mis-sorting Mono's IMT collision entries
+        // (imt_sort_slot_entries → imt_emit_ir; shadow-sorter experiment + libmono disassembly) —
+        // fixed at the root in wrappedlibc.c, so the scanner band-aid is redundant on 1.5 too, and
+        // on 1.6 it actively CRASHED saves (1.5-Mono offsets on 2022.3 Mono). Code stays in the
+        // tree (rd_savefix_off() checks mere PRESENCE of this env var); the shadow-sorter
+        // diagnostic (RIMDROID QSORTDIV) stays active as the sensor for the no-fix validation runs.
+        Os.setenv("RIMDROID_NO_SAVEFIX", "1", true);
         // RimWorld 1.6 GLES pivot: presence of an "rd_force_gles" marker denies Vulkan to Unity
         // (my_vkCreateInstance -> VK_ERROR_INCOMPATIBLE_DRIVER) so its auto graphics-API selection
         // falls back to the GfxDeviceGLES backend, which presents via native EGL and bypasses the

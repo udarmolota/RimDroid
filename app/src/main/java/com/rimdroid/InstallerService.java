@@ -114,6 +114,12 @@ public class InstallerService extends Service {
         File zipFile = new File(zipPath);
         if (!zipFile.exists()) throw new Exception("Zip not found: " + zipPath);
 
+        // Make sure the shared deps bundle is present AND at the current revision before setting up the
+        // instance (which stamps deps-installed at the end). This guarantees e.g. the x86_64 X11 client
+        // libs are laid down for a fresh install even if the user jumps straight to "Add Instance", and
+        // re-extracts for updaters whose on-disk deps predate a bundle bump. Idempotent + quick (~24 MB).
+        if (!prefs.areDependenciesInstalled()) ensureDepsExtracted();
+
         File instanceDir = storage.getInstanceDir(instanceName);
         // NEVER overwrite an existing instance — that silently wiped the user's data when a new
         // instance was given a name that already existed (e.g. auto-filled from the zip filename).
@@ -124,23 +130,35 @@ public class InstallerService extends Service {
                     + "(or delete it first).");
         }
 
-        // Validate the archive BEFORE creating any folders (Zomdroid-style): it must contain the
-        // RimWorldLinux binary somewhere. Otherwise we'd extract a non-RimWorld archive and leave an
-        // orphaned instance folder that the launcher silently hides (fails isInstalled()).
-        broadcastProgress("Checking archive...");
-        if (!zipContainsEntry(zipFile, C.files.RIMWORLD_BIN)) {
-            throw new Exception("RimWorldLinux not found in the archive — this doesn't look like a "
-                    + "RimWorld Linux build. Nothing was installed.");
+        // Two input shapes:
+        //  (1) GOG DRM-free installer(s): a single .sh, or a .zip bundling the base game + DLC .sh
+        //      installers. Extracted by GogInstallerExtractor (strips the data/noarch/game/ prefix,
+        //      merges DLC into Data/), yielding RimWorldLinux at the instance root directly.
+        //  (2) our normal RimWorld .zip: RimWorldLinux somewhere inside → extract + re-root.
+        boolean gog = GogInstallerExtractor.looksLikeGogBundle(zipFile);
+        if (gog) {
+            broadcastProgress("Extracting GOG installer(s)...");
+            GogInstallerExtractor.extract(zipFile, instanceDir,
+                    new File(storage.getCachePath()), this::broadcastProgress);
+        } else {
+            // Validate the archive BEFORE creating any folders (Zomdroid-style): it must contain the
+            // RimWorldLinux binary somewhere. Otherwise we'd extract a non-RimWorld archive and leave
+            // an orphaned instance folder that the launcher silently hides (fails isInstalled()).
+            broadcastProgress("Checking archive...");
+            if (!zipContainsEntry(zipFile, C.files.RIMWORLD_BIN)) {
+                throw new Exception("RimWorldLinux not found in the archive — this doesn't look like a "
+                        + "RimWorld Linux build (nor a GOG installer). Nothing was installed.");
+            }
+            instanceDir.mkdirs();
+            broadcastProgress("Extracting instance...");
+            extractZip(zipFile, instanceDir);
         }
-
-        instanceDir.mkdirs();
-        broadcastProgress("Extracting instance...");
-        extractZip(zipFile, instanceDir);
 
         // Re-root: the game files may sit inside a wrapper folder (e.g. "game/RimWorldLinux") at any
         // depth. Find RimWorldLinux and lift its folder's contents to the instance top, dropping the
         // wrappers, so isInstalled() (which checks the root) passes. If it's somehow missing after
         // extraction, delete the whole instance dir — never leave an orphaned, hidden instance.
+        // (GOG extraction already lands RimWorldLinux at the root, so this is a no-op there.)
         File bin = new File(instanceDir, C.files.RIMWORLD_BIN);
         if (!bin.exists()) {
             File found = findFile(instanceDir, C.files.RIMWORLD_BIN);
@@ -157,10 +175,14 @@ public class InstallerService extends Service {
         }
         bin.setExecutable(true);
 
-        // Install-time save fix: bspatch the user's Assembly-CSharp.dll if this RimWorld build is covered
-        // (box64 IMT-thunk corruption bypass). Unknown build → no-op. Never fatal to the install.
-        broadcastProgress("Applying save fix...");
-        SaveFixInstaller.applyTo(getApplicationContext(), instanceDir);
+        if (RimWorldInstanceSetup.configureDetected(instanceDir))
+            broadcastProgress("Configured RimWorld 1.6 renderer and texture compression.");
+
+        // Install-time save fix (Assembly-CSharp bspatch) DISABLED 2026-07-14: the save-bug root
+        // (box64's broken Android qsort mis-building Mono IMT tables) is fixed at the root in
+        // box64/wrappedlibc.c, so the IL bypass is redundant. Code + assets kept for rollback.
+        // broadcastProgress("Applying save fix...");
+        // SaveFixInstaller.applyTo(getApplicationContext(), instanceDir);
 
         prefs.setLastInstanceName(instanceName);
         prefs.setDependenciesInstalled(true);
@@ -173,23 +195,29 @@ public class InstallerService extends Service {
     // INSTALL DEPS FROM ASSETS (libs.tar.xz)
     // =========================================================================
 
+    /** TASK_INSTALL_DEPS entry point: extract the bundle, then signal completion to the UI. */
     private void installDepsFromAssets() throws Exception {
-        broadcastProgress("Installing renderer libraries from assets...");
+        ensureDepsExtracted();
+        broadcastDone(true, "Renderer libraries installed");
+    }
 
-        // For now: extract libs.tar.xz from assets to deps dir
-        // The .so files for GL4ES and Zink are bundled in assets/bundles/libs.tar.xz
+    /**
+     * Extract assets/bundles/libs.tar.xz into the deps dir (renderer libs, x86_64 game + X11 client libs,
+     * Vulkan drivers, fmod, …) and stamp the current bundle revision. Overwrites in place, so it also
+     * refreshes an older on-disk bundle after a BUNDLE_VERSION bump. No broadcastDone — safe to call as a
+     * sub-step of another install task.
+     */
+    private void ensureDepsExtracted() throws Exception {
+        broadcastProgress("Installing renderer libraries from assets...");
         File depsDir = new File(storage.getHomePath(), C.deps.ROOT);
         depsDir.mkdirs();
-
         try (InputStream in = getAssets().open(C.assets.BUNDLES_LIBS)) {
             File tarFile = new File(storage.getCachePath(), "libs.tar.xz");
             copyStream(in, tarFile);
             extractTarXz(tarFile, depsDir);
             tarFile.delete();
         }
-
         prefs.setDependenciesInstalled(true);
-        broadcastDone(true, "Renderer libraries installed");
     }
 
     private void extractTarXz(File tarXz, File destDir) throws Exception {

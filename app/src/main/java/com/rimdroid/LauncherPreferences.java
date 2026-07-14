@@ -102,12 +102,19 @@ public class LauncherPreferences {
 
     // --- Dependencies ---
 
+    /** True only if the deps bundle has been extracted AND at the current bundle revision — so a bundle
+     *  change (BUNDLE_VERSION bump) makes this false again and the launcher re-extracts to pick up new
+     *  libs. Both conditions matter: the boolean covers "ever installed"; the version covers "up to date". */
     public boolean areDependenciesInstalled() {
-        return prefs.getBoolean(C.shprefs.keys.ARE_DEPENDENCIES_INSTALLED, false);
+        return prefs.getBoolean(C.shprefs.keys.ARE_DEPENDENCIES_INSTALLED, false)
+                && prefs.getInt(C.shprefs.keys.DEPENDENCIES_BUNDLE_VERSION, 0) >= C.deps.BUNDLE_VERSION;
     }
 
     public void setDependenciesInstalled(boolean value) {
-        prefs.edit().putBoolean(C.shprefs.keys.ARE_DEPENDENCIES_INSTALLED, value).apply();
+        prefs.edit()
+                .putBoolean(C.shprefs.keys.ARE_DEPENDENCIES_INSTALLED, value)
+                .putInt(C.shprefs.keys.DEPENDENCIES_BUNDLE_VERSION, value ? C.deps.BUNDLE_VERSION : 0)
+                .apply();
     }
 
     // --- Audio (experimental) ---

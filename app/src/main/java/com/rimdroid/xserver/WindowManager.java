@@ -103,6 +103,40 @@ public class WindowManager extends XResourceManager {
         parent.removeChild(window);
     }
 
+    // RimWorld 1.6.4871 stall: Unity's Screen stays 0x0 through startup ("Resolution too small
+    // (0x0)") and managed loading never proceeds, while the X window/ZFA drawable is a correct
+    // 1685x778. SDL2 only refreshes its cached window size from ConfigureNotify, and our
+    // same-geometry notify suppression (brief v12, configureWindow above) can starve it at the
+    // exact moment Unity applies the prefs resolution. Kick: re-deliver the window's CURRENT
+    // geometry as ConfigureNotify a few seconds after mapping — past the fragile splash frame —
+    // so SDL/Unity resync. A real X server may emit such notifies at any time; this is legal.
+    private final java.util.Set<Integer> configureKicked = new java.util.HashSet<>();
+
+    private void scheduleConfigureKick(final Window window) {
+        if (window == rootWindow || !window.isInputOutput()) return;
+        if (window.getParent() != rootWindow) return;                 // top-level windows only
+        synchronized (configureKicked) {
+            if (!configureKicked.add(window.id)) return;              // once per window
+        }
+        Thread t = new Thread(new Runnable() {
+            public void run() {
+                for (int i = 0; i < 2; i++) {
+                    try { Thread.sleep(i == 0 ? 5000 : 12000); } catch (InterruptedException e) { return; }
+                    Window w = getWindow(window.id);
+                    if (w == null || !w.attributes.isMapped()) return;
+                    android.util.Log.i("RimDroid/XServer", "ConfigureNotify KICK #" + (i + 1)
+                            + " win=0x" + Integer.toHexString(w.id)
+                            + " " + w.getWidth() + "x" + w.getHeight());
+                    w.sendEvent(Event.STRUCTURE_NOTIFY, new ConfigureNotify(w, w, w.previousSibling(),
+                            w.getX(), w.getY(), w.getWidth(), w.getHeight(),
+                            w.getBorderWidth(), w.attributes.isOverrideRedirect()));
+                }
+            }
+        }, "rd-configure-kick");
+        t.setDaemon(true);
+        t.start();
+    }
+
     public void mapWindow(Window window) {
         android.util.Log.i("RimDroid/XServer", "MAPWIN win=0x" + Integer.toHexString(window.id)
                 + " wasMapped=" + window.attributes.isMapped()
@@ -117,6 +151,7 @@ public class WindowManager extends XResourceManager {
                 // RimDroid: a real X server also reports visibility after mapping — SDL2 tracks it.
                 window.sendEvent(Event.VISIBILITY_CHANGE, new com.rimdroid.xserver.events.VisibilityNotify(window));
                 window.sendEvent(Event.EXPOSURE, new Expose(window));
+                scheduleConfigureKick(window);
                 triggerOnMapWindow(window);
             }
             else parent.sendEvent(Event.SUBSTRUCTURE_REDIRECT, new MapRequest(parent, window));

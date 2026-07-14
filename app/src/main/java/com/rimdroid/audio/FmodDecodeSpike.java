@@ -143,38 +143,13 @@ public final class FmodDecodeSpike {
                .append("  </Operation>\n");
         }
 
-        // 3) Music: every SongDef's Vorbis is garbled under box64, so silence ALL music, then restore
-        //    the menu EntrySong as clean stereo PCM (decoded from the user's own files). Order matters:
-        //    the silence-all patch must come BEFORE the EntrySong-specific one.
-        boolean menuMusicOk = false;
-        if (plan.menuMusic != null) {
-            UnityAudioAssets.WorkItem m = plan.menuMusic;
-            File mout = new File(sounds, m.rdPath + ".wav");
-            File mp = mout.getParentFile(); if (mp != null) mp.mkdirs();
-            try {
-                // stereo (outChannels=2), native rate (targetRate=0) -> clean music quality
-                int r = nativeDecodeClip(fmod[0], ver, resource.getAbsolutePath(),
-                        m.clip.resOffset, m.clip.resSize, mout.getAbsolutePath(),
-                        m.clip.freq, 0, 2);
-                menuMusicOk = (r == 0);
-                Log.i("RimDroid/SoundPack", "menu music decode r=" + r + " -> " + mout.length() + " bytes");
-            } catch (Throwable t) { Log.w("RimDroid/SoundPack", "menu music decode failed", t); }
-        }
-        // _silence.wav (tiny silent mono clip) for all the muted SongDefs.
-        File silence = new File(sounds, "rd/_silence.wav");
-        writeSilenceWav(silence, SFX_RATE, 1.5);
-        // silence every SongDef
-        ops.append("  <Operation Class=\"PatchOperationReplace\">\n")
-           .append("    <xpath>/Defs/SongDef/clipPath</xpath>\n")
-           .append("    <value><clipPath>rd/_silence</clipPath></value>\n")
-           .append("  </Operation>\n");
-        // restore the menu song with clean PCM
-        if (menuMusicOk) {
-            ops.append("  <Operation Class=\"PatchOperationReplace\">\n")
-               .append("    <xpath>/Defs/SongDef[defName=\"EntrySong\"]/clipPath</xpath>\n")
-               .append("    <value><clipPath>").append(xmlEsc(plan.menuMusic.rdPath)).append("</clipPath></value>\n")
-               .append("  </Operation>\n");
-        }
+        // 3) Music: NO LONGER SILENCED. The box64 qsort_r fix (wrappedlibc.c) repaired FMOD's Vorbis
+        //    codebook build (the sort corruption that garbled all Vorbis → "screech"), so the game's
+        //    raw Vorbis soundtrack now decodes cleanly on demand. Verified 2026-07-14: in-game songs
+        //    play clean. We therefore leave every SongDef pointing at its ORIGINAL clip (no _silence
+        //    patch) and no longer need to pre-decode the menu EntrySong to PCM — music streams raw.
+        //    (Kept as one place to re-mute if a future box64/Unity regression reintroduces the screech.)
+        // (menu + in-game music now stream raw Vorbis; nothing to do here)
 
         // About.xml + Patches/Audio.xml
         writeFile(new File(about, "About.xml"),
@@ -201,7 +176,7 @@ public final class FmodDecodeSpike {
           .append(" in ").append(dt / 1000).append("s; ~").append(bytes / (1024 * 1024)).append(" MB\n")
           .append("patches: ").append(plan.folderPatches.size()).append(" folder + ")
           .append(plan.singlePatches.size()).append(" single\n")
-          .append("music: all SongDefs silenced; menu music ").append(menuMusicOk ? "decoded" : "MISSING").append('\n')
+          .append("music: raw Vorbis (soundtrack no longer silenced — qsort fix)\n")
           .append("mod built — enable via the \"Game sound\" toggle\n");
         Log.i("RimDroid/SoundPack", sb.toString());
         return sb.toString();

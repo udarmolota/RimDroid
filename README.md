@@ -13,16 +13,14 @@ on Android phones, with real GPU rendering, touch controls, gamepad support, and
 
 ## Features
 
-- ✔️ Runs **RimWorld 1.5** (the native Linux x86_64 build) on ARM64 phones
+- ✔️ Runs **RimWorld 1.5** and **RimWorld 1.6** (the native Linux x86_64 build) on ARM64 phones
 - ✔️ **Editable on-screen touch controls** — move / resize / opacity, add buttons bound to any key or mouse action
 - ✔️ **In-app downloads** — get the game, DLC, and Workshop mods straight from Steam
 - ✔️ **Mods** — Harmony patching works (tested: RimHUD, Pick Up And Haul, Camera+); needs Harmony 2.2.2
 - ✔️ **Multiple instances** — each install is a card with its own settings (renderer, driver, controls)
 - ✔️ **Gamepad support** — version 1.0 with a button-remapping wizard for controllers with swapped buttons
-- ✔️ **Saves work reliably** — the "colonists vanish after save / reload" bug is fixed, built in, **no mod needed**
 - ✔️ **Compatibility mode** — helps stubborn devices launch and lets mods load (Settings → Advanced)
 - ✔️ **On-screen FPS counter** (Settings → Video)
-- ✔️ **Game sound** — generate a sound pack from your own RimWorld audio (Settings → Sound)
 - ✔️ **Save / Settings / layout import & export**
 - ✔️ Haptics, night mode, and a Russian translation
 - ⭕ **On-screen keyboard** for text fields not yet available
@@ -50,7 +48,7 @@ it and send us a log.
 - Android 11+
 - A 64-bit (ARM64) device; **8 GB+ RAM** recommended
 - ~5–10 GB free storage for the game, DLC, and mods
-- A copy of RimWorld you own (Steam)
+- A copy of RimWorld you own (Steam/GOG)
 
 ## Roadmap
 

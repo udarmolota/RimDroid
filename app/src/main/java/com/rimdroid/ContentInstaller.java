@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -25,14 +26,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Installs a picked .zip (mod or DLC) into a chosen instance. One unified flow: the user picks the
+ * Installs a picked file (mod or DLC) into a chosen instance. One unified flow: the user picks the
  * file from anywhere on the phone (SAF — no storage permission needed, works for the /Download/RimDroid
- * zips too), then picks the target instance and Mod/DLC. Reuses {@link ModImporter} (finds the
- * About/About.xml root and strips wrappers like the depot's {@code Data/} folder).
- *   • Mod  → instance/Mods/&lt;folder&gt;
- *   • DLC  → instance/Data/&lt;folder&gt;   (where RimWorld expects official expansions)
+ * zips too), then picks the target instance and Mod/DLC.
+ *   • Mod zip → instance/Mods/&lt;folder&gt;
+ *   • DLC zip → instance/Data/&lt;folder&gt;   (where RimWorld expects official expansions)
+ * Both reuse {@link ModImporter} (finds the About/About.xml root and strips wrappers like the depot's
+ * {@code Data/} folder).
+ *   • GOG DLC installer (.sh) → extracted by {@link GogInstallerExtractor} into the instance root,
+ *     since its payload is already game-relative (carries a ready-made {@code Data/<Expansion>}).
+ *     It has no About/About.xml, so the ModImporter path can't handle it.
  */
 public final class ContentInstaller {
+    private static final String TAG = "RimDroid/Content";
 
     private ContentInstaller() {}
 
@@ -70,6 +76,13 @@ public final class ContentInstaller {
         rg.addView(rbMod); rg.addView(rbDlc); rg.check(1);
         box.addView(rg);
 
+        // A GOG .sh installer places its own content (Data/<Expansion>), so the choice above is
+        // ignored for it — say so rather than let the picked radio look meaningful.
+        TextView hint = new TextView(act);
+        hint.setText("A GOG DLC installer (.sh) is detected automatically and installs itself into Data/.");
+        hint.setPadding(0, (int) (8 * dp), 0, 0);
+        box.addView(hint);
+
         new MaterialAlertDialogBuilder(act)
                 .setTitle("Install mod / DLC")
                 .setView(box)
@@ -102,6 +115,15 @@ public final class ContentInstaller {
                 main.post(() -> Toast.makeText(act, "Read failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 return;
             }
+            // A GOG .sh installer is NOT a mod zip: it has no About/About.xml (ModImporter would fail
+            // with "missing About/About.xml"), and its payload is already game-root-relative — a DLC
+            // installer carries a ready-made Data/<Expansion>. So extract it into the instance ROOT
+            // and let its own layout place the content; the Mod/DLC choice doesn't apply.
+            if (GogInstallerExtractor.looksLikeGogBundle(cache)) {
+                installGogInstaller(act, cache, instance, main);
+                return;
+            }
+
             ModImporter.Result r = ModImporter.importZip(cache, destDir, fallback);
             //noinspection ResultOfMethodCallIgnored
             cache.delete();
@@ -118,6 +140,44 @@ public final class ContentInstaller {
                 new MaterialAlertDialogBuilder(act).setMessage(msg).setPositiveButton("OK", null).show();
             });
         }, "rd-content-install").start();
+    }
+
+    /** Install a GOG installer (a single {@code .sh}, or a zip bundling installers) into
+     *  {@code instance}: extract into the game root — its payload is game-relative, so a DLC's
+     *  Data/&lt;Expansion&gt; lands where RimWorld expects it — and report the folders that appeared.
+     *  Runs on the caller's worker thread. */
+    private static void installGogInstaller(Activity act, File src, GameInstance instance, Handler main) {
+        File gameRoot = new File(instance.getGamePath());
+        File dataDir  = new File(gameRoot, "Data");
+        try {
+            java.util.Set<String> before = listNames(dataDir);
+            GogInstallerExtractor.extract(src, gameRoot, act.getCacheDir(), m -> Log.i(TAG, m));
+            java.util.Set<String> added = listNames(dataDir);
+            added.removeAll(before);
+            String what = added.isEmpty()
+                    ? "existing files updated (no new expansion folder)"
+                    : String.join(", ", added);
+            alert(act, main, "Installed: " + what + " → Data of " + instance.getName());
+        } catch (Exception e) {
+            Log.e(TAG, "GOG install failed", e);
+            alert(act, main, "Install failed: " + e.getMessage());
+        } finally {
+            //noinspection ResultOfMethodCallIgnored
+            src.delete();
+        }
+    }
+
+    /** Names directly inside {@code dir} (empty if absent) — used to diff what an installer added. */
+    private static java.util.Set<String> listNames(File dir) {
+        java.util.Set<String> names = new java.util.TreeSet<>();
+        String[] list = dir.list();
+        if (list != null) java.util.Collections.addAll(names, list);
+        return names;
+    }
+
+    private static void alert(Activity act, Handler main, String msg) {
+        main.post(() -> new MaterialAlertDialogBuilder(act)
+                .setMessage(msg).setPositiveButton("OK", null).show());
     }
 
     private static String displayName(Activity act, Uri uri) {

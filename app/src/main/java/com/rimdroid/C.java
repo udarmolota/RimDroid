@@ -28,6 +28,19 @@ public class C {
         public static final String BUNDLES_LIBS = BUNDLES + "/libs.tar.xz";
     }
 
+    public static class mime {
+        /** SAF filter for anything we can install a game / DLC / mod from: a plain .zip, or a GOG
+         *  DRM-free .sh installer (bare, or bundled inside a .zip). A .sh's reported type varies by
+         *  document provider (x-sh / x-shellscript / text-plain / octet-stream), and a type missing
+         *  here greys the file out entirely — so the list ends in "*&#47;*" to guarantee the user can
+         *  always pick their file. Safe: what a file actually IS gets decided by content sniffing
+         *  (GogInstallerExtractor / ModImporter), never by its MIME type. */
+        public static final String[] GAME_ARCHIVE = {
+            "application/zip", "application/x-zip-compressed", "application/octet-stream",
+            "application/x-sh", "text/x-sh", "application/x-shellscript", "*/*",
+        };
+    }
+
     public static class shprefs {
         public static final String NAME = "com.rimdroid.PREFS";
 

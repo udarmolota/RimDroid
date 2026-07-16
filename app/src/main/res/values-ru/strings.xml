@@ -126,7 +126,7 @@
     <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
     <string name="steam_spike_label">Проба входа в Steam (QR)</string>
     <string name="steam_dl_label">Проба загрузки Steam (RimWorld)</string>
-    <string name="pick_zip">Выбрать ZIP-файл…</string>
+    <string name="pick_zip">Выбрать ZIP или GOG .sh…</string>
     <string name="install">Установить</string>
     <string name="installing">Установка…</string>
     <string name="instance_name_hint">Имя инстанса</string>

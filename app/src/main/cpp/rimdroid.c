@@ -1010,7 +1010,7 @@ static int load_linker_hook() {
         void* vulkan_loader = linkernsbypass_namespace_dlopen_unique(
             "/system/lib64/libvulkan.so", NULL, RTLD_GLOBAL, rimdroid_ns);
         if (!vulkan_loader) {
-            LOGE("Failed to load libvulkan.so");
+            LOGE("Failed to load libvulkan.so: %s", dlerror());
             return -1;
         }
         rimdroid_linker_set_vulkan_loader_handle(vulkan_loader);
@@ -1018,7 +1018,7 @@ static int load_linker_hook() {
         void* vulkan_driver = linkernsbypass_namespace_dlopen(
             g_rimdroid_vulkan_driver_name, RTLD_LOCAL, rimdroid_ns);
         if (!vulkan_driver) {
-            LOGE("Failed to load vulkan driver: %s", g_rimdroid_vulkan_driver_name);
+            LOGE("Failed to load vulkan driver %s: %s", g_rimdroid_vulkan_driver_name, dlerror());
             return -1;
         }
         rimdroid_linker_set_vulkan_driver_handle(vulkan_driver);

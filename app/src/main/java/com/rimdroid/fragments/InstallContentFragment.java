@@ -73,13 +73,13 @@ public class InstallContentFragment extends Fragment {
         a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spInstance.setAdapter(a);
 
-        btnPick.setOnClickListener(x -> picker.launch(new String[]{
-                "application/zip", "application/x-zip-compressed", "application/octet-stream"}));
+        // Mod/DLC .zip, or a GOG DLC .sh installer (ContentInstaller sniffs and routes it).
+        btnPick.setOnClickListener(x -> picker.launch(com.rimdroid.C.mime.GAME_ARCHIVE));
 
         btnGo.setOnClickListener(x -> {
             if (instances.isEmpty()) return;
             if (selectedZip == null) {
-                Toast.makeText(requireContext(), "Choose a ZIP file first", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Choose a file first", Toast.LENGTH_SHORT).show();
                 return;
             }
             int pos = spInstance.getSelectedItemPosition();

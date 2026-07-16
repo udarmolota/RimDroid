@@ -362,11 +362,20 @@ public class GameLauncher {
                 // RimWorld 1.6 GLES pivot: the SYSTEM Adreno Vulkan driver crashes inside
                 // vkCmdPipelineBarrier2 (NULL+0xbc, vulkan.adreno.so, deterministic at RimWorld
                 // startup) under Zink's present path. Same as 1.5: Zink needs Turnip, not the
-                // proprietary driver. If the instance is on "System", force the Adreno 830/840
-                // Turnip for the rd_force_gles path.
+                // proprietary driver. If the instance is on "System", pick the Turnip matching
+                // THIS device's Adreno series via the same GpuInfo probe the instance-creation
+                // advisor uses — NOT a hardcoded 830/840 build (the bring-up hardcode black-screened
+                // a Mali tester on 2026-07-16: Turnip is a kgsl/Adreno-only ICD, and it stomped the
+                // advisor's correct "System" recommendation). Non-Adreno/unknown GPUs get "" back
+                // and STAY on the System driver — exactly what Zink uses on working 1.5 Mali devices.
                 if (forceGlesZfa && (vkDriver == null || vkDriver.isEmpty())) {
-                    vkDriver = "libvulkan_freedreno_840.so";
-                    android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> Vulkan driver System->Turnip 830/840 (" + vkDriver + ")");
+                    String rec = GpuInfo.query().recommendedDriverSo();
+                    if (!rec.isEmpty()) {
+                        vkDriver = rec;
+                        android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> Vulkan driver System->" + rec + " (per-GPU Turnip)");
+                    } else {
+                        android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> non-Adreno GPU, keeping System Vulkan driver");
+                    }
                 }
                 Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vkDriver == null ? "" : vkDriver, true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our

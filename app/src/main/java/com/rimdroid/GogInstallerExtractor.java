@@ -170,6 +170,7 @@ public final class GogInstallerExtractor {
         if (base.startsWith("goggame-")) return true;          // GOG catalog id / hashdb / info
         if (base.endsWith("_s.debug")) return true;            // Unity debug symbols (useless here)
         if (base.startsWith("start_rimworld")) return true;    // GOG's own launcher scripts
+        if (base.startsWith("how to install")) return true;    // e.g. "How to install Royalty.txt"
         return false;
     }
 

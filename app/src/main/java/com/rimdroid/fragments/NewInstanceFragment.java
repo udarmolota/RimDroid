@@ -91,8 +91,8 @@ public class NewInstanceFragment extends Fragment {
 
         btnInstall.setEnabled(false);
 
-        // Accepts a RimWorld .zip OR a GOG .sh installer (single, or a zip bundling base + DLC .sh) —
-        // GogInstallerExtractor sniffs the content, so the picker must not filter .sh types out.
+        // A RimWorld .zip, or a zip wrapping GOG .sh installers (base + DLC) — GogInstallerExtractor
+        // sniffs the content and unpacks the .sh files found inside.
         btnPickZip.setOnClickListener(v -> zipPicker.launch(com.rimdroid.C.mime.GAME_ARCHIVE));
 
         btnInstall.setOnClickListener(v -> startInstall());

@@ -33,9 +33,10 @@ import java.util.List;
  *   • DLC zip → instance/Data/&lt;folder&gt;   (where RimWorld expects official expansions)
  * Both reuse {@link ModImporter} (finds the About/About.xml root and strips wrappers like the depot's
  * {@code Data/} folder).
- *   • GOG DLC installer (.sh) → extracted by {@link GogInstallerExtractor} into the instance root,
- *     since its payload is already game-relative (carries a ready-made {@code Data/<Expansion>}).
- *     It has no About/About.xml, so the ModImporter path can't handle it.
+ *   • zipped GOG DLC installer (a {@code .sh} inside the zip) → extracted by
+ *     {@link GogInstallerExtractor} into the instance root, since its payload is already
+ *     game-relative (carries a ready-made {@code Data/<Expansion>}). It has no About/About.xml, so
+ *     the ModImporter path can't handle it. (We only accept zips — see {@link C.mime#GAME_ARCHIVE}.)
  */
 public final class ContentInstaller {
     private static final String TAG = "RimDroid/Content";
@@ -76,10 +77,11 @@ public final class ContentInstaller {
         rg.addView(rbMod); rg.addView(rbDlc); rg.check(1);
         box.addView(rg);
 
-        // A GOG .sh installer places its own content (Data/<Expansion>), so the choice above is
+        // A zipped GOG installer places its own content (Data/<Expansion>), so the choice above is
         // ignored for it — say so rather than let the picked radio look meaningful.
         TextView hint = new TextView(act);
-        hint.setText("A GOG DLC installer (.sh) is detected automatically and installs itself into Data/.");
+        hint.setText("A zipped GOG DLC installer (.sh inside a .zip) is detected automatically "
+                + "and installs itself into Data/.");
         hint.setPadding(0, (int) (8 * dp), 0, 0);
         box.addView(hint);
 

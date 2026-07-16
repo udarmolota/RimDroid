@@ -128,7 +128,7 @@
     <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
     <string name="steam_dl_label">Steam download spike (RimWorld)</string>
-    <string name="pick_zip">Pick ZIP or GOG .sh…</string>
+    <string name="pick_zip">Pick ZIP file…</string>
     <string name="install">Install</string>
     <string name="installing">Installing…</string>
     <string name="instance_name_hint">Instance name</string>

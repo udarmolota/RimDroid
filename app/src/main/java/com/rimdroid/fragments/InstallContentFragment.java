@@ -73,7 +73,7 @@ public class InstallContentFragment extends Fragment {
         a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spInstance.setAdapter(a);
 
-        // Mod/DLC .zip, or a GOG DLC .sh installer (ContentInstaller sniffs and routes it).
+        // Mod/DLC .zip, or a zip wrapping a GOG DLC .sh installer (ContentInstaller sniffs and routes it).
         btnPick.setOnClickListener(x -> picker.launch(com.rimdroid.C.mime.GAME_ARCHIVE));
 
         btnGo.setOnClickListener(x -> {

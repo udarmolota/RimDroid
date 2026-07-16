@@ -29,15 +29,13 @@ public class C {
     }
 
     public static class mime {
-        /** SAF filter for anything we can install a game / DLC / mod from: a plain .zip, or a GOG
-         *  DRM-free .sh installer (bare, or bundled inside a .zip). A .sh's reported type varies by
-         *  document provider (x-sh / x-shellscript / text-plain / octet-stream), and a type missing
-         *  here greys the file out entirely — so the list ends in "*&#47;*" to guarantee the user can
-         *  always pick their file. Safe: what a file actually IS gets decided by content sniffing
-         *  (GogInstallerExtractor / ModImporter), never by its MIME type. */
+        /** SAF filter for installing a game / DLC / mod: ZIP only, deliberately. A bare GOG {@code .sh}
+         *  installer is NOT offered — its reported type varies wildly by document provider and most
+         *  file explorers won't hand one over at all, so the supported workflow is to WRAP the .sh in
+         *  a zip (GogInstallerExtractor unpacks .sh files found inside). octet-stream is included
+         *  because some providers report zips as that. */
         public static final String[] GAME_ARCHIVE = {
             "application/zip", "application/x-zip-compressed", "application/octet-stream",
-            "application/x-sh", "text/x-sh", "application/x-shellscript", "*/*",
         };
     }
 

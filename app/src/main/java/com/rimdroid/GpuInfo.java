@@ -23,6 +23,10 @@ import java.util.regex.Pattern;
  */
 public final class GpuInfo {
 
+    private static final Pattern ADRENO_MODEL_PATTERN = Pattern.compile(
+            "(?i)\\badreno(?:\\s*\\(tm\\))?[^0-9]{0,24}(\\d{3,4})\\b");
+    private static volatile GpuInfo cached;
+
     /** Raw GL_RENDERER from the phone's GLES driver (e.g. "Adreno (TM) 830"); null if unavailable. */
     @Nullable public final String renderer;
     /** Raw GL_VENDOR (e.g. "Qualcomm"); null if unavailable. */
@@ -32,7 +36,7 @@ public final class GpuInfo {
     /** Full Adreno model number (e.g. 644, 735, 830) or 0 if not an Adreno / unknown. */
     public final int adrenoModel;
 
-    private GpuInfo(@Nullable String renderer, @Nullable String vendor, int adrenoSeries, int adrenoModel) {
+    GpuInfo(@Nullable String renderer, @Nullable String vendor, int adrenoSeries, int adrenoModel) {
         this.renderer = renderer;
         this.vendor = vendor;
         this.adrenoSeries = adrenoSeries;
@@ -42,6 +46,22 @@ public final class GpuInfo {
     /** Query the GPU. Cheap (a 1x1 pbuffer context); call off the very first frame to be safe. */
     @NonNull
     public static GpuInfo query() {
+        GpuInfo result = cached;
+        if (result != null) return result;
+
+        synchronized (GpuInfo.class) {
+            result = cached;
+            if (result != null) return result;
+            result = queryUncached();
+            // A failed EGL probe may be transient. Cache only a real renderer so a later launch or
+            // Settings retry still gets a chance to identify the GPU.
+            if (result.renderer != null && !result.renderer.trim().isEmpty()) cached = result;
+            return result;
+        }
+    }
+
+    @NonNull
+    private static GpuInfo queryUncached() {
         String r = null, v = null;
         EGLDisplay dpy = EGL14.EGL_NO_DISPLAY;
         EGLContext ctx = EGL14.EGL_NO_CONTEXT;
@@ -86,14 +106,22 @@ public final class GpuInfo {
     }
 
     /** Extract the full Adreno model number, e.g. "Adreno (TM) 830" → 830, "Adreno (TM) 644" → 644. */
-    private static int parseAdrenoModel(@Nullable String renderer) {
+    static int parseAdrenoModel(@Nullable String renderer) {
         if (renderer == null) return 0;
-        if (!renderer.toLowerCase().contains("adreno")) return 0;
-        Matcher m = Pattern.compile("(\\d{3,4})").matcher(renderer);
+        Matcher m = ADRENO_MODEL_PATTERN.matcher(renderer);
         if (m.find()) {
             try { return Integer.parseInt(m.group(1)); } catch (NumberFormatException e) { return 0; }
         }
         return 0;
+    }
+
+    public boolean isAdreno() {
+        return adrenoModel > 0;
+    }
+
+    /** True when EGL returned a real renderer, including a positively identified non-Adreno GPU. */
+    public boolean isKnownGpu() {
+        return renderer != null && !renderer.trim().isEmpty();
     }
 
     /**

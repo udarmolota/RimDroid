@@ -70,6 +70,8 @@ android {
 }
 
 dependencies {
+    testImplementation 'junit:junit:4.13.2'
+
     // FMOD Android Java classes (org.fmod.AudioDevice / FMOD / MediaCodec). Required on the classpath
     // so the bundled native libfmod.so's JNI_OnLoad can FindClass("org/fmod/AudioDevice") — without it
     // System.load(libfmod) aborts with ClassNotFoundException. Used by the offline FSB5 audio decoder

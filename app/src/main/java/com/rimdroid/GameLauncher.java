@@ -64,11 +64,21 @@ public class GameLauncher {
         } catch (Exception e) { return "(read failed: " + e.getMessage() + ")"; }
     }
 
-    private static String buildLaunchConfig(GameInstance gi) {
+    private static String buildLaunchConfig(GameInstance gi, LauncherPreferences.Renderer actualRenderer,
+                                            GpuInfo gpu,
+                                            VulkanDriverPolicy.Decision driverDecision) {
         InstanceSettings s = gi.settings();
-        String so = s.getVulkanDriverSo();
-        String soShown = (so == null || so.isEmpty()) ? "System (phone driver)" : so;
-        String driverLabel = LauncherPreferences.VULKAN_DRIVERS.get(s.getVulkanDriverIndex()).label;
+        String configuredSo = driverDecision != null
+                ? driverDecision.configuredSo : s.getVulkanDriverSo();
+        String policySo = driverDecision != null
+                ? driverDecision.effectiveSo : configuredSo;
+        String actualSo = Os.getenv("RIMDROID_VULKAN_DRIVER_NAME");
+        if (actualSo == null) actualSo = policySo;
+        String decisionReason = driverDecision != null
+                ? driverDecision.reason : "renderer does not use Vulkan driver policy";
+        if (!actualSo.equals(policySo)) {
+            decisionReason += "; overridden by Extra env vars";
+        }
         boolean interp = s.isInterpreter();
         return "=== RimDroid launch config ===\n"
             + "instance      : " + gi.getName() + "\n"
@@ -76,8 +86,13 @@ public class GameLauncher {
             + "device        : " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + " (Android " + android.os.Build.VERSION.RELEASE + ", API " + android.os.Build.VERSION.SDK_INT + ")\n"
             + "soc           : " + deviceSoc() + "\n"
-            + "renderer      : " + s.getRenderer().name() + "\n"
-            + "vulkan driver : " + driverLabel + "  [" + soShown + "]\n"
+            + "renderer      : " + actualRenderer.name() + "\n"
+            + "gpu probe     : " + (gpu != null
+                    ? gpu.displayName() + " / " + (gpu.vendor != null ? gpu.vendor : "unknown vendor")
+                    : "not queried") + "\n"
+            + "vulkan config : " + VulkanDriverPolicy.displayName(configuredSo) + "\n"
+            + "vulkan actual : " + VulkanDriverPolicy.displayName(actualSo) + "\n"
+            + "driver policy : " + decisionReason + "\n"
             + "render scale  : " + s.getRenderScalePercent() + "%\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
@@ -277,6 +292,9 @@ public class GameLauncher {
         Os.setenv("RIMDROID_RENDERER", renderer.name(), true);  // read by rimdroid.c on init
         Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
 
+        GpuInfo launchGpu = null;
+        VulkanDriverPolicy.Decision driverDecision = null;
+
         switch (renderer) {
             case GL4ES:
                 // Absolute path, not bare soname: libgl4es.so lives in the app's
@@ -350,34 +368,19 @@ public class GameLauncher {
                 // Empty string = "System" option = use the phone's own Vulkan driver
                 // (rimdroid.c treats empty as NULL and skips the bundled Turnip ICD).
                 // Software path needs no Vulkan ICD; GPU (Zink) path uses the chosen driver.
-                String vkDriver = soft ? "" : gameInstance.settings().getVulkanDriverSo();
-                // Safety: a stored driver that's no longer bundled (e.g. the retired ad07XX anti-flicker
-                // build) keeps its non-empty so-name but resolves to index 0 → force System so a fresh
-                // install doesn't try to load a missing ICD (would otherwise black-screen).
-                if (vkDriver != null && !vkDriver.isEmpty()
-                        && gameInstance.settings().getVulkanDriverIndex() == 0) {
-                    Log.w(TAG, "Vulkan driver '" + vkDriver + "' no longer bundled → using System");
-                    vkDriver = "";
+                String configuredDriver = soft ? "" : gameInstance.settings().getVulkanDriverSo();
+                launchGpu = GpuInfo.query();
+                driverDecision = VulkanDriverPolicy.resolve(
+                        configuredDriver, launchGpu, forceGlesZfa);
+                if (!driverDecision.configuredSo.equals(driverDecision.effectiveSo)) {
+                    // Migrate stale or incompatible saved choices so Settings and later launches
+                    // reflect the driver that actually worked on this device.
+                    gameInstance.settings().setVulkanDriverSo(driverDecision.effectiveSo);
                 }
-                // RimWorld 1.6 GLES pivot: the SYSTEM Adreno Vulkan driver crashes inside
-                // vkCmdPipelineBarrier2 (NULL+0xbc, vulkan.adreno.so, deterministic at RimWorld
-                // startup) under Zink's present path. Same as 1.5: Zink needs Turnip, not the
-                // proprietary driver. If the instance is on "System", pick the Turnip matching
-                // THIS device's Adreno series via the same GpuInfo probe the instance-creation
-                // advisor uses — NOT a hardcoded 830/840 build (the bring-up hardcode black-screened
-                // a Mali tester on 2026-07-16: Turnip is a kgsl/Adreno-only ICD, and it stomped the
-                // advisor's correct "System" recommendation). Non-Adreno/unknown GPUs get "" back
-                // and STAY on the System driver — exactly what Zink uses on working 1.5 Mali devices.
-                if (forceGlesZfa && (vkDriver == null || vkDriver.isEmpty())) {
-                    String rec = GpuInfo.query().recommendedDriverSo();
-                    if (!rec.isEmpty()) {
-                        vkDriver = rec;
-                        android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> Vulkan driver System->" + rec + " (per-GPU Turnip)");
-                    } else {
-                        android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> non-Adreno GPU, keeping System Vulkan driver");
-                    }
-                }
-                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", vkDriver == null ? "" : vkDriver, true);
+                Log.i(TAG, "GPU '" + launchGpu.displayName() + "': " + driverDecision.reason
+                        + " (configured=" + VulkanDriverPolicy.displayName(driverDecision.configuredSo)
+                        + ", effective=" + VulkanDriverPolicy.displayName(driverDecision.effectiveSo) + ")");
+                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", driverDecision.effectiveSo, true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our
                 // my2_SDL_GL_CreateContext/SwapWindow route to ZFA.
                 Os.setenv("SDL_DYNAMIC_API",
@@ -536,7 +539,7 @@ public class GameLauncher {
         // Self-describing launch header: passed to native (RIMDROID_LAUNCH_CONFIG) so it lands at
         // the top of rimdroid.log, AND mirrored to the on-screen launcher log. Makes any pasted log
         // say exactly which renderer/driver/settings produced it.
-        String launchConfig = buildLaunchConfig(gameInstance);
+        String launchConfig = buildLaunchConfig(gameInstance, renderer, launchGpu, driverDecision);
         Os.setenv("RIMDROID_LAUNCH_CONFIG", launchConfig, true);
         for (String line : launchConfig.split("\n")) postLog(line);
 

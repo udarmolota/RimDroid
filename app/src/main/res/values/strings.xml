@@ -5,6 +5,8 @@
     <string name="stop">Stop</string>
     <string name="install_instance">Install Instance (ZIP)…</string>
     <string name="no_instances">No instances installed</string>
+    <string name="choose_instance_prompt">— Choose an instance —</string>
+    <string name="choose_instance_first">Choose an instance to install into</string>
     <string name="delete_instance">Delete instance</string>
     <string name="delete_instance_confirm">Delete instance \"%1$s\" and all its files? This cannot be undone.</string>
     <string name="log">Log</string>

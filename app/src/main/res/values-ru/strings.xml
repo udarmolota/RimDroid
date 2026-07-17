@@ -4,6 +4,8 @@
     <string name="stop">Стоп</string>
     <string name="install_instance">Установить инстанс (ZIP)…</string>
     <string name="no_instances">Нет установленных инстансов</string>
+    <string name="choose_instance_prompt">— Выберите инстанс —</string>
+    <string name="choose_instance_first">Выберите инстанс для установки</string>
     <string name="delete_instance">Удалить инстанс</string>
     <string name="delete_instance_confirm">Удалить инстанс \"%1$s\" и все его файлы? Это нельзя отменить.</string>
     <string name="log">Лог</string>

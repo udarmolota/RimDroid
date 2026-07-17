@@ -63,10 +63,16 @@ public class InstallContentFragment extends Fragment {
         GameInstanceManager.requireSingleton().reload();
         instances = GameInstanceManager.requireSingleton().getInstances();
         List<String> names = new ArrayList<>();
-        for (GameInstance gi : instances) names.add(gi.getName());
-        if (names.isEmpty()) {
+        if (instances.isEmpty()) {
             names.add(getString(R.string.no_instances));
             btnGo.setEnabled(false);
+        } else {
+            // Index 0 is a deliberate "choose an instance" placeholder, NOT a real instance: a
+            // spinner that preselects one makes it far too easy to install a DLC into the wrong
+            // instance without ever looking at this field (e.g. 1.5 content into a 1.6 install).
+            // Install refuses to run while the placeholder is selected.
+            names.add(getString(R.string.choose_instance_prompt));
+            for (GameInstance gi : instances) names.add(gi.getName());
         }
         ArrayAdapter<String> a = new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_item, names);
@@ -82,9 +88,14 @@ public class InstallContentFragment extends Fragment {
                 Toast.makeText(requireContext(), "Choose a file first", Toast.LENGTH_SHORT).show();
                 return;
             }
+            // Spinner index 0 = the placeholder, so a real instance is index+1. Nothing chosen →
+            // say so instead of silently installing into whatever happened to be first.
             int pos = spInstance.getSelectedItemPosition();
-            if (pos < 0 || pos >= instances.size()) return;
-            GameInstance inst = instances.get(pos);
+            if (pos <= 0 || pos > instances.size()) {
+                Toast.makeText(requireContext(), R.string.choose_instance_first, Toast.LENGTH_LONG).show();
+                return;
+            }
+            GameInstance inst = instances.get(pos - 1);
             boolean intoData = rgType.getCheckedRadioButtonId() == R.id.rb_install_dlc;
             ContentInstaller.install(requireActivity(), selectedZip, inst, intoData);
         });

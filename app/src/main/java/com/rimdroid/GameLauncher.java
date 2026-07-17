@@ -236,14 +236,17 @@ public class GameLauncher {
             // NOTE: FORWARD=0 was tried here too but REMOVED — a tester reported it made things WORSE
             // (smaller blocks → MORE block boundaries → more FP↔GPR-boundary leaks; the bug is at the
             // boundary transition). The proven pair is WEAKBARRIER=2 + X87DOUBLE=1.
-            // MAXCPU=1 → guest sees a single CPU → RimWorld's parallel Def load (ShortHashGiver
-            // .GiveAllShortHashes via Parallel.ForEach) runs inline/serially, so it never takes the
-            // .NET self-replicating-task code path that box64 miscompiles into a worker NRE
-            // ("Caught exception while loading play data … Resetting mods config" → mods fail / black
-            // on 725 / Mali-G57). Needs the box64 my_sched_getaffinity cap (wrappedlibc.c) for Mono's
-            // ProcessorCount to actually drop. Folded into compat mode because the affected devices
-            // already run compat ON; cost (1-CPU view) is tiny for RimWorld (sim is single-threaded,
-            // render is -force-gfx-direct). See [[save_bug_investigation]] / [[known_bugs]].
+            // MAXCPU=1 → guest sees a single CPU → RimWorld 1.5's parallel Def load (ShortHashGiver
+            // .GiveAllShortHashes via Parallel.ForEach) runs inline/serially, avoiding the older
+            // Task.ExecuteSelfReplicating path box64 miscompiled into a worker NRE ("Caught exception
+            // while loading play data … Resetting mods config" → mods fail / black on 725 / Mali-G57).
+            // CAVEAT (verified 2026-07-18, Adreno 710 / RimWorld 1.6.4633): on 1.6 this does NOT stop
+            // the def-load crash — even with the affinity cap firing (ProcessorCount→1), 1.6's newer
+            // TPL TaskReplicator still runs and the SAME fatal RIP (libmono+0x111610) also faults from
+            // serial XmlTextReaderImpl, so the crash is a box64 SMC-page fault (false-MAPERR 2-hit cap),
+            // NOT the parallel path. So MAXCPU=1 is a 1.5 mod-load workaround only; do not treat it as a
+            // 1.6 def-load fix. Needs the box64 my_sched_getaffinity cap (wrappedlibc.c) to drop
+            // ProcessorCount. See [[save_bug_investigation]] / [[known_bugs]].
             Os.setenv("BOX64_MAXCPU", "1", true);
         }
         // BOX64_PREFER_EMULATED intentionally NOT set:

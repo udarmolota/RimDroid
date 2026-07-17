@@ -61,8 +61,12 @@ public class XClient extends ConnectedClient implements XResourceManager.OnResou
         // RimDroid: MUST write under the stream lock — closing it flushes the buffer to the
         // socket. Without it events (MapNotify etc.) sat in the native buffer forever and
         // SDL's blocking XIfEvent(MapNotify) after XMapRaised hung the game (see rimworld_16_port).
-        try (com.rimdroid.xconnector.XStreamLock lock = outputStream.lock()) {
-            event.send(sequenceNumber, outputStream);
+        // Capture once + null-guard: destroy() nulls outputStream on disconnect, and an async
+        // sender racing that would NPE and (via the default handler) crash the whole app.
+        com.rimdroid.xconnector.XOutputStream out = outputStream;
+        if (out == null) return;
+        try (com.rimdroid.xconnector.XStreamLock lock = out.lock()) {
+            event.send(sequenceNumber, out);
             long n = ++rd_eventsSent;
             String type = event.getClass().getSimpleName();
             synchronized (rd_eventCounts) {

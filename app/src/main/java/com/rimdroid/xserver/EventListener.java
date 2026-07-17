@@ -26,8 +26,15 @@ public class EventListener {
         // RimDroid: write under the stream lock — closing it flushes to the socket. Without it
         // events never left the native buffer and SDL's blocking waits (MapNotify) hung. See
         // memory rimworld_16_port.
-        try (com.rimdroid.xconnector.XStreamLock lock = client.getOutputStream().lock()) {
-            event.send(client.getSequenceNumber(), client.getOutputStream());
+        // Capture the stream ONCE: a disconnecting client nulls its outputStream in destroy(), and
+        // an async sender (e.g. the configure-kick thread, seconds after mapping) would otherwise
+        // NPE — either straight away, or on the second getOutputStream() after the first locked
+        // (the race that crashed the whole app on Adreno 735, 2026-07-17). A null stream = the
+        // client is gone, so there's nothing to deliver.
+        com.rimdroid.xconnector.XOutputStream out = client.getOutputStream();
+        if (out == null) return;
+        try (com.rimdroid.xconnector.XStreamLock lock = out.lock()) {
+            event.send(client.getSequenceNumber(), out);
             android.util.Log.i("RimDroid/XServer", "event -> " + event.getClass().getSimpleName());
         }
         catch (IOException e) {

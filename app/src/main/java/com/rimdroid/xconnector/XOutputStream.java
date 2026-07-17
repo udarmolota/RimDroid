@@ -11,6 +11,10 @@ import dalvik.annotation.optimization.CriticalNative;
 public class XOutputStream {
     private final ReentrantLock lock = new ReentrantLock();
     private final long nativePtr;
+    // Guarded by `lock`. destroy() frees nativePtr; a send racing it (e.g. the async configure-kick
+    // thread) must not write to freed memory. Set under the lock so an in-flight send finishes first
+    // and a send that starts after destroy() bails in lock() instead of touching a dangling nativePtr.
+    private boolean closed = false;
 
     static {
         System.loadLibrary("rimdroidxserver");
@@ -74,17 +78,30 @@ public class XOutputStream {
         writePad(nativePtr, length);
     }
 
-    public XStreamLock lock() {
+    public XStreamLock lock() throws IOException {
         return new OutputStreamLock();
     }
 
     public void destroy() {
-        destroy(nativePtr);
+        // Take the same lock as the send path so we can't free nativePtr while a send is mid-write,
+        // and mark closed so a send that starts after us bails in lock(). Idempotent.
+        lock.lock();
+        try {
+            if (closed) return;
+            closed = true;
+            destroy(nativePtr);
+        } finally {
+            lock.unlock();
+        }
     }
 
     private class OutputStreamLock implements XStreamLock {
-        public OutputStreamLock() {
+        public OutputStreamLock() throws IOException {
             lock.lock();
+            if (closed) {
+                lock.unlock();
+                throw new IOException("Output stream closed (client disconnected).");
+            }
         }
 
         @Override

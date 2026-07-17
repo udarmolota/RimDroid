@@ -120,16 +120,27 @@ public class WindowManager extends XResourceManager {
         }
         Thread t = new Thread(new Runnable() {
             public void run() {
-                for (int i = 0; i < 2; i++) {
-                    try { Thread.sleep(i == 0 ? 5000 : 12000); } catch (InterruptedException e) { return; }
-                    Window w = getWindow(window.id);
-                    if (w == null || !w.attributes.isMapped()) return;
-                    android.util.Log.i("RimDroid/XServer", "ConfigureNotify KICK #" + (i + 1)
-                            + " win=0x" + Integer.toHexString(w.id)
-                            + " " + w.getWidth() + "x" + w.getHeight());
-                    w.sendEvent(Event.STRUCTURE_NOTIFY, new ConfigureNotify(w, w, w.previousSibling(),
-                            w.getX(), w.getY(), w.getWidth(), w.getHeight(),
-                            w.getBorderWidth(), w.attributes.isOverrideRedirect()));
+                // Best-effort helper: it must NEVER crash the app. An uncaught exception on any
+                // thread hits the default handler, which kills the whole process (that's how a
+                // null client output stream here black-screened Adreno 735, 2026-07-17). Swallow.
+                try {
+                    for (int i = 0; i < 2; i++) {
+                        try { Thread.sleep(i == 0 ? 5000 : 12000); } catch (InterruptedException e) { return; }
+                        Window w = getWindow(window.id);
+                        if (w == null || !w.attributes.isMapped()) return;
+                        android.util.Log.i("RimDroid/XServer", "ConfigureNotify KICK #" + (i + 1)
+                                + " win=0x" + Integer.toHexString(w.id)
+                                + " " + w.getWidth() + "x" + w.getHeight());
+                        w.sendEvent(Event.STRUCTURE_NOTIFY, new ConfigureNotify(w, w, w.previousSibling(),
+                                w.getX(), w.getY(), w.getWidth(), w.getHeight(),
+                                w.getBorderWidth(), w.attributes.isOverrideRedirect()));
+                    }
+                } catch (RuntimeException e) {
+                    // Swallow only unchecked app-level exceptions (NPE, ConcurrentModificationException
+                    // from iterating a window's listeners) so this best-effort kick can't reach the
+                    // default handler and kill the app. NOT Throwable: an Error (OOM etc.) means the
+                    // whole process is in trouble and must not be hidden.
+                    android.util.Log.w("RimDroid/XServer", "configure-kick failed (non-fatal)", e);
                 }
             }
         }, "rd-configure-kick");

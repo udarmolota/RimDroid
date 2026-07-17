@@ -27,6 +27,7 @@ public class XRequestError extends Exception  {
 
     public void sendError(XClient client, byte opcode) throws IOException {
         XOutputStream outputStream = client.getOutputStream();
+        if (outputStream == null) return;   // client disconnected — nothing to send to
         try (XStreamLock lock = outputStream.lock()) {
             outputStream.writeByte(RESPONSE_CODE_ERROR);
             outputStream.writeByte(code);

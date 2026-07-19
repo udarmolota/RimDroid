@@ -23,9 +23,13 @@ public class RimDroidApplication extends Application {
         LauncherPreferences.init(this);
         // Fix up any already-installed 1.6 instances whose UnityPlayer.so is a known-bad build
         // (see RimWorldInstanceSetup / memory unityplayer_4871_swap). Off the UI thread: this
-        // hashes a ~33MB file per instance.
-        new Thread(() -> RimWorldInstanceSetup.reconcileExistingInstances(
-                AppStorage.requireSingleton().getInstancesDir()), "rd-player-reconcile").start();
+        // hashes a ~33MB file per instance. Game-fix reference assets (e.g. the known-good
+        // libsteam_api.so) are extracted FIRST on the same thread so the reconcile can use them.
+        new Thread(() -> {
+            RimWorldInstanceSetup.ensureGameFixAssets(RimDroidApplication.this);
+            RimWorldInstanceSetup.reconcileExistingInstances(
+                    AppStorage.requireSingleton().getInstancesDir());
+        }, "rd-player-reconcile").start();
         // Apply the user's theme choice (System / Light / Dark) before any activity is shown.
         androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
                 LauncherPreferences.requireSingleton().getThemeMode());

@@ -46,6 +46,7 @@ public final class RimWorldInstanceSetup {
         // 8 GB devices, so it's the default for every install, not just a manual test.
         createMarker(instanceDir, "rd_texcompress");
         fixupUnityPlayer(instanceDir);
+        fixupSteamApi(instanceDir);
         // Force lazy audio decode: RimWorld ships ~2400 AudioClips with m_PreloadAudioData=true, so
         // Unity mass-decodes every FSB5-Vorbis clip up front. Under box64 that can hang "Loading defs"
         // or OOM on tight-memory devices. Flipping the flag makes each clip decode on first play. Sound
@@ -66,7 +67,10 @@ public final class RimWorldInstanceSetup {
         if (dirs == null) return;
         for (File dir : dirs) {
             try {
-                if (isVersion16(dir)) fixupUnityPlayer(dir);
+                if (isVersion16(dir)) {
+                    fixupUnityPlayer(dir);
+                    fixupSteamApi(dir);
+                }
                 // Version-agnostic (helps 1.5 and 1.6 alike): flip m_PreloadAudioData so the game
                 // decodes audio lazily instead of front-loading ~2400 clips. Idempotent — a no-op once
                 // patched, so it's safe to run on every startup.
@@ -105,6 +109,90 @@ public final class RimWorldInstanceSetup {
                     + Integer.toHexString(PLAYER_PATCH_OFFSET) + " (force 1 display → no black screen).");
         } catch (IOException e) {
             Log.w(TAG, "UnityPlayer.so patch skipped: " + e);
+        }
+    }
+
+    // --- libsteam_api.so normalization -------------------------------------------------------
+    // Some repacked 1.6 tarballs (observed: "RimWorld-1.6.4636.tar" on two independent devices,
+    // Mali-G615 AND Adreno 735) ship a libsteam_api.so whose SteamAPI_Init HANGS forever under
+    // box64 instead of failing cleanly — the game freezes right after "Command line arguments:",
+    // before its version banner, with only the audio thread alive. A Steam-depot-clean build
+    // (her S25, 1.6.4871) fails Init gracefully ("[S_API] ... did not locate a running instance
+    // of Steam") and plays on. Fix: bundle the known-good Steam-origin lib (from the 1.6.4518
+    // depot download, md5 ccdf20f0…; the Steamworks flat API is stable across these builds) and
+    // normalize every 1.6 instance's copy to it. Only REPLACES an existing file (an instance
+    // without the lib takes RimWorld's clean no-Steam path already); original kept as .rdorig.
+    private static final String STEAM_LIB = "libsteam_api.so";
+    private static final String GAMEFIX_DIR = "gamefix";
+
+    /** Copy bundled game-fix reference files (assets/gamefix/*) into files/gamefix/ so the
+     *  context-free setup/reconcile code can read them. Idempotent (size check). Call once from
+     *  Application startup and before install-time configure. */
+    public static void ensureGameFixAssets(android.content.Context ctx) {
+        try {
+            File dir = new File(ctx.getFilesDir(), GAMEFIX_DIR);
+            if (!dir.isDirectory() && !dir.mkdirs()) return;
+            android.content.res.AssetManager am = ctx.getAssets();
+            for (String name : am.list(GAMEFIX_DIR)) {
+                File out = new File(dir, name);
+                try (java.io.InputStream in = am.open(GAMEFIX_DIR + "/" + name)) {
+                    long assetLen = in.available();
+                    if (out.isFile() && out.length() == assetLen) continue;   // already extracted
+                    try (java.io.FileOutputStream os = new java.io.FileOutputStream(out)) {
+                        byte[] buf = new byte[1 << 16];
+                        int n;
+                        while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
+                    }
+                    Log.i(TAG, "gamefix asset extracted: " + name + " (" + out.length() + " bytes)");
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "ensureGameFixAssets failed (non-fatal): " + t);
+        }
+    }
+
+    /** Normalize the instance's libsteam_api.so to the bundled known-good copy (see note above).
+     *  Idempotent via md5 compare; keeps a one-time .rdorig backup; never fatal. */
+    private static void fixupSteamApi(File instanceDir) {
+        File ref = new File(AppStorage.requireSingleton().getHomePath(),
+                GAMEFIX_DIR + "/" + STEAM_LIB);
+        if (!ref.isFile()) { Log.w(TAG, "steam-lib fixup: no extracted reference — skipped"); return; }
+        String refMd5 = md5Of(ref);
+        if (refMd5 == null) return;
+        File data = new File(instanceDir, "RimWorldLinux_Data");
+        File[] candidates = {
+            new File(data, "Plugins/" + STEAM_LIB),
+            new File(data, "Plugins/x86_64/" + STEAM_LIB),
+        };
+        for (File lib : candidates) {
+            if (!lib.isFile()) continue;
+            String cur = md5Of(lib);
+            if (cur == null || cur.equals(refMd5)) continue;   // unreadable or already normalized
+            try {
+                File backup = new File(lib.getPath() + ".rdorig");
+                if (!backup.exists())
+                    java.nio.file.Files.copy(lib.toPath(), backup.toPath());
+                java.nio.file.Files.copy(ref.toPath(), lib.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                Log.i(TAG, "steam-lib normalized: " + lib + " (" + cur + " -> " + refMd5
+                        + ", original kept as .rdorig)");
+            } catch (IOException e) {
+                Log.w(TAG, "steam-lib fixup failed for " + lib + ": " + e);
+            }
+        }
+    }
+
+    private static String md5Of(File f) {
+        try (FileInputStream in = new FileInputStream(f)) {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] buf = new byte[1 << 16];
+            int n;
+            while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
+            StringBuilder sb = new StringBuilder(32);
+            for (byte b : md.digest()) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
         }
     }
 

@@ -175,6 +175,9 @@ public class InstallerService extends Service {
         }
         bin.setExecutable(true);
 
+        // Game-fix reference assets must exist before configure (steam-lib normalization reads
+        // them from files/gamefix). Idempotent; normally a no-op after first app start.
+        RimWorldInstanceSetup.ensureGameFixAssets(getApplicationContext());
         if (RimWorldInstanceSetup.configureDetected(instanceDir))
             broadcastProgress("Configured RimWorld 1.6 renderer and texture compression.");
 

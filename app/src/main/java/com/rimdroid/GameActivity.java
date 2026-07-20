@@ -198,9 +198,36 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             }
         }
 
-        android.graphics.Rect b = getWindowManager().getCurrentWindowMetrics().getBounds();
-        int sw = Math.max(b.width(), b.height());   // landscape width
-        int sh = Math.min(b.width(), b.height());   // landscape height
+        // Window policy FIRST, measurement AFTER. LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS tells every
+        // firmware to lay the window out over the FULL physical screen, including the display-cutout
+        // (camera) strip. Without it, some devices keep the window INSIDE the safe area in landscape
+        // while we size the SurfaceView to the full getBounds() — the CENTER-gravity child is then
+        // wider than its parent and overflow-clips on BOTH sides (black strip by the camera + cropped
+        // right edge; three testers reported exactly that). Forcing ALWAYS puts parent and child in
+        // one coordinate system on every device, instead of guessing with bounds-minus-insets (which
+        // would SHRINK the image on devices that already draw under the cutout — a non-zero cutout
+        // inset does NOT imply the window avoids it). minSdk 30 = R, so no version check needed.
+        WindowManager.LayoutParams wlp = getWindow().getAttributes();
+        wlp.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        getWindow().setAttributes(wlp);
+        // True immersive fullscreen: hide BOTH status and navigation bars. The old
+        // FLAG_FULLSCREEN only hid the status bar, so on devices with a 3-button
+        // navigation bar (e.g. tablets) it stayed visible and ate the bottom of the game.
+        // (Must run BEFORE the metrics read below — it can relayout the window.)
+        getWindow().setDecorFitsSystemWindows(false);
+
+        android.view.WindowMetrics wmx = getWindowManager().getCurrentWindowMetrics();
+        android.graphics.Rect b = wmx.getBounds();
+        android.graphics.Insets cut = wmx.getWindowInsets()
+                .getInsetsIgnoringVisibility(android.view.WindowInsets.Type.displayCutout());
+        int usableW = Math.max(1, b.width());
+        int usableH = Math.max(1, b.height());
+        Log.i(TAG, "screen bounds=" + b.width() + "x" + b.height()
+                + " cutout(l,t,r,b)=" + cut.left + "," + cut.top + "," + cut.right + "," + cut.bottom
+                + " cutoutMode=ALWAYS -> full bounds used");
+        int sw = Math.max(usableW, usableH);   // landscape width  (full screen)
+        int sh = Math.min(usableW, usableH);   // landscape height (full screen)
         // Effective render scale = stored value raised to the per-device floor, so RimWorld's UI
         // never drops below 1280x720. Per-instance when launched from a card; global as a fallback
         // (e.g. the smoke test, which has no instance).
@@ -239,10 +266,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // menu (resolution drift). Fixed landscape = no flips, no sensor reaction, no stretch trigger.
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        // True immersive fullscreen: hide BOTH status and navigation bars. The old
-        // FLAG_FULLSCREEN only hid the status bar, so on devices with a 3-button
-        // navigation bar (e.g. tablets) it stayed visible and ate the bottom of the game.
-        getWindow().setDecorFitsSystemWindows(false);
+        // (cutout mode + setDecorFitsSystemWindows moved ABOVE the metrics read — see the window
+        // policy block before getCurrentWindowMetrics().)
 
         surfaceView = new SurfaceView(this);
         // RGBA_8888 explicitly — the default logged as RGB_565 (format=4); Vulkan WSI replaces the
@@ -263,6 +288,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         root.addView(controls, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         controls.setGameRect(boxLeft, boxTop, boxW, boxH);   // so cursor/tap map into the game rect
+
+        // Post-layout diagnostic for the cropped-screen reports: the fact that matters is whether
+        // the laid-out root ACTUALLY matches getBounds() now that cutout mode is ALWAYS. If root is
+        // still narrower than bounds on some firmware, this log line proves it from a tester zip.
+        root.post(() -> Log.i(TAG, "post-layout root=" + root.getWidth() + "x" + root.getHeight()
+                + " surface=" + surfaceView.getWidth() + "x" + surfaceView.getHeight()
+                + " (window bounds=" + b.width() + "x" + b.height() + ")"));
 
         // Physical mouse: hide Android's OWN pointer (TYPE_NULL) so it doesn't double up with our overlay
         // cursor. Set on every in-game view the pointer can rest on (controls is on top; surface/root for when

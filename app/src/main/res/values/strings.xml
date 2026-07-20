@@ -15,6 +15,8 @@
     <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If not works try another one.</string>
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
     <string name="drag_pan_label">Drag the map with a finger to pan</string>
+    <string name="reverse_landscape_label">Mirror the picture (180°)</string>
+    <string name="reverse_landscape_hint">Flips the game to the opposite landscape — still fixed, no free rotation. Turn on if your gamepad or cradle holds the phone the other way up.</string>
     <string name="compat_mode_label">Compatibility mode</string>
     <string name="compat_mode_hint">Turn on if the game won\'t start (black screen / stuck on loading). A bit slower, but helps it launch on some devices.</string>
     <string name="compat_mode_dialog_title">Compatibility mode — please read</string>

@@ -14,6 +14,8 @@
     <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU. Если не сработало — попробуйте другой.</string>
     <string name="driver_recommend">Рекомендуемый драйвер (определить GPU)</string>
     <string name="drag_pan_label">Двигать карту пальцем (панорама)</string>
+    <string name="reverse_landscape_label">Зеркальная ориентация (180°)</string>
+    <string name="reverse_landscape_hint">Разворачивает картинку в противоположную сторону — тоже фиксированно, без свободного вращения. Включи, если геймпад или держатель фиксирует телефон «вверх ногами».</string>
     <string name="compat_mode_label">Режим совместимости</string>
     <string name="compat_mode_hint">Включи, если игра не запускается (чёрный экран / зависает на загрузке). Чуть медленнее, но помогает запуститься на некоторых устройствах.</string>
     <string name="compat_mode_dialog_title">Режим совместимости — прочти</string>

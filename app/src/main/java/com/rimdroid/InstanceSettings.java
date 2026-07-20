@@ -88,6 +88,19 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "drag_pan", v).apply();
     }
 
+    // --- Mirrored (180°-rotated) landscape. Still a FIXED orientation, just the opposite one:
+    // a USB-C gamepad cradle holds the phone in one physical pose, which may be the reverse of ours,
+    // making the game unplayable for those users. Deliberately NOT sensor-based — free rotation
+    // re-exposes the flip-induced resolution drift (each flip fires surfaceChanged and could leave
+    // the game stuck in a stretched menu), which is why GameActivity pins a single landscape. ---
+    public boolean isReverseLandscape() {
+        return p.getBoolean(pfx + "reverse_landscape", false);
+    }
+
+    public void setReverseLandscape(boolean v) {
+        p.edit().putBoolean(pfx + "reverse_landscape", v).apply();
+    }
+
     // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
     public boolean isHapticFeedback() {
         return p.getBoolean(pfx + "haptic", global.isHapticFeedback());
@@ -174,6 +187,7 @@ public class InstanceSettings {
                 .remove(pfx + "compat_mode")
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
+                .remove(pfx + "reverse_landscape")
                 .remove(pfx + "render_scale_pct")
                 .remove(pfx + "controls")
                 .apply();

@@ -235,6 +235,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             com.rimdroid.InstanceSettings is = new com.rimdroid.InstanceSettings(instanceName);
             renderScale = is.getEffectiveRenderScale(sw, sh);
             dragPanEnabled = is.isDragPan();
+            reverseLandscape = is.isReverseLandscape();
             // 1.6/X11 render scale ENABLED (2026-07-11): the bring-up force-1.0 is gone. The old
             // race is covered — GameLauncher's settle loop waits for the FIXED-SIZE surfaceChanged
             // before starting the X server, so the buffer, the X screen and -screen-width/-height
@@ -264,7 +265,12 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // SENSOR_LANDSCAPE, which let the device flip 180° (landscape <-> reverse-landscape) whenever it
         // was held unsteadily; each flip fired surfaceChanged and could leave the game stuck in a stretched
         // menu (resolution drift). Fixed landscape = no flips, no sensor reaction, no stretch trigger.
-        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        // Opt-in escape hatch (Settings → "Mirror the picture (180°)"): a USB-C gamepad cradle can hold
+        // the phone in the OPPOSITE landscape, making the game unplayable for those users. This stays a
+        // FIXED orientation — just the mirrored one — so the no-flip guarantee above is preserved.
+        setRequestedOrientation(reverseLandscape
+                ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // (cutout mode + setDecorFitsSystemWindows moved ABOVE the metrics read — see the window
         // policy block before getCurrentWindowMetrics().)
@@ -429,6 +435,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     // press nudges the map to the top-left" bug). We only pan when we own the gesture from its DOWN.
     private boolean panGestureOwned;
     private boolean dragPanEnabled = true;   // per-instance (Settings → "Drag the map to pan")
+    private boolean reverseLandscape;        // per-instance (Settings → "Mirror the picture"); default OFF
 
     private void updateDragPan(float dx, float dy, float dead) {
         boolean fUp = dy < -dead, fDown = dy > dead, fLeft = dx < -dead, fRight = dx > dead;

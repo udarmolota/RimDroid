@@ -64,6 +64,7 @@ public class SettingsFragment extends Fragment {
         Switch swDebug        = view.findViewById(R.id.sw_debug);
         Switch swStrict       = view.findViewById(R.id.sw_strict_barriers);
         Switch swDragPan      = view.findViewById(R.id.sw_drag_pan);
+        Switch swReverse      = view.findViewById(R.id.sw_reverse_landscape);
         Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
         Switch swShowFps      = view.findViewById(R.id.sw_show_fps);
@@ -94,6 +95,10 @@ public class SettingsFragment extends Fragment {
         swStrict.setChecked(inst.isInterpreter());
         swDragPan.setChecked(inst.isDragPan());
         swDragPan.setOnCheckedChangeListener((btn, checked) -> inst.setDragPan(checked));
+        // Mirrored landscape: opt-in for USB-C gamepad cradles that hold the phone the other way up.
+        // Takes effect on the next launch (orientation is requested once in GameActivity.onCreate).
+        swReverse.setChecked(inst.isReverseLandscape());
+        swReverse.setOnCheckedChangeListener((btn, checked) -> inst.setReverseLandscape(checked));
         // Compatibility mode: box64 FP/barrier tuning (WEAKBARRIER=2 + X87DOUBLE=1) that lets the game launch
         // on devices hit by the deep "won't start / black screen" bug (Adreno 610/725, weak-Vulkan Mali).
         swCompat.setChecked(inst.isCompatibilityMode());

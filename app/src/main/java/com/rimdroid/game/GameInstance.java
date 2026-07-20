@@ -148,6 +148,31 @@ public class GameInstance {
         return new File(getGamePath(), C.files.RIMWORLD_BIN).exists();
     }
 
+    /**
+     * Completeness check, separate from {@link #isInstalled()}. isInstalled() stays lenient (just the
+     * RimWorldLinux binary) so a working instance NEVER vanishes from the launcher over a layout quirk —
+     * but a repack/tarball can ship without the base game content, and RimWorld then dies at startup in
+     * ModLister ("Sequence contains no matching element" — no Core) long after we've said "Installed".
+     * This returns the list of REQUIRED files that are missing (empty = complete). Data/Core/About/
+     * About.xml is the real tell (the base "Core" module); DLC (Data/Biotech, Data/Odyssey…) are
+     * optional and intentionally NOT checked. Used to warn at install and block launch, not to hide.
+     */
+    public java.util.List<String> missingCoreFiles() {
+        File root = new File(getGamePath());
+        String[] required = {
+            C.files.RIMWORLD_BIN,
+            "RimWorldLinux_Data/Managed/Assembly-CSharp.dll",
+            "Data/Core/About/About.xml",
+        };
+        java.util.List<String> missing = new ArrayList<>();
+        for (String rel : required)
+            if (!new File(root, rel).isFile()) missing.add(rel);
+        return missing;
+    }
+
+    /** True if the base game content is present enough for RimWorld to load (see {@link #missingCoreFiles}). */
+    public boolean isComplete() { return missingCoreFiles().isEmpty(); }
+
     private static String join(ArrayList<String> list, String sep) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < list.size(); i++) {

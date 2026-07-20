@@ -190,6 +190,21 @@ public class InstallerService extends Service {
         prefs.setLastInstanceName(instanceName);
         prefs.setDependenciesInstalled(true);
 
+        // Completeness gate: a repack/tarball can contain RimWorldLinux yet be missing the base game
+        // content (Data/Core), and RimWorld then dies at startup in ModLister — long after a bare
+        // "Installed" would have told the user everything is fine. Warn HERE with the exact missing
+        // files so they know it's their game copy, not the app. The instance is left in place (they may
+        // want to add the files) but we do NOT claim success. See GameInstance.missingCoreFiles().
+        java.util.List<String> missing =
+                new com.rimdroid.game.GameInstance(instanceName).missingCoreFiles();
+        if (!missing.isEmpty()) {
+            broadcastDone(false, "Instance '" + instanceName + "' is INCOMPLETE — this copy of the game "
+                    + "is missing: " + String.join(", ", missing) + ". RimWorld can't start without the "
+                    + "base game content (Data/Core). Use a complete copy — the in-app Download gives a "
+                    + "clean one.");
+            return;
+        }
+
         broadcastProgress("Instance installed.");
         broadcastDone(true, "Instance '" + instanceName + "' installed — ready to launch");
     }

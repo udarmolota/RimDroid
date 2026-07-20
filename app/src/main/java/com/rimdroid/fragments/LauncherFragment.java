@@ -153,7 +153,10 @@ public class LauncherFragment extends Fragment {
                 ImageButton settings = v.findViewById(R.id.instance_item_settings);
                 ImageButton launch = v.findViewById(R.id.instance_item_launch);
 
-                name.setText(gi.getName());
+                // Flag an incomplete game copy (missing Data/Core etc.) right in the list, so the user
+                // sees it before tapping Launch. Cheap (a few File.isFile checks). launchInstance()
+                // still explains what's missing if they tap it.
+                name.setText(gi.isComplete() ? gi.getName() : gi.getName() + "  ⚠ incomplete");
                 // (renderer subtitle is commented out in the layout — keep the binding out too)
 
                 launch.setOnClickListener(x -> launchInstance(gi));
@@ -280,6 +283,20 @@ public class LauncherFragment extends Fragment {
 
     private void launchInstance(GameInstance gi) {
         if (gi == null) return;
+        // Block launching a game copy that's missing base content (Data/Core etc.) — it would just
+        // reach RimWorld's ModLister and crash to a black screen, looking like an app bug. Tell the
+        // user it's their files. isInstalled() stays lenient so the instance still shows in the list.
+        java.util.List<String> missing = gi.missingCoreFiles();
+        if (!missing.isEmpty()) {
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Incomplete game files")
+                    .setMessage("This instance is missing base game content and won't start:\n\n"
+                            + String.join("\n", missing) + "\n\nRimWorld needs the Data/Core folder. "
+                            + "Install a complete copy of the game — the in-app Download provides a clean one.")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            return;
+        }
         LauncherPreferences.requireSingleton().setLastInstanceName(gi.getName());
         clearLog();
 

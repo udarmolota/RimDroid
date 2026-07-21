@@ -134,16 +134,27 @@ public final class RimWorldInstanceSetup {
             if (!dir.isDirectory() && !dir.mkdirs()) return;
             android.content.res.AssetManager am = ctx.getAssets();
             for (String name : am.list(GAMEFIX_DIR)) {
-                File out = new File(dir, name);
-                try (java.io.InputStream in = am.open(GAMEFIX_DIR + "/" + name)) {
-                    long assetLen = in.available();
-                    if (out.isFile() && out.length() == assetLen) continue;   // already extracted
+                // Guest (x86_64) libs are stored GZIP-COMPRESSED under a ".pack" extension so Android
+                // Studio's 16 KB-page alignment check can't flag them. That check inspects the ELF
+                // HEADER of any file in the APK (a plain ".bin" rename did NOT fool it — it reads
+                // content), but a gzip stream has no ELF magic, so it's invisible. We deliberately do
+                // NOT use ".gz": AGP's asset merger auto-DECOMPRESSES ".gz" assets back into a bare
+                // ELF, re-triggering the warning. ".pack" is copied verbatim. These libs are loaded by
+                // box64 inside the emulation, never by Android's linker, so the alignment rule doesn't
+                // apply to them anyway. ".pack" is always decompressed fresh (cheap; keeps the on-disk
+                // copy in sync if the bundled lib is ever updated).
+                boolean gz = name.endsWith(".pack");
+                String outName = gz ? name.substring(0, name.length() - 5) : name;
+                File out = new File(dir, outName);
+                try (java.io.InputStream raw = am.open(GAMEFIX_DIR + "/" + name)) {
+                    if (!gz && out.isFile() && out.length() == raw.available()) continue;   // already extracted
+                    java.io.InputStream in = gz ? new java.util.zip.GZIPInputStream(raw) : raw;
                     try (java.io.FileOutputStream os = new java.io.FileOutputStream(out)) {
                         byte[] buf = new byte[1 << 16];
                         int n;
                         while ((n = in.read(buf)) != -1) os.write(buf, 0, n);
                     }
-                    Log.i(TAG, "gamefix asset extracted: " + name + " (" + out.length() + " bytes)");
+                    Log.i(TAG, "gamefix asset extracted: " + outName + " (" + out.length() + " bytes)");
                 }
             }
         } catch (Throwable t) {

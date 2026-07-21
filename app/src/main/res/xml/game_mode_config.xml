@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Game Mode config (Android 12+). Declares to the platform/vendor game services
+     (Samsung Game Booster, Xiaomi Game Turbo, ...) how to treat us in game mode:
+     - supportsPerformanceGameMode: we want the sustained-clocks performance profile —
+       the game is CPU-bound under emulation, so scheduler/clock policy moves FPS directly.
+     - allowGameDownscaling=false: we already render at our own resolution scale
+       (per-instance render-scale with a 1280x720 UI floor); a system-imposed downscale
+       on top of that would double-scale and break the UI floor.
+     - allowGameFpsOverride=false: don't let the system cap our frame rate — the in-game
+       FPS is our main quality metric and battery mode must not silently clamp it. -->
+<game-mode-config xmlns:android="http://schemas.android.com/apk/res/android"
+    android:supportsPerformanceGameMode="true"
+    android:supportsBatteryGameMode="true"
+    android:allowGameDownscaling="false"
+    android:allowGameFpsOverride="false" />

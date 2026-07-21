@@ -29,6 +29,12 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme">
 
+        <!-- Game Mode (Android 12+): tells platform/vendor game services we support the
+             performance profile and must not be downscaled or FPS-capped — see the config. -->
+        <meta-data
+            android:name="android.game_mode_config"
+            android:resource="@xml/game_mode_config" />
+
         <activity
             android:name=".LauncherActivity"
             android:exported="true"

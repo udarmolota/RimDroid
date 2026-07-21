@@ -261,6 +261,9 @@ public class SettingsFragment extends Fragment {
                     .show();
         });
 
+        // (Steam Cloud saves moved out of debug into its own screen: drawer -> "Steam Cloud saves"
+        //  = CloudSavesFragment. The old debug spike button here was removed.)
+
         rgRenderer.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_zink_zfa) {
                 inst.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);

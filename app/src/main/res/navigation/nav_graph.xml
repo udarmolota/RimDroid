@@ -30,6 +30,11 @@
         android:label="@string/nav_download_game" />
 
     <fragment
+        android:id="@+id/cloud_saves_fragment"
+        android:name="com.rimdroid.fragments.CloudSavesFragment"
+        android:label="@string/nav_cloud_saves" />
+
+    <fragment
         android:id="@+id/install_content_fragment"
         android:name="com.rimdroid.fragments.InstallContentFragment"
         android:label="@string/nav_install_content" />
@@ -50,6 +55,9 @@
 
     <action android:id="@+id/action_download_game"
         app:destination="@id/download_fragment" />
+
+    <action android:id="@+id/action_cloud_saves"
+        app:destination="@id/cloud_saves_fragment" />
 
     <action android:id="@+id/action_open_install"
         app:destination="@id/install_content_fragment" />

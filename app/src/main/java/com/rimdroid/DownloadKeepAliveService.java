@@ -26,9 +26,17 @@ public class DownloadKeepAliveService extends Service {
     private static final String CHANNEL_ID = "rd_download";
     private static final int NOTIF_ID = 4242;
 
-    public static void start(Context ctx) {
-        ContextCompat.startForegroundService(ctx.getApplicationContext(),
-                new Intent(ctx.getApplicationContext(), DownloadKeepAliveService.class));
+    /** Intent extra: what the ongoing notification should say (the service is shared by the
+     *  game downloader and the Steam Cloud save sync, which are different activities to the user). */
+    private static final String EXTRA_TEXT = "text";
+    private static final String DEFAULT_TEXT = "Downloading from Steam — keep the app open";
+
+    public static void start(Context ctx) { start(ctx, DEFAULT_TEXT); }
+
+    public static void start(Context ctx, String text) {
+        Intent i = new Intent(ctx.getApplicationContext(), DownloadKeepAliveService.class);
+        i.putExtra(EXTRA_TEXT, text);
+        ContextCompat.startForegroundService(ctx.getApplicationContext(), i);
     }
 
     public static void stop(Context ctx) {
@@ -39,10 +47,12 @@ public class DownloadKeepAliveService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         createChannel();
+        String text = (intent != null && intent.getStringExtra(EXTRA_TEXT) != null)
+                ? intent.getStringExtra(EXTRA_TEXT) : DEFAULT_TEXT;
         Notification n = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
                 .setContentTitle("RimDroid")
-                .setContentText("Downloading from Steam — keep the app open")
+                .setContentText(text)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();

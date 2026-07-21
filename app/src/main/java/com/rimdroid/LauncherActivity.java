@@ -104,6 +104,8 @@ public class LauncherActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.action_download_game) {
                 navController.navigate(R.id.action_download_game);
+            } else if (id == R.id.action_cloud_saves) {
+                navController.navigate(R.id.action_cloud_saves);   // pull PC saves from Steam Cloud
                 return true;
             } else if (id == R.id.action_install_instance) {
                 navController.navigate(R.id.action_install_instance);

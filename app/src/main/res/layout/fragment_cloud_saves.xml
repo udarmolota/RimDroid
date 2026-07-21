@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/cloud_saves_title"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:alpha="0.75"
+            android:textSize="13sp"
+            android:text="@string/cloud_saves_hint" />
+
+        <!-- Shared by BOTH directions: the Steam session and the instance the saves live in. -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/cloud_saves_user">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_cloud_user"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:passwordToggleEnabled="true"
+            android:hint="@string/cloud_saves_pass">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_cloud_pass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/cloud_saves_instance"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/sp_cloud_instance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
+
+        <!-- Direction picker, mirroring the Download screen's Game/DLC/Mods toggle. -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggle_cloud_dir"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_dir_pull"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/cloud_saves_dir_pull" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_dir_push"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/cloud_saves_dir_push" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- Cloud listing needs a sign-in first; local listing does not. Shown only for "from cloud". -->
+        <Button
+            android:id="@+id/btn_cloud_refresh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/cloud_saves_refresh" />
+
+        <TextView
+            android:id="@+id/tv_cloud_list_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:alpha="0.75"
+            android:textSize="12sp"
+            android:text="@string/cloud_saves_list_empty_cloud" />
+
+        <!-- One checkbox row per save, filled in code (name + date + size). -->
+        <LinearLayout
+            android:id="@+id/box_cloud_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/btn_cloud_go"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:enabled="false"
+            android:text="@string/cloud_saves_pull" />
+
+        <TextView
+            android:id="@+id/tv_cloud_go_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:alpha="0.75"
+            android:textSize="12sp"
+            android:text="@string/cloud_saves_pull_note" />
+
+        <ProgressBar
+            android:id="@+id/pb_cloud"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <!-- Scrolling console log, same idea as the downloader screen: shows it isn't frozen. -->
+        <TextView
+            android:id="@+id/tv_cloud_log"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginTop="10dp"
+            android:fontFamily="monospace"
+            android:textSize="11sp"
+            android:textIsSelectable="true"
+            android:scrollbars="vertical" />
+    </LinearLayout>
+</ScrollView>

@@ -23,6 +23,10 @@
             android:id="@+id/action_download_game"
             android:icon="@drawable/ic_steam"
             android:title="@string/nav_download_game" />
+        <item
+            android:id="@+id/action_cloud_saves"
+            android:icon="@drawable/mt_icon_save"
+            android:title="@string/nav_cloud_saves" />
     </group>
 
     <!-- 3) Settings + data transfer (saves / settings / controls layout) -->

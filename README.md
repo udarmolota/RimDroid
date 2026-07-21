@@ -31,18 +31,6 @@ All tested devices now launch the game. Some run great out of the box; others ma
 **Compatibility mode** (Settings → Advanced). This is a living list; if your device isn't here, try
 it and send us a log.
 
-**Works:**
-- Samsung Galaxy S25 Ultra (Adreno 830)
-- Lenovo Legion Y700 (Adreno 730)
-- Realme P4x (Mali)
-- Poco X7 (Mali)
-
-**Loads, but may need Compatibility mode (Settings → Advanced):**
-- Poco F5 / Snapdragon 7+ Gen 2 (Adreno 725)
-- Infinix Note 50s 5G (Mali-G615) and similar
-- Tecno Pova 7 / Helio G100 (Mali-G57)
-- Tecno Pova 4 Pro
-
 ## System requirements
 
 - Android 11+
@@ -64,13 +52,6 @@ RimWorld officially ships only for x86_64. RimDroid runs the **native Linux buil
 ARM64: [box64](https://github.com/ptitSeb/box64) emulates the x86_64 engine + Mono in-process,
 graphics go through your phone's real GPU via Zink/Vulkan, and Android touch and gamepad input is
 injected straight into the game.
-
-## Mods
-
-Mods that patch the game use **Harmony**, and it must be version **2.2.2** — not the latest 2.3.x
-(its patch engine can't run under emulation). Install the provided ([Harmony-2.2.2-RimDroid.zip](https://www.mediafire.com/file/hqykm2zrl0b2rus/Harmony-2.2.2-RimDroid.zip/file))
-instead of the Steam Workshop Harmony, then add mods with **menu → Import Mods (ZIP)**, or download
-them in-app (Steam Downloads → Mods).
 
 ## Build
 

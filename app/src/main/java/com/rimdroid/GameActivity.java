@@ -368,20 +368,29 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         if (scaleDetector != null) scaleDetector.onTouchEvent(e);
-        if (e.getPointerCount() >= 2 || scaling) { releasePan(); panGestureOwned = false; return true; }   // pinch-zoom
+        if (e.getPointerCount() >= 2 || scaling) {   // pinch-zoom
+            ui.removeCallbacks(longPressRunnable);   // a 2nd finger cancels the pending right-click
+            releasePan(); panGestureOwned = false; return true;
+        }
         float d = getResources().getDisplayMetrics().density;
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 tapDownX = e.getX(); tapDownY = e.getY(); tapDownT = System.currentTimeMillis(); tapMoved = false;
                 lastPanX = e.getX(); lastPanY = e.getY();
                 panGestureOwned = true;     // we received this gesture's DOWN → it's a real map touch
+                longPressFired = false;
+                ui.removeCallbacks(longPressRunnable);
+                ui.postDelayed(longPressRunnable, LONG_PRESS_MS);   // held-still finger → right-click
                 return true;
             case MotionEvent.ACTION_MOVE: {
                 if (!panGestureOwned) return true;   // leaked MOVE from a button press → never pan
                 float dx = e.getX() - tapDownX, dy = e.getY() - tapDownY;
                 // Raised tap→drag threshold: a tap (even a slightly imprecise one, e.g. aiming for an
                 // on-screen button) stays a CLICK and does NOT pan the map. Only a deliberate drag pans.
-                if (Math.abs(dx) + Math.abs(dy) > 22 * d) tapMoved = true;
+                if (Math.abs(dx) + Math.abs(dy) > 22 * d) {
+                    if (!tapMoved) ui.removeCallbacks(longPressRunnable);   // it's a drag, not a long-press
+                    tapMoved = true;
+                }
                 if (tapMoved && dragPanEnabled) {
                     // Only pan if the finger actually MOVED since last frame (gate out jitter); a
                     // displaced-but-still finger must NOT keep the camera accelerating.
@@ -397,7 +406,11 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             }
             case MotionEvent.ACTION_UP:
                 releasePan();
-                if (panGestureOwned && !tapMoved && !scaling && System.currentTimeMillis() - tapDownT < 250) {
+                ui.removeCallbacks(longPressRunnable);   // released → no long-press
+                // A quick tap = left click. If the long-press already fired a right-click, do NOT
+                // also left-click (that would double-act). tapMoved/scaling still exclude drags/pinch.
+                if (panGestureOwned && !tapMoved && !scaling && !longPressFired
+                        && System.currentTimeMillis() - tapDownT < 250) {
                     final int gx = gameX(e.getX()), gy = gameY(e.getY());
                     try {
                         buttonInput(1, 1, gx, gy);   // direct tap = left click at finger
@@ -408,6 +421,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                 return true;
             case MotionEvent.ACTION_CANCEL:
                 releasePan();
+                ui.removeCallbacks(longPressRunnable);
                 panGestureOwned = false;
                 return true;
         }
@@ -436,6 +450,23 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     private boolean panGestureOwned;
     private boolean dragPanEnabled = true;   // per-instance (Settings → "Drag the map to pan")
     private boolean reverseLandscape;        // per-instance (Settings → "Mirror the picture"); default OFF
+
+    // Long-press = right-click. RimWorld uses right-click for context orders (move here, prioritise…),
+    // and a held finger did NOTHING before (the tap→left-click path requires release < 250 ms). After
+    // LONG_PRESS_MS with the finger still (no pan, no pinch) we fire a right-click at the touch-down
+    // point and suppress the release's left-click. A haptic tick confirms it (no cursor to see).
+    private static final long LONG_PRESS_MS = 350;
+    private boolean longPressFired;          // this gesture already sent a right-click
+    private final Runnable longPressRunnable = () -> {
+        if (!panGestureOwned || tapMoved || scaling || longPressFired) return;
+        longPressFired = true;
+        final int gx = gameX(tapDownX), gy = gameY(tapDownY);
+        try {
+            buttonInput(3, 1, gx, gy);   // right button down
+            ui.postDelayed(() -> buttonInput(3, 0, gx, gy), 50);
+        } catch (UnsatisfiedLinkError ig) {}
+        if (controls != null) controls.maybeHaptic();
+    };
 
     private void updateDragPan(float dx, float dy, float dead) {
         boolean fUp = dy < -dead, fDown = dy > dead, fLeft = dx < -dead, fRight = dx > dead;

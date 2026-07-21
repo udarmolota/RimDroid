@@ -34,7 +34,7 @@ it and send us a log.
 ## System requirements
 
 - Android 11+
-- A 64-bit (ARM64) device; **8 GB+ RAM** recommended
+- A 64-bit (ARM64) device; **6 GB+ RAM** recommended
 - ~5–10 GB free storage for the game, DLC, and mods
 - A copy of RimWorld you own (Steam/GOG)
 

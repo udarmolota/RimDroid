@@ -9,7 +9,7 @@ on Android phones, with real GPU rendering, touch controls, gamepad support, and
 
 > [!WARNING]
 > **The app is still in beta.** All tested devices launch the game, but some need **Compatibility
-> mode** and behaviour is still per-device, not per-GPU brand. See [Device compatibility](#device-compatibility).
+> mode** and behaviour is still per-device, not per-GPU brand. 
 
 ## Features
 

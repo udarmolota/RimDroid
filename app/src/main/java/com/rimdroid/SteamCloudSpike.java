@@ -62,9 +62,21 @@ public class SteamCloudSpike implements Runnable, Cancellable {
         }
     }
 
-    /** Adds the file listing to the shared progress/done listener. */
+    /** Push decision when the cloud already holds files with the same names. */
+    public static final int PUSH_CANCEL = 0, PUSH_REPLACE = 1, PUSH_ONLY_NEW = 2;
+
+    /** Adds the file listing and the push-conflict question to the shared progress/done listener. */
     public interface CloudListener extends SteamDownloadSpike.Listener {
         void onFileList(java.util.List<CloudFile> files);
+
+        /**
+         * Sending is about to replace these cloud files (the PC will load our version instead).
+         * Answer with PUSH_REPLACE / PUSH_ONLY_NEW / PUSH_CANCEL. Called on the worker thread, so
+         * the UI must complete the future from its own thread.
+         */
+        default CompletableFuture<Integer> resolvePushConflicts(java.util.List<CloudFile> clashes) {
+            return CompletableFuture.completedFuture(PUSH_CANCEL);
+        }
     }
 
     private final String username, password;
@@ -74,6 +86,8 @@ public class SteamCloudSpike implements Runnable, Cancellable {
     private final boolean listOnly;                       // just enumerate and report, download nothing
     private final boolean upload;                         // push local saves TO the cloud instead
     private final java.util.Set<String> selected;         // null = every file; else only these filenames
+    private File pullDir;                                 // pull target: a temp dir, NOT the Saves/ folder
+    private File compareDir;                              // pull: existing Saves/, to skip identical files
     private final SteamDownloadSpike.Listener listener;   // same shape → same UI wiring
 
     private SteamClient steamClient;
@@ -110,18 +124,23 @@ public class SteamCloudSpike implements Runnable, Cancellable {
         return new SteamCloudSpike(user, pass, appId, null, true, false, null, l);
     }
 
-    /** Pull the named saves into the instance's Saves/ (existing files are never overwritten). */
-    public static SteamCloudSpike forPull(String user, String pass, int appId, String instanceName,
-                                          java.util.Set<String> filenames,
-                                          SteamDownloadSpike.Listener l) {
-        return new SteamCloudSpike(user, pass, appId, instanceName, false, false, filenames, l);
+    /**
+     * Download EVERY cloud save into {@code tempDir} and then hang up. Nothing is decided about the
+     * user's Saves/ folder while the connection is open — placing the files (and asking about clashing
+     * names) happens afterwards, offline, with no session to keep alive and no rush.
+     */
+    public static SteamCloudSpike forPull(String user, String pass, int appId, File tempDir,
+                                          File savesDir, SteamDownloadSpike.Listener l) {
+        SteamCloudSpike s = new SteamCloudSpike(user, pass, appId, null, false, false, null, l);
+        s.pullDir = tempDir;
+        s.compareDir = savesDir;
+        return s;
     }
 
-    /** Push the named saves from the instance's Saves/ up to the cloud (replaces same-named files). */
+    /** Push the instance's saves up: new names go silently, existing ones are asked about once. */
     public static SteamCloudSpike forPush(String user, String pass, int appId, String instanceName,
-                                          java.util.Set<String> filenames,
                                           SteamDownloadSpike.Listener l) {
-        return new SteamCloudSpike(user, pass, appId, instanceName, false, true, filenames, l);
+        return new SteamCloudSpike(user, pass, appId, instanceName, false, true, null, l);
     }
 
     private void progress(String m) {
@@ -303,11 +322,18 @@ public class SteamCloudSpike implements Runnable, Cancellable {
             }
 
             if (upload) {
-                // The changelist we just fetched doubles as the "what's already up there" reference,
-                // so the log can say whether each push creates a new cloud file or replaces one.
-                java.util.Set<String> inCloud = new java.util.HashSet<>();
-                for (AppFileInfo f : files) inCloud.add(f.getFilename());
-                uploadSelected(cloud, prefixes.isEmpty() ? DEFAULT_CLOUD_PREFIX : prefixes.get(0), inCloud);
+                // The changelist doubles as "what's already up there": names it doesn't contain are
+                // new and go silently; names it does contain would overwrite what the PC loads, so we
+                // stop and ask once, listing them with both dates.
+                java.util.Map<String, CloudFile> inCloud = new java.util.HashMap<>();
+                java.util.Map<String, byte[]> cloudSha = new java.util.HashMap<>();
+                for (AppFileInfo f : files) {
+                    inCloud.put(f.getFilename(), new CloudFile(f.getFilename(), f.getRawFileSize(),
+                            f.getTimestamp() == null ? 0L : f.getTimestamp().getTime()));
+                    cloudSha.put(f.getFilename(), f.getShaFile());
+                }
+                uploadAll(cloud, prefixes.isEmpty() ? DEFAULT_CLOUD_PREFIX : prefixes.get(0),
+                        inCloud, cloudSha);
                 return;
             }
 
@@ -317,56 +343,48 @@ public class SteamCloudSpike implements Runnable, Cancellable {
                 return;
             }
 
-            if (instanceName == null) {
-                // CACHE TEST: pull just the SMALLEST file to cache/cloud_test/ to prove the pipeline
-                // with the least data. Touches no instance.
-                AppFileInfo smallest = files.get(0);
-                for (AppFileInfo f : files) if (f.getRawFileSize() < smallest.getRawFileSize()) smallest = f;
-                String path = prefixOf(smallest, prefixes) + smallest.getFilename();
-                byte[] raw = fetchAndDecode(cloud, path, smallest.getRawFileSize(), smallest.getShaFile());
-                if (raw == null) return;   // fetchAndDecode already called done()
-                File saved = writeTestFile(smallest.getFilename(), raw, "");
-                enumerationCompleted = true;
-                done("Download OK: " + raw.length + " B, SHA verified. Saved to " + saved
-                        + " — no instance touched.");
+            // PULL: fetch EVERY cloud save into a scratch dir, then hang up. Deciding what goes into
+            // the user's Saves/ (and asking about names that clash) happens afterwards with no live
+            // session — so a slow human answering a dialog can't cost us the connection, and a failed
+            // download never lands anywhere near real saves.
+            if (pullDir == null) { done("internal: no pull target"); return; }
+            if (!pullDir.isDirectory() && !pullDir.mkdirs()) {
+                done("Cannot create the temporary folder: " + pullDir);
                 return;
             }
-
-            // PULL INTO INSTANCE: download EVERY cloud save into instances/<name>/…/Saves/. Existing
-            // files are SKIPPED (never overwrite the user's data). The cloud path tail is just the
-            // filename; the prefix maps onto our own Saves/ dir.
-            File saveDir = new File(AppStorage.requireSingleton().getInstanceDir(instanceName),
-                    "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Saves");
-            if (!saveDir.isDirectory() && !saveDir.mkdirs()) {
-                done("Cannot create Saves dir: " + saveDir + " (does instance '" + instanceName + "' exist?)");
-                return;
-            }
-            int ok = 0, skipped = 0, failed = 0;
+            for (File old : orEmpty(pullDir.listFiles())) old.delete();   // start from a clean scratch
+            int ok = 0, failed = 0, same = 0;
             for (AppFileInfo f : files) {
                 if (!running) break;
-                if (selected != null && !selected.contains(f.getFilename())) continue;   // user's picks only
-                File dest = new File(saveDir, f.getFilename());
-                if (dest.exists()) {
-                    progress("Skipping (already exists): " + f.getFilename());
-                    skipped++;
+                // Already have this exact file? The changelist carries the cloud's SHA-1, so we can
+                // tell before spending any bandwidth — and it keeps the "same name" dialog for real
+                // differences instead of asking about a file that is identical.
+                if (compareDir != null && sameContent(new File(compareDir, f.getFilename()), f.getShaFile())) {
+                    progress("Unchanged, skipping: " + f.getFilename());
+                    same++;
                     continue;
                 }
                 String path = prefixOf(f, prefixes) + f.getFilename();
                 byte[] raw = fetchAndDecode(cloud, path, f.getRawFileSize(), f.getShaFile());
                 if (raw == null) { failed++; continue; }   // fetchAndDecode logged the reason
+                File dest = new File(pullDir, f.getFilename());
                 try (java.io.FileOutputStream os = new java.io.FileOutputStream(dest)) {
                     os.write(raw);
+                    // Carry the cloud's own timestamp across, so the placement step can compare
+                    // "mine vs theirs" by date without another round trip.
+                    if (f.getTimestamp() != null) dest.setLastModified(f.getTimestamp().getTime());
                     ok++;
-                    progress("Saved: " + f.getFilename() + " (" + raw.length + " B)");
+                    progress("Downloaded: " + f.getFilename() + " (" + raw.length + " B)");
                 } catch (Throwable t) {
                     Log.w(TAG, "write failed for " + dest + ": " + t);
                     failed++;
                 }
             }
             enumerationCompleted = true;
-            done("Pull complete → instance '" + instanceName + "': " + ok + " saved, "
-                    + skipped + " skipped (existed), " + failed + " failed. "
-                    + "Open RimWorld " + instanceName + " → Load game to try them.");
+            done("Downloaded " + ok + " save(s)"
+                    + (same > 0 ? (", " + same + " already up to date") : "")
+                    + (failed > 0 ? (", " + failed + " failed") : "")
+                    + ". Disconnected from Steam.");
             return;
         } catch (Throwable t) {
             Log.e(TAG, "enumeration failed", t);
@@ -396,17 +414,58 @@ public class SteamCloudSpike implements Runnable, Cancellable {
      * Uploading REPLACES the cloud file of the same name, i.e. what the PC will next pick up, so the
      * log states for every file whether it creates or replaces.
      */
-    private void uploadSelected(SteamCloud cloud, String cloudPrefix, java.util.Set<String> alreadyInCloud) {
+    private void uploadAll(SteamCloud cloud, String cloudPrefix,
+                           java.util.Map<String, CloudFile> alreadyInCloud,
+                           java.util.Map<String, byte[]> cloudSha) {
         File saveDir = new File(AppStorage.requireSingleton().getInstanceDir(instanceName),
                 "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Saves");
         java.util.List<File> picked = new java.util.ArrayList<>();
-        File[] all = saveDir.listFiles((d, n) -> n.endsWith(".rws"));
-        if (all != null)
-            for (File f : all) if (selected == null || selected.contains(f.getName())) picked.add(f);
+        int unchanged = 0;
+        for (File f : orEmpty(saveDir.listFiles((d, n) -> n.endsWith(".rws")))) {
+            // Identical to what's already up there? Sending it again would burn quota and bandwidth
+            // and move the cloud timestamp for nothing — and would make us ask about "replacing" a
+            // file with itself, e.g. right after pulling.
+            if (sameContent(f, cloudSha.get(f.getName()))) { unchanged++; continue; }
+            picked.add(f);
+        }
         if (picked.isEmpty()) {
             enumerationCompleted = true;
-            done("Nothing to send: no matching saves in " + saveDir);
+            done(unchanged > 0
+                    ? ("Nothing to send — all " + unchanged + " save(s) already match the cloud.")
+                    : ("Nothing to send: no saves in " + saveDir));
             return;
+        }
+        if (unchanged > 0) progress(unchanged + " save(s) already match the cloud — skipping those.");
+
+        // Names the cloud already holds would replace what the PC loads next — ask once before any
+        // of them goes up. New names need no question and are uploaded regardless of the answer.
+        java.util.List<CloudFile> clashes = new java.util.ArrayList<>();
+        for (File f : picked) {
+            CloudFile cf = alreadyInCloud.get(f.getName());
+            if (cf != null) clashes.add(cf);
+        }
+        if (!clashes.isEmpty() && listener instanceof CloudListener) {
+            int answer;
+            try {
+                answer = ((CloudListener) listener).resolvePushConflicts(clashes).get(10, TimeUnit.MINUTES);
+            } catch (Throwable t) {
+                answer = PUSH_CANCEL;
+            }
+            if (answer == PUSH_CANCEL) {
+                enumerationCompleted = true;
+                done("Cancelled — nothing was sent.");
+                return;
+            }
+            if (answer == PUSH_ONLY_NEW) {
+                java.util.List<File> onlyNew = new java.util.ArrayList<>();
+                for (File f : picked) if (!alreadyInCloud.containsKey(f.getName())) onlyNew.add(f);
+                picked = onlyNew;
+                if (picked.isEmpty()) {
+                    enumerationCompleted = true;
+                    done("Nothing new to send — every save is already in the cloud.");
+                    return;
+                }
+            }
         }
 
         long batchId = 0;
@@ -431,7 +490,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
                     byte[] zip = zipSingleEntry(raw);
                     byte[] sha = java.security.MessageDigest.getInstance("SHA-1").digest(raw);
                     String cloudPath = cloudPrefix + f.getName();
-                    progress((alreadyInCloud.contains(f.getName()) ? "Replacing " : "Creating ")
+                    progress((alreadyInCloud.containsKey(f.getName()) ? "Replacing " : "Creating ")
                             + f.getName() + " (" + zip.length + " B zipped / " + raw.length + " B raw)…");
 
                     // Mobile transfers drop mid-flight (the same "connection abort" the download side
@@ -715,6 +774,29 @@ public class SteamCloudSpike implements Runnable, Cancellable {
             Log.e(TAG, "fetch/decode failed for " + cloudPath, t);
             progress("FAILED " + baseName(cloudPath) + ": " + t);
             return null;
+        }
+    }
+
+    /** listFiles() returns null for a missing/unreadable dir — treat that as "nothing there". */
+    private static File[] orEmpty(File[] fs) { return fs == null ? new File[0] : fs; }
+
+    /**
+     * Is this local file byte-for-byte what the cloud holds? Compares against the SHA-1 the cloud
+     * reports for that name, so "has it changed" is answered by CONTENT rather than by timestamps
+     * (which drift across devices and say nothing about the bytes). False whenever we can't be sure —
+     * an unreadable file or a missing hash means "treat as different", never skip on a guess.
+     */
+    private static boolean sameContent(File local, byte[] cloudSha1) {
+        if (local == null || !local.isFile() || cloudSha1 == null || cloudSha1.length == 0) return false;
+        try (java.io.FileInputStream in = new java.io.FileInputStream(local)) {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
+            byte[] buf = new byte[1 << 16];
+            int n;
+            while ((n = in.read(buf)) != -1) md.update(buf, 0, n);
+            return java.util.Arrays.equals(md.digest(), cloudSha1);
+        } catch (Throwable t) {
+            Log.w(TAG, "sameContent check failed for " + local + ": " + t);
+            return false;
         }
     }
 

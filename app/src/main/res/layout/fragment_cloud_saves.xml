@@ -93,37 +93,11 @@
                 android:text="@string/cloud_saves_dir_push" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-        <!-- Cloud listing needs a sign-in first; local listing does not. Shown only for "from cloud". -->
-        <Button
-            android:id="@+id/btn_cloud_refresh"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="@string/cloud_saves_refresh" />
-
-        <TextView
-            android:id="@+id/tv_cloud_list_note"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:alpha="0.75"
-            android:textSize="12sp"
-            android:text="@string/cloud_saves_list_empty_cloud" />
-
-        <!-- One checkbox row per save, filled in code (name + date + size). -->
-        <LinearLayout
-            android:id="@+id/box_cloud_list"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:orientation="vertical" />
-
         <Button
             android:id="@+id/btn_cloud_go"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:enabled="false"
             android:text="@string/cloud_saves_pull" />
 
         <TextView

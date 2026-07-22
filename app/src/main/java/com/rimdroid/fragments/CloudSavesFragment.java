@@ -7,11 +7,8 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -35,27 +32,19 @@ import java.io.File;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Steam Cloud saves — move saves between an instance on the phone and the Steam Cloud copy that a
- * PC keeps in sync. Sits beside "Steam Downloads" in the drawer and shares its session model:
- * credentials + a Steam-Mobile approval, token in memory only, never stored.
+ * Steam Cloud saves — move saves between an instance on the phone and the copy Steam keeps in sync
+ * with a PC. Sits beside "Steam Downloads" in the drawer and shares its session model: credentials
+ * plus a Steam-Mobile approval, token in memory only, never stored.
  *
- * Two directions, picked with a toggle (mirroring the download screen's Game/DLC/Mods):
- *   • FROM CLOUD — needs a sign-in before anything can be listed, so the list appears after
- *     "show cloud saves". Already-present files are skipped, never overwritten.
- *   • TO CLOUD — the local list needs no sign-in, so it fills in as soon as an instance is chosen.
- *     (Upload itself is not implemented yet; it replaces the PC's copy of the same name, so it
- *     needs its own confirmation flow.)
- *
- * Whichever side is listed, rows show what the OTHER side has: if a copy of the same name is newer
- * there, the row says so — that's the raw material for the eventual Steam-style conflict prompt.
+ * Deliberately NO per-file picking. Getting saves fetches everything in one connection into a scratch
+ * folder and then hangs up; only afterwards — offline, unhurried — are the files moved into Saves/,
+ * asking only where a name already exists. Sending mirrors that: new names go up silently, existing
+ * ones are asked about once. Choosing files up front would mean holding the Steam session open while
+ * a human deliberates (the connection dies if the app is backgrounded) and a second sign-in approval.
  */
 public class CloudSavesFragment extends Fragment {
 
@@ -66,18 +55,11 @@ public class CloudSavesFragment extends Fragment {
 
     private TextInputEditText etUser, etPass;
     private Spinner spInstance;
-    private MaterialButtonToggleGroup toggleDir;
-    private Button btnRefresh, btnGo;
-    private TextView listNote, goNote, log;
-    private LinearLayout listBox;
+    private Button btnGo;
+    private TextView goNote, log;
     private ProgressBar progress;
 
     private List<GameInstance> instances;
-    /** Cloud listing from the last sign-in (null = not fetched yet). */
-    private List<SteamCloudSpike.CloudFile> cloudFiles;
-    /** filename → checkbox, for whichever side is currently listed. */
-    private final Map<String, CheckBox> rows = new HashMap<>();
-
     private boolean pullDirection = true;   // true = from cloud, false = to cloud
 
     @Nullable
@@ -94,18 +76,14 @@ public class CloudSavesFragment extends Fragment {
         etUser = view.findViewById(R.id.et_cloud_user);
         etPass = view.findViewById(R.id.et_cloud_pass);
         spInstance = view.findViewById(R.id.sp_cloud_instance);
-        toggleDir = view.findViewById(R.id.toggle_cloud_dir);
-        btnRefresh = view.findViewById(R.id.btn_cloud_refresh);
         btnGo = view.findViewById(R.id.btn_cloud_go);
-        listNote = view.findViewById(R.id.tv_cloud_list_note);
         goNote = view.findViewById(R.id.tv_cloud_go_note);
-        listBox = view.findViewById(R.id.box_cloud_list);
         progress = view.findViewById(R.id.pb_cloud);
         log = view.findViewById(R.id.tv_cloud_log);
         log.setMovementMethod(new ScrollingMovementMethod());
 
-        // Instance list. Position 0 is a PROMPT, never a real instance: a pre-selected default lets
-        // the user pull saves into the wrong instance without ever touching the spinner.
+        // Position 0 is a PROMPT, never a real instance: a pre-selected default lets the user move
+        // saves in or out of the wrong game without ever touching the spinner.
         instances = GameInstanceManager.requireSingleton().getInstances();
         List<String> names = new ArrayList<>();
         names.add(getString(instances.isEmpty()
@@ -113,29 +91,17 @@ public class CloudSavesFragment extends Fragment {
         for (GameInstance gi : instances) names.add(gi.getName());
         spInstance.setAdapter(new ArrayAdapter<>(requireContext(),
                 android.R.layout.simple_spinner_dropdown_item, names));
-        spInstance.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) { refreshList(); }
-            @Override public void onNothingSelected(AdapterView<?> p) { }
-        });
 
-        toggleDir.check(R.id.btn_dir_pull);
-        toggleDir.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+        MaterialButtonToggleGroup toggle = view.findViewById(R.id.toggle_cloud_dir);
+        toggle.check(R.id.btn_dir_pull);
+        toggle.addOnButtonCheckedListener((g, checkedId, isChecked) -> {
             if (!isChecked) return;
             pullDirection = (checkedId == R.id.btn_dir_pull);
-            applyDirection();
+            btnGo.setText(pullDirection ? R.string.cloud_saves_pull : R.string.cloud_saves_push);
+            goNote.setText(pullDirection ? R.string.cloud_saves_pull_note : R.string.cloud_saves_push_note);
         });
-        applyDirection();
-
-        btnRefresh.setOnClickListener(v -> fetchCloudList());
+        btnGo.setEnabled(true);
         btnGo.setOnClickListener(v -> onGo());
-    }
-
-    /** Swap the labels/visibility for the chosen direction and re-list that side. */
-    private void applyDirection() {
-        btnRefresh.setVisibility(pullDirection ? View.VISIBLE : View.GONE);
-        btnGo.setText(pullDirection ? R.string.cloud_saves_pull : R.string.cloud_saves_push);
-        goNote.setText(pullDirection ? R.string.cloud_saves_pull_note : R.string.cloud_saves_push_note);
-        refreshList();
     }
 
     private GameInstance chosenInstance() {
@@ -148,124 +114,9 @@ public class CloudSavesFragment extends Fragment {
                 "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Saves");
     }
 
-    /** Local .rws files of the chosen instance (empty list if none / no instance). */
-    private List<File> localSaves() {
-        GameInstance gi = chosenInstance();
-        List<File> out = new ArrayList<>();
-        if (gi == null) return out;
-        File[] fs = savesDirOf(gi).listFiles((d, n) -> n.endsWith(".rws"));
-        if (fs != null) for (File f : fs) out.add(f);
-        return out;
-    }
-
-    /** Rebuild the checkbox list for the current direction. */
-    private void refreshList() {
-        if (!isAdded()) return;
-        listBox.removeAllViews();
-        rows.clear();
-        btnGo.setEnabled(false);
-
-        GameInstance gi = chosenInstance();
-        if (gi == null) {
-            listNote.setVisibility(View.VISIBLE);
-            listNote.setText(pullDirection ? R.string.cloud_saves_list_empty_cloud
-                                           : R.string.cloud_saves_list_empty_local);
-            return;
-        }
-
-        if (pullDirection) {
-            if (cloudFiles == null) {   // not signed in yet
-                listNote.setVisibility(View.VISIBLE);
-                listNote.setText(R.string.cloud_saves_list_empty_cloud);
-                return;
-            }
-            if (cloudFiles.isEmpty()) {
-                listNote.setVisibility(View.VISIBLE);
-                listNote.setText(R.string.cloud_saves_list_none_cloud);
-                return;
-            }
-            listNote.setVisibility(View.GONE);
-            File dir = savesDirOf(gi);
-            for (SteamCloudSpike.CloudFile cf : cloudFiles) {
-                File local = new File(dir, cf.filename);
-                String label;
-                if (local.isFile() && local.lastModified() > cf.timestampMs) {
-                    // The phone's copy is newer — taking the cloud one would be a step back.
-                    label = getString(R.string.cloud_saves_row_newer_local, cf.filename,
-                            fmtDate(cf.timestampMs), fmtSize(cf.rawSize), fmtDate(local.lastModified()));
-                } else {
-                    label = getString(R.string.cloud_saves_row, cf.filename,
-                            fmtDate(cf.timestampMs), fmtSize(cf.rawSize));
-                }
-                addRow(cf.filename, label);
-            }
-        } else {
-            List<File> local = localSaves();
-            if (local.isEmpty()) {
-                listNote.setVisibility(View.VISIBLE);
-                listNote.setText(R.string.cloud_saves_list_none_local);
-                return;
-            }
-            listNote.setVisibility(View.GONE);
-            for (File f : local) {
-                SteamCloudSpike.CloudFile cf = cloudFileNamed(f.getName());
-                String label;
-                if (cf != null && cf.timestampMs > f.lastModified()) {
-                    // Sending would replace a cloud copy that is NEWER than this one.
-                    label = getString(R.string.cloud_saves_row_newer_cloud, f.getName(),
-                            fmtDate(f.lastModified()), fmtSize(f.length()), fmtDate(cf.timestampMs));
-                } else {
-                    label = getString(R.string.cloud_saves_row, f.getName(),
-                            fmtDate(f.lastModified()), fmtSize(f.length()));
-                }
-                addRow(f.getName(), label);
-            }
-        }
-    }
-
-    @Nullable
-    private SteamCloudSpike.CloudFile cloudFileNamed(String name) {
-        if (cloudFiles == null) return null;
-        for (SteamCloudSpike.CloudFile cf : cloudFiles) if (cf.filename.equals(name)) return cf;
-        return null;
-    }
-
-    private void addRow(String filename, String label) {
-        CheckBox cb = new CheckBox(requireContext());
-        cb.setText(label);
-        cb.setTextSize(13f);
-        cb.setOnCheckedChangeListener((b, c) -> btnGo.setEnabled(anyChecked()));
-        listBox.addView(cb);
-        rows.put(filename, cb);
-    }
-
-    private boolean anyChecked() {
-        for (CheckBox cb : rows.values()) if (cb.isChecked()) return true;
-        return false;
-    }
-
-    private Set<String> checkedNames() {
-        Set<String> out = new HashSet<>();
-        for (Map.Entry<String, CheckBox> e : rows.entrySet())
-            if (e.getValue().isChecked()) out.add(e.getKey());
-        return out;
-    }
-
-    /** Sign in and list what the cloud holds (downloads nothing). */
-    private void fetchCloudList() {
-        String u = text(etUser), p = text(etPass);
-        if (u.isEmpty() || p.isEmpty()) {
-            Toast.makeText(requireContext(), R.string.cloud_saves_need_login, Toast.LENGTH_SHORT).show();
-            return;
-        }
-        busy(true);
-        log.setText("");
-        appendLog("Connecting to Steam…");
-        new Thread(SteamCloudSpike.forList(u, p, RIMWORLD_APP_ID, new CloudCallbacks() {
-            @Override public void onFileList(List<SteamCloudSpike.CloudFile> files) {
-                ui.post(() -> { cloudFiles = files; refreshList(); });
-            }
-        }), "CloudSavesList").start();
+    /** Scratch folder the cloud copy lands in before anything touches the real saves. */
+    private File pullTempDir(GameInstance gi) {
+        return new File(AppStorage.requireSingleton().getCachePath(), "cloud_pull/" + gi.getName());
     }
 
     private void onGo() {
@@ -274,47 +125,152 @@ public class CloudSavesFragment extends Fragment {
             Toast.makeText(requireContext(), R.string.choose_instance_first, Toast.LENGTH_SHORT).show();
             return;
         }
-        Set<String> picked = checkedNames();
-        if (picked.isEmpty()) {
-            Toast.makeText(requireContext(), R.string.cloud_saves_select_none, Toast.LENGTH_SHORT).show();
-            return;
-        }
         String u = text(etUser), p = text(etPass);
         if (u.isEmpty() || p.isEmpty()) {
             Toast.makeText(requireContext(), R.string.cloud_saves_need_login, Toast.LENGTH_SHORT).show();
             return;
         }
+        busy(true);
+        log.setText("");
         if (pullDirection) {
-            busy(true);
-            appendLog("Getting " + picked.size() + " save(s)…");
-            new Thread(SteamCloudSpike.forPull(u, p, RIMWORLD_APP_ID, gi.getName(), picked,
-                    new CloudCallbacks()), "CloudSavesPull").start();
+            final File temp = pullTempDir(gi);
+            appendLog(getString(R.string.cloud_saves_log_connecting));
+            new Thread(SteamCloudSpike.forPull(u, p, RIMWORLD_APP_ID, temp, savesDirOf(gi), new Callbacks() {
+                @Override public void onDone(String message) {
+                    ui.post(() -> {
+                        appendLog("— " + message);
+                        // Connection is closed by now: place the files at leisure.
+                        placeAll(temp, savesDirOf(gi));
+                    });
+                }
+            }), "CloudSavesPull").start();
+        } else {
+            appendLog(getString(R.string.cloud_saves_log_connecting));
+            new Thread(SteamCloudSpike.forPush(u, p, RIMWORLD_APP_ID, gi.getName(), new Callbacks()),
+                    "CloudSavesPush").start();
+        }
+    }
+
+    // ===== placement: runs offline, after the Steam session is gone =====
+
+    /** Move every downloaded file into Saves/, asking only where the name already exists. */
+    private void placeAll(File temp, File savesDir) {
+        List<File> pending = new ArrayList<>();
+        File[] fs = temp.listFiles();
+        if (fs != null) for (File f : fs) pending.add(f);
+        if (pending.isEmpty()) { busy(false); return; }
+        if (!savesDir.isDirectory() && !savesDir.mkdirs()) {
+            appendLog("Cannot create " + savesDir);
+            busy(false);
             return;
         }
-        // Sending REPLACES the cloud copy — i.e. what the PC picks up next. Always confirm, and name
-        // the files that already exist up there so an accidental overwrite can't happen silently.
-        List<String> willReplace = new ArrayList<>();
-        for (String n : picked) if (cloudFileNamed(n) != null) willReplace.add(n);
-        String msg = willReplace.isEmpty()
-                ? getString(R.string.cloud_saves_push_confirm_new, picked.size())
-                : getString(R.string.cloud_saves_push_confirm_replace,
-                        android.text.TextUtils.join("\n• ", willReplace));
+        placeNext(pending, 0, savesDir, new int[]{0, 0});   // {copied, kept}
+    }
+
+    /** One file at a time, because a clash needs an answer before the next one is touched. */
+    private void placeNext(List<File> pending, int i, File savesDir, int[] tally) {
+        if (!isAdded()) return;
+        if (i >= pending.size()) {
+            appendLog(getString(R.string.cloud_saves_place_done, tally[0], tally[1]));
+            busy(false);
+            return;
+        }
+        File src = pending.get(i);
+        File dest = new File(savesDir, src.getName());
+        if (!dest.exists()) {
+            copyInto(src, dest, tally);
+            placeNext(pending, i + 1, savesDir, tally);
+            return;
+        }
+        // Same name on both sides — show both dates and let the user decide, like Steam does.
+        boolean cloudNewer = src.lastModified() > dest.lastModified();
+        String msg = getString(R.string.cloud_saves_clash_msg,
+                fmtDate(dest.lastModified()), fmtDate(src.lastModified()),
+                getString(cloudNewer ? R.string.cloud_saves_clash_cloud_newer
+                                     : R.string.cloud_saves_clash_local_newer));
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.cloud_saves_push_confirm_title)
+                .setTitle(getString(R.string.cloud_saves_clash_title, src.getName()))
                 .setMessage(msg)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.cloud_saves_push, (d, w) -> {
-                    busy(true);
-                    appendLog("Sending " + picked.size() + " save(s)…");
-                    new Thread(SteamCloudSpike.forPush(u, p, RIMWORLD_APP_ID, gi.getName(), picked,
-                            new CloudCallbacks()), "CloudSavesPush").start();
+                .setCancelable(false)
+                .setPositiveButton(R.string.cloud_saves_clash_replace, (d, w) -> {
+                    copyInto(src, dest, tally);
+                    placeNext(pending, i + 1, savesDir, tally);
+                })
+                .setNegativeButton(R.string.cloud_saves_clash_keep, (d, w) -> {
+                    appendLog(getString(R.string.cloud_saves_log_kept, src.getName()));
+                    tally[1]++;
+                    placeNext(pending, i + 1, savesDir, tally);
+                })
+                .setNeutralButton(R.string.cloud_saves_clash_both, (d, w) -> {
+                    copyInto(src, uniqueName(savesDir, src.getName()), tally);
+                    placeNext(pending, i + 1, savesDir, tally);
                 })
                 .show();
     }
 
-    /** Shared progress/done/Steam-Guard plumbing for both spike modes. */
-    private class CloudCallbacks implements SteamCloudSpike.CloudListener {
-        @Override public void onFileList(List<SteamCloudSpike.CloudFile> files) { /* only the list mode */ }
+    /** "Colony.rws" -> "Colony (from cloud).rws", and "… 2" etc. if that is taken too. */
+    private File uniqueName(File dir, String filename) {
+        int dot = filename.lastIndexOf('.');
+        String base = dot > 0 ? filename.substring(0, dot) : filename;
+        String ext = dot > 0 ? filename.substring(dot) : "";
+        String suffix = getString(R.string.cloud_saves_from_cloud_suffix);
+        File f = new File(dir, base + " " + suffix + ext);
+        for (int n = 2; f.exists(); n++) f = new File(dir, base + " " + suffix + " " + n + ext);
+        return f;
+    }
+
+    private void copyInto(File src, File dest, int[] tally) {
+        try (java.io.FileInputStream in = new java.io.FileInputStream(src);
+             java.io.FileOutputStream out = new java.io.FileOutputStream(dest)) {
+            byte[] buf = new byte[1 << 16];
+            int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            dest.setLastModified(src.lastModified());   // keep the cloud's date, for later comparisons
+            tally[0]++;
+            appendLog(getString(R.string.cloud_saves_log_placed, dest.getName()));
+            src.delete();
+        } catch (Throwable t) {
+            appendLog("FAILED " + dest.getName() + ": " + t);
+        }
+    }
+
+    // ===== shared Steam plumbing =====
+
+    private class Callbacks implements SteamCloudSpike.CloudListener {
+        @Override public void onFileList(List<SteamCloudSpike.CloudFile> files) { /* unused */ }
+
+        /** Sending would overwrite these on the PC — ask once, naming them with both dates. */
+        @Override
+        public CompletableFuture<Integer> resolvePushConflicts(List<SteamCloudSpike.CloudFile> clashes) {
+            final CompletableFuture<Integer> fut = new CompletableFuture<>();
+            ui.post(() -> {
+                if (!isAdded()) { fut.complete(SteamCloudSpike.PUSH_CANCEL); return; }
+                GameInstance gi = chosenInstance();
+                File savesDir = gi == null ? null : savesDirOf(gi);
+                StringBuilder sb = new StringBuilder();
+                for (SteamCloudSpike.CloudFile cf : clashes) {
+                    File local = savesDir == null ? null : new File(savesDir, cf.filename);
+                    sb.append("\n• ").append(cf.filename)
+                      .append("\n   ").append(getString(R.string.cloud_saves_clash_in_cloud,
+                              fmtDate(cf.timestampMs)));
+                    if (local != null && local.isFile())
+                        sb.append("\n   ").append(getString(R.string.cloud_saves_clash_on_phone,
+                                fmtDate(local.lastModified())));
+                }
+                new MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.cloud_saves_push_confirm_title)
+                        .setMessage(getString(R.string.cloud_saves_push_confirm_replace, sb.toString()))
+                        .setCancelable(false)
+                        .setPositiveButton(R.string.cloud_saves_push_replace,
+                                (d, w) -> fut.complete(SteamCloudSpike.PUSH_REPLACE))
+                        .setNeutralButton(R.string.cloud_saves_push_only_new,
+                                (d, w) -> fut.complete(SteamCloudSpike.PUSH_ONLY_NEW))
+                        .setNegativeButton(android.R.string.cancel,
+                                (d, w) -> fut.complete(SteamCloudSpike.PUSH_CANCEL))
+                        .show();
+            });
+            return fut;
+        }
 
         @Override
         public CompletableFuture<String> requestSteamGuardCode(boolean prevWrong, String email) {
@@ -340,35 +296,24 @@ public class CloudSavesFragment extends Fragment {
         @Override public void onProgress(String message) { ui.post(() -> appendLog(message)); }
 
         @Override public void onDone(String message) {
-            ui.post(() -> {
-                appendLog("— " + message);
-                busy(false);
-                if (pullDirection) refreshList();   // pulled files now exist locally
-            });
+            ui.post(() -> { appendLog("— " + message); busy(false); });
         }
     }
 
     private void busy(boolean b) {
         if (!isAdded()) return;
         progress.setVisibility(b ? View.VISIBLE : View.GONE);
-        btnRefresh.setEnabled(!b);
-        btnGo.setEnabled(!b && anyChecked());
-        // Hold the process at foreground-service priority for the whole operation. Without this
-        // Android freezes a backgrounded app and kills its Steam connection mid-transfer — the exact
-        // failure the game downloader already hit, which is why this service exists. It matters here
-        // in particular because signing in SENDS THE USER AWAY to the Steam Mobile app to approve.
+        btnGo.setEnabled(!b);
+        // Hold the process at foreground-service priority for the whole operation. Android freezes a
+        // backgrounded app and kills its Steam connection mid-transfer — the failure the game
+        // downloader already hit — and signing in deliberately sends the user to Steam Mobile.
         android.content.Context appCtx = requireContext().getApplicationContext();
-        if (b) com.rimdroid.DownloadKeepAliveService.start(appCtx,
-                getString(R.string.cloud_saves_keepalive));
+        if (b) com.rimdroid.DownloadKeepAliveService.start(appCtx, getString(R.string.cloud_saves_keepalive));
         else com.rimdroid.DownloadKeepAliveService.stop(appCtx);
     }
 
     private String text(TextInputEditText e) {
         return e.getText() == null ? "" : e.getText().toString().trim();
-    }
-
-    private static String fmtSize(long bytes) {
-        return bytes >= 1024 * 1024 ? (bytes / (1024 * 1024)) + " MB" : Math.max(1, bytes / 1024) + " KB";
     }
 
     private String fmtDate(long ms) {

@@ -188,9 +188,9 @@ public class LauncherFragment extends Fragment {
         Navigation.findNavController(requireView()).navigate(R.id.action_settings, b);
     }
 
-    /** Open the system Documents UI directly at this instance's folder (same provider as the drawer's
-     *  Manage Storage, but scoped to this instance). Falls back to the storage root if a file manager
-     *  doesn't honour a folder-level view. */
+    /** Open the system Documents UI directly at this instance's folder — the only way in now that the
+     *  drawer's global "Manage storage" is gone (it duplicated this, unscoped). Falls back to the
+     *  storage root if a file manager doesn't honour a folder-level view. */
     private void openInstanceStorage(GameInstance gi) {
         String docId = AppStorage.requireSingleton().getInstanceDir(gi.getName()).getAbsolutePath();
         try {

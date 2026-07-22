@@ -63,14 +63,12 @@
 
     <!-- 4) Diagnostics & storage -->
     <group android:id="@+id/group_files" android:checkableBehavior="none">
+        <!-- "Manage storage" lives on each instance card's own menu (menu_game_instance.xml), where
+             it acts on that instance — a global duplicate only made this drawer longer. -->
         <item
             android:id="@+id/action_export_logs"
             android:icon="@drawable/mt_icon_logfile"
             android:title="@string/nav_export_logs" />
-        <item
-            android:id="@+id/action_manage_storage"
-            android:icon="@drawable/mt_icon_folder"
-            android:title="@string/nav_manage_storage" />
     </group>
 
     <!-- 5) About -->

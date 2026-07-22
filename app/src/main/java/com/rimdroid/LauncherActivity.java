@@ -154,14 +154,10 @@ public class LauncherActivity extends AppCompatActivity {
             } else if (id == R.id.action_reddit) {
                 openUrl(getString(R.string.url_reddit));
                 return true;
-            } else if (id == R.id.action_manage_storage) {
-                Uri rootUri = DocumentsContract.buildRootsUri(C.STORAGE_PROVIDER_AUTHORITY);
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(rootUri, "vnd.android.document/root");
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-                return true;
             }
+            // "Manage storage" is gone from the drawer: every instance card already has it in its own
+            // menu, scoped to that instance (LauncherFragment.openInstanceStorage), so the global copy
+            // was a duplicate that only made an already-long drawer longer.
             return NavigationUI.onNavDestinationSelected(item, navController)
                     || super.onOptionsItemSelected(item);
         });

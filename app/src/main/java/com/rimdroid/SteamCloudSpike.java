@@ -417,6 +417,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
     private void uploadAll(SteamCloud cloud, String cloudPrefix,
                            java.util.Map<String, CloudFile> alreadyInCloud,
                            java.util.Map<String, byte[]> cloudSha) {
+        CloudSyncState state = CloudSyncState.load(instanceName);
         File saveDir = new File(AppStorage.requireSingleton().getInstanceDir(instanceName),
                 "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Saves");
         java.util.List<File> picked = new java.util.ArrayList<>();
@@ -428,7 +429,18 @@ public class SteamCloudSpike implements Runnable, Cancellable {
             if (sameContent(f, cloudSha.get(f.getName()))) { unchanged++; continue; }
             picked.add(f);
         }
-        if (picked.isEmpty()) {
+        // Deletions travel too, the way Steam does it — but ONLY for names this instance is on record
+        // as having synced. A cloud file we never synced belongs to another instance or to the PC:
+        // treating "not in this folder" as "deleted" would let a sync from an instance holding two
+        // saves wipe every other colony out of the cloud, and off the PC on its next sync.
+        java.util.Set<String> localNames = new java.util.HashSet<>();
+        for (File f : orEmpty(saveDir.listFiles((d, n) -> n.endsWith(".rws")))) localNames.add(f.getName());
+        java.util.List<String> toDelete = new java.util.ArrayList<>();
+        for (String known : state.knownNames())
+            if (!localNames.contains(known) && alreadyInCloud.containsKey(known))
+                toDelete.add(cloudPrefix + known);
+
+        if (picked.isEmpty() && toDelete.isEmpty()) {
             enumerationCompleted = true;
             done(unchanged > 0
                     ? ("Nothing to send — all " + unchanged + " save(s) already match the cloud.")
@@ -436,6 +448,9 @@ public class SteamCloudSpike implements Runnable, Cancellable {
             return;
         }
         if (unchanged > 0) progress(unchanged + " save(s) already match the cloud — skipping those.");
+        if (!toDelete.isEmpty())
+            progress("Removing " + toDelete.size() + " save(s) from the cloud (deleted here since the "
+                    + "last sync).");
 
         // Names the cloud already holds would replace what the PC loads next — ask once before any
         // of them goes up. New names need no question and are uploaded regardless of the answer.
@@ -475,7 +490,7 @@ public class SteamCloudSpike implements Runnable, Cancellable {
             for (File f : picked) names.add(cloudPrefix + f.getName());
             progress("Opening upload batch for " + picked.size() + " file(s)…");
             batchId = cloud.beginAppUploadBatch(
-                            appId, "RimDroid", names, java.util.Collections.emptyList(),
+                            appId, "RimDroid", names, toDelete,
                             steamClient.getSteamID().convertToUInt64(),   // clientId (undocumented; SteamID works as an id)
                             0L,                                           // appBuildId — we don't track the game's build
                             ioScope())
@@ -517,7 +532,13 @@ public class SteamCloudSpike implements Runnable, Cancellable {
                     }
                     boolean committed = cloud.commitFileUpload(sent, appId, sha, cloudPath, ioScope())
                             .get(60, TimeUnit.SECONDS);
-                    if (sent && committed) { ok++; progress("Sent: " + f.getName()); }
+                    if (sent && committed) {
+                        ok++;
+                        // Both sides now hold this exact content — record it, so a later deletion
+                        // here can be told apart from a file that was never ours.
+                        state.remember(f.getName(), hex(sha));
+                        progress("Sent: " + f.getName());
+                    }
                     else { failed++; progress("FAILED " + f.getName() + " (sent=" + sent + " committed=" + committed + ")"); }
                 } catch (Throwable t) {
                     Log.e(TAG, "upload failed for " + f, t);
@@ -534,8 +555,13 @@ public class SteamCloudSpike implements Runnable, Cancellable {
                 try { cloud.completeAppUploadBatch(appId, batchId, EResult.OK, ioScope()).get(60, TimeUnit.SECONDS); }
                 catch (Throwable t) { Log.w(TAG, "completeAppUploadBatch: " + t); }
             }
+            // Deletions went out with the batch; drop them from the record so we don't try again.
+            if (batchId != 0) for (String p : toDelete) state.forget(baseName(p));
+            state.save();
             enumerationCompleted = true;
-            done("Send complete: " + ok + " uploaded, " + failed + " failed."
+            done("Send complete: " + ok + " uploaded"
+                    + (toDelete.isEmpty() ? "" : (", " + toDelete.size() + " removed from the cloud"))
+                    + (failed > 0 ? (", " + failed + " failed") : "") + "."
                     + (ok > 0 ? " Your PC will pick them up next time Steam syncs RimWorld." : ""));
             running = false;
         }
@@ -826,6 +852,21 @@ public class SteamCloudSpike implements Runnable, Cancellable {
 
     private static String sha1Hex(byte[] data) throws java.security.NoSuchAlgorithmException {
         return hex(java.security.MessageDigest.getInstance("SHA-1").digest(data));
+    }
+
+    /** SHA-1 of a file as hex, or null if it can't be read — the key the sync record is built on. */
+    public static String sha1Hex(File f) {
+        if (f == null || !f.isFile()) return null;
+        try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-1");
+            byte[] buf = new byte[1 << 16];
+            int n;
+            while ((n = in.read(buf)) != -1) md.update(buf, 0, n);
+            return hex(md.digest());
+        } catch (Throwable t) {
+            Log.w(TAG, "sha1 failed for " + f + ": " + t);
+            return null;
+        }
     }
 
     private class PushAuthenticator implements IAuthenticator {

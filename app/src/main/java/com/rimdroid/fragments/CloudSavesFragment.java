@@ -164,13 +164,18 @@ public class CloudSavesFragment extends Fragment {
             busy(false);
             return;
         }
-        placeNext(pending, 0, savesDir, new int[]{0, 0});   // {copied, kept}
+        GameInstance gi = chosenInstance();
+        placeNext(pending, 0, savesDir,
+                gi == null ? null : com.rimdroid.CloudSyncState.load(gi.getName()),
+                new int[]{0, 0});   // {copied, kept}
     }
 
     /** One file at a time, because a clash needs an answer before the next one is touched. */
-    private void placeNext(List<File> pending, int i, File savesDir, int[] tally) {
+    private void placeNext(List<File> pending, int i, File savesDir,
+                           com.rimdroid.CloudSyncState state, int[] tally) {
         if (!isAdded()) return;
         if (i >= pending.size()) {
+            if (state != null) state.save();   // record what now matches the cloud
             appendLog(getString(R.string.cloud_saves_place_done, tally[0], tally[1]));
             busy(false);
             return;
@@ -178,8 +183,8 @@ public class CloudSavesFragment extends Fragment {
         File src = pending.get(i);
         File dest = new File(savesDir, src.getName());
         if (!dest.exists()) {
-            copyInto(src, dest, tally);
-            placeNext(pending, i + 1, savesDir, tally);
+            copyInto(src, dest, tally, state);
+            placeNext(pending, i + 1, savesDir, state, tally);
             return;
         }
         // Same name on both sides — show both dates and let the user decide, like Steam does.
@@ -193,17 +198,22 @@ public class CloudSavesFragment extends Fragment {
                 .setMessage(msg)
                 .setCancelable(false)
                 .setPositiveButton(R.string.cloud_saves_clash_replace, (d, w) -> {
-                    copyInto(src, dest, tally);
-                    placeNext(pending, i + 1, savesDir, tally);
+                    copyInto(src, dest, tally, state);
+                    placeNext(pending, i + 1, savesDir, state, tally);
                 })
                 .setNegativeButton(R.string.cloud_saves_clash_keep, (d, w) -> {
+                    // Sides deliberately left different — drop any record, so this name is not
+                    // mistaken later for "the user deleted it" and removed from the cloud.
+                    if (state != null) state.forget(src.getName());
                     appendLog(getString(R.string.cloud_saves_log_kept, src.getName()));
                     tally[1]++;
-                    placeNext(pending, i + 1, savesDir, tally);
+                    placeNext(pending, i + 1, savesDir, state, tally);
                 })
                 .setNeutralButton(R.string.cloud_saves_clash_both, (d, w) -> {
-                    copyInto(src, uniqueName(savesDir, src.getName()), tally);
-                    placeNext(pending, i + 1, savesDir, tally);
+                    // The cloud copy lands under a new name, so neither name matches the cloud now.
+                    if (state != null) state.forget(src.getName());
+                    copyInto(src, uniqueName(savesDir, src.getName()), tally, null);
+                    placeNext(pending, i + 1, savesDir, state, tally);
                 })
                 .show();
     }
@@ -219,7 +229,9 @@ public class CloudSavesFragment extends Fragment {
         return f;
     }
 
-    private void copyInto(File src, File dest, int[] tally) {
+    /** Copy one downloaded save into place. Passing {@code state} records that this name now holds
+     *  exactly what the cloud holds — the fact a later deletion here is judged against. */
+    private void copyInto(File src, File dest, int[] tally, com.rimdroid.CloudSyncState state) {
         try (java.io.FileInputStream in = new java.io.FileInputStream(src);
              java.io.FileOutputStream out = new java.io.FileOutputStream(dest)) {
             byte[] buf = new byte[1 << 16];
@@ -228,6 +240,7 @@ public class CloudSavesFragment extends Fragment {
             dest.setLastModified(src.lastModified());   // keep the cloud's date, for later comparisons
             tally[0]++;
             appendLog(getString(R.string.cloud_saves_log_placed, dest.getName()));
+            if (state != null) state.remember(dest.getName(), SteamCloudSpike.sha1Hex(dest));
             src.delete();
         } catch (Throwable t) {
             appendLog("FAILED " + dest.getName() + ": " + t);

@@ -65,6 +65,8 @@ In the cloud: %2$s
     <string name="audio_label">Game sound</string>
     <string name="show_fps_label">Show FPS counter (top-left)</string>
     <string name="render_res_label">Render resolution</string>
+    <string name="render_res_relative">fullscreen</string>
+    <string name="render_res_fixed_169">black margins 1280×720 — fastest</string>
     <string name="render_res_hint">Lower = more FPS on weak GPUs and a bigger UI. Native = sharpest.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
@@ -77,10 +79,25 @@ In the cloud: %2$s
     <string name="nav_export_logs">Export logs (ZIP)…</string>
     <string name="nav_export_layout">Export controls layout…</string>
     <string name="nav_import_layout">Import controls layout…</string>
-    <string name="nav_reddit">Community (X)</string>
     <string name="nav_updates">New versions (GitHub)</string>
-    <string name="url_reddit" translatable="false">https://x.com/rimdroid</string>
+    <string name="nav_bug_report">Report a bug</string>
+    <!-- Drawer footer icon labels (accessibility) -->
+    <string name="link_x">RimDroid on X</string>
+    <string name="link_reddit">RimDroid on Reddit</string>
+    <string name="link_support">Support the developer</string>
+    <string name="link_soon">Coming soon</string>
+    <!-- Bug report email. Number = the tap date as ddMMyyyy, filled at runtime. -->
+    <string name="bug_report_email" translatable="false">210478@mail.ru</string>
+    <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
+    <string name="bug_report_body">Hi, I have a new bug report.\n\nDescription: \n\n\n---\n%1$s</string>
+    <string name="bug_report_no_mail">No email app found on this device.</string>
+    <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
+    <string name="donate_title">Support development</string>
+    <string name="donate_message">Enjoying RimDroid and want to support it?\n\nMade and maintained by: ko-fi.com/udarmolota\n\nEvery bit helps keep the work going. Thank you! ❤</string>
+    <!-- External links. url_x carries what url_reddit used to. -->
     <string name="url_github_releases" translatable="false">https://github.com/udarmolota/rimdroid/releases</string>
+    <string name="url_x" translatable="false">https://x.com/rimdroid</string>
+    <string name="url_reddit_sub" translatable="false">https://www.reddit.com/r/rimdroid/</string>
     <string name="on_screen_controls">On-screen controls</string>
     <string name="edit_controls">Edit on-screen controls…</string>
     <string name="editor_add">Add</string>

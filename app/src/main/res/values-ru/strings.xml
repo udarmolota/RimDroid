@@ -64,6 +64,8 @@
     <string name="audio_label">Звук в игре</string>
     <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
     <string name="render_res_label">Разрешение рендера</string>
+    <string name="render_res_relative">во весь экран</string>
+    <string name="render_res_fixed_169">с чёрными краями 1280×720 — fastest</string>
     <string name="render_res_hint">Ниже = больше FPS на слабых GPU и крупнее интерфейс. Нативное = резче.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
@@ -76,8 +78,17 @@
     <string name="nav_export_logs">Экспорт логов (ZIP)…</string>
     <string name="nav_export_layout">Экспорт раскладки управления…</string>
     <string name="nav_import_layout">Импорт раскладки управления…</string>
-    <string name="nav_reddit">Сообщество (X)</string>
     <string name="nav_updates">Новые версии (GitHub)</string>
+    <string name="nav_bug_report">Сообщить об ошибке</string>
+    <string name="link_x">RimDroid в X</string>
+    <string name="link_reddit">RimDroid на Reddit</string>
+    <string name="link_support">Поддержать разработчика</string>
+    <string name="link_soon">Скоро</string>
+    <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
+    <string name="bug_report_body">Hi, I have a new bug report.\n\nDescription: \n\n\n---\n%1$s</string>
+    <string name="bug_report_no_mail">На устройстве нет почтового приложения.</string>
+    <string name="donate_title">Поддержать разработку</string>
+    <string name="donate_message">Нравится RimDroid и хочешь поддержать?\n\nДелаю и поддерживаю: ko-fi.com/udarmolota\n\nЛюбая помощь помогает продолжать работу. Спасибо! ❤</string>
     <string name="on_screen_controls">Экранное управление</string>
     <string name="edit_controls">Редактировать экранные кнопки…</string>
     <string name="editor_add">Добавить</string>

@@ -137,12 +137,12 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     }
 
     private float renderScale = 0.72f;
-    // Letterbox the game at its native 4:3 (black side bars, no stretch). DEFAULT OFF: in-game the
-    // world is already aspect-correct (RimWorld's camera adapts); only the loading screen/menus
-    // stretch, and 4:3 bars cost ~1/3 of a wide screen — bad trade. Kept behind this flag (could
-    // become an optional setting later). OFF = full-screen (boxLeft/Top=0, boxW/H=screen).
-    private static final boolean LETTERBOX_4_3 = false;
-    // The game rect (screen px). With LETTERBOX off this is the whole screen.
+    // Fixed monitor resolution (per-instance, Settings → Render resolution). Players coming from PC
+    // emulators asked for 720p by name: a real monitor resolution, letterboxed, instead of stretching
+    // to the device's aspect. 16:9 for ordinary phones, 4:3 for near-square foldables where 16:9
+    // would waste a third of the screen. See InstanceSettings.FIXED_*. NONE = fill the screen.
+    private int fixedRes;
+    // The game rect (screen px). Filling the screen, this is the whole screen.
     private int boxLeft, boxTop, boxW, boxH;
     // Auto-pin RimWorld's Prefs.xml to fullscreen at our render resolution.
     // DISABLED for now: forcing fullscreen at surface*scale raised the internal
@@ -236,6 +236,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             renderScale = is.getEffectiveRenderScale(sw, sh);
             dragPanEnabled = is.isDragPan();
             reverseLandscape = is.isReverseLandscape();
+            fixedRes = is.getFixedResMode();
             // 1.6/X11 render scale ENABLED (2026-07-11): the bring-up force-1.0 is gone. The old
             // race is covered — GameLauncher's settle loop waits for the FIXED-SIZE surfaceChanged
             // before starting the X server, so the buffer, the X screen and -screen-width/-height
@@ -246,15 +247,26 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             if (lp != null) renderScale = lp.getEffectiveRenderScale(sw, sh);
         }
 
-        if (LETTERBOX_4_3) {
-            // Native 4:3, fit by HEIGHT, centered, black side bars → no stretch (buffer aspect
-            // matches the game, so Unity's 4:3 maps 1:1).
-            final float GAME_ASPECT = 4f / 3f;
+        if (fixedRes != com.rimdroid.InstanceSettings.FIXED_NONE) {
+            // A rect of the chosen shape centred on the screen, then a buffer of exactly N x 720
+            // inside it. Because the rect has that exact aspect, scale (targetW / boxW) lands the
+            // height on 720 with no rounding — so the existing setFixedSize / touch-mapping /
+            // Prefs-pinning paths need no changes at all. Whatever is left over stays black: that
+            // is the margin the on-screen buttons can sit on.
+            boolean wide = (fixedRes == com.rimdroid.InstanceSettings.FIXED_720_16_9);
+            final float ASPECT  = wide ? 16f / 9f : 4f / 3f;
+            final int   TARGET_W = wide ? 1280 : 960;
             boxH = sh;
-            boxW = Math.round(sh * GAME_ASPECT);
-            if (boxW > sw) { boxW = sw; boxH = Math.round(sw / GAME_ASPECT); }
+            boxW = Math.round(sh * ASPECT);
+            if (boxW > sw) { boxW = sw; boxH = Math.round(sw / ASPECT); }
             boxLeft = (sw - boxW) / 2;
             boxTop  = (sh - boxH) / 2;
+            // Overrides the render-scale setting on purpose — this mode IS the resolution. 720 lines
+            // is also our readability floor, so pinning it can't make the UI too small.
+            renderScale = (float) TARGET_W / boxW;
+            Log.i(TAG, "fixed " + (wide ? "16:9" : "4:3") + ": box=" + boxW + "x" + boxH
+                    + " scale=" + renderScale + " -> buffer "
+                    + Math.round(boxW * renderScale) + "x" + Math.round(boxH * renderScale));
         } else {
             // Full screen (game stretched to fill — in-game world stays aspect-correct via
             // RimWorld's camera; only the loading screen/menus stretch). No black bars.

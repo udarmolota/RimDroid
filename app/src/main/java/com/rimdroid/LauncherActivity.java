@@ -10,6 +10,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowInsets;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.graphics.Insets;
 
@@ -148,19 +149,73 @@ public class LauncherActivity extends AppCompatActivity {
                 chooseInstanceThen(gi -> { pendingInstance = gi; importLayoutLauncher.launch(new String[]{
                         "application/json", "text/plain", "application/octet-stream"}); });
                 return true;
-            } else if (id == R.id.action_updates) {
-                checkForUpdates();
-                return true;
-            } else if (id == R.id.action_reddit) {
-                openUrl(getString(R.string.url_reddit));
+            } else if (id == R.id.action_bug_report) {
+                sendBugReport();
                 return true;
             }
+            // GitHub / X / Reddit / Support are no longer menu rows — they're the icon row in the
+            // drawer header, wired in wireHeaderLinks().
             // "Manage storage" is gone from the drawer: every instance card already has it in its own
             // menu, scoped to that instance (LauncherFragment.openInstanceStorage), so the global copy
             // was a duplicate that only made an already-long drawer longer.
             return NavigationUI.onNavDestinationSelected(item, navController)
                     || super.onOptionsItemSelected(item);
         });
+
+        wireHeaderLinks();
+    }
+
+    /** The four external links pinned at the bottom of the drawer (icon row, not menu rows). */
+    private void wireHeaderLinks() {
+        findViewById(R.id.link_github).setOnClickListener(v -> { binding.drawerLayout.close(); checkForUpdates(); });
+        findViewById(R.id.link_x).setOnClickListener(v -> openLink(R.string.url_x));
+        findViewById(R.id.link_reddit).setOnClickListener(v -> openLink(R.string.url_reddit_sub));
+        findViewById(R.id.link_support).setOnClickListener(v -> { binding.drawerLayout.close(); showDonateDialog(); });
+    }
+
+    /** Open a link, or say "coming soon" if that URL hasn't been set yet (empty string resource). */
+    private void openLink(int urlRes) {
+        String url = getString(urlRes);
+        if (url == null || url.trim().isEmpty()) {
+            Toast.makeText(this, R.string.link_soon, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        binding.drawerLayout.close();
+        openUrl(url);
+    }
+
+    /** Support dialog — the ko-fi link is clickable (matches how Zomdroid asks for support). */
+    private void showDonateDialog() {
+        android.text.SpannableString s =
+                new android.text.SpannableString(getString(R.string.donate_message));
+        android.text.util.Linkify.addLinks(s, android.text.util.Linkify.WEB_URLS);
+        androidx.appcompat.app.AlertDialog dialog =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.donate_title)
+                        .setMessage(s)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .create();
+        dialog.show();
+        TextView mv = dialog.findViewById(android.R.id.message);
+        if (mv != null) mv.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+    }
+
+    /** Open the user's email app pre-filled with a bug report to the maintainer. */
+    private void sendBugReport() {
+        String date = new java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.US)
+                .format(new java.util.Date());
+        String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                + "\nAndroid: " + android.os.Build.VERSION.RELEASE
+                + "\nRimDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")";
+        Intent i = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"));
+        i.putExtra(Intent.EXTRA_EMAIL, new String[]{ getString(R.string.bug_report_email) });
+        i.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.bug_report_subject, date));
+        i.putExtra(Intent.EXTRA_TEXT, getString(R.string.bug_report_body, device));
+        try {
+            startActivity(i);
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.bug_report_no_mail, Toast.LENGTH_LONG).show();
+        }
     }
 
     @Override

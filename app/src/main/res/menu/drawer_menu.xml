@@ -61,7 +61,7 @@
             android:title="@string/nav_import_layout" />
     </group>
 
-    <!-- 4) Diagnostics & storage -->
+    <!-- 4) Diagnostics -->
     <group android:id="@+id/group_files" android:checkableBehavior="none">
         <!-- "Manage storage" lives on each instance card's own menu (menu_game_instance.xml), where
              it acts on that instance — a global duplicate only made this drawer longer. -->
@@ -69,18 +69,13 @@
             android:id="@+id/action_export_logs"
             android:icon="@drawable/mt_icon_logfile"
             android:title="@string/nav_export_logs" />
+        <item
+            android:id="@+id/action_bug_report"
+            android:icon="@drawable/mt_icon_mail"
+            android:title="@string/nav_bug_report" />
     </group>
 
-    <!-- 5) About -->
-    <group android:id="@+id/group_about" android:checkableBehavior="none">
-        <item
-            android:id="@+id/action_updates"
-            android:icon="@drawable/ic_github"
-            android:title="@string/nav_updates" />
-        <item
-            android:id="@+id/action_reddit"
-            android:icon="@drawable/ic_x"
-            android:title="@string/nav_reddit" />
-    </group>
+    <!-- The four external links (GitHub / X / Reddit / Support) are a row of icons in the drawer
+         HEADER (nav_header_links.xml), not menu rows, to keep this list short. -->
 
 </menu>

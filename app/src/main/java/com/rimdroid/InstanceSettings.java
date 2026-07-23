@@ -101,6 +101,22 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "reverse_landscape", v).apply();
     }
 
+    // --- A fixed monitor resolution instead of filling the screen, letterboxed with black margins.
+    // Asked for by players coming from PC emulators, who wanted 720p specifically. Both modes keep
+    // 720 lines (our readability floor) and differ only in shape: 16:9 suits ordinary phones, 4:3
+    // suits near-square foldables, where 16:9 would waste a third of the screen. Fewer pixels than
+    // any device-relative preset, and the margins give the on-screen buttons somewhere to sit that
+    // isn't on top of the map. Overrides the render-scale setting while on. Default OFF. ---
+    public static final int FIXED_NONE = 0, FIXED_720_16_9 = 1, FIXED_720_4_3 = 2;
+
+    public int getFixedResMode() {
+        return p.getInt(pfx + "fixed_res", FIXED_NONE);
+    }
+
+    public void setFixedResMode(int mode) {
+        p.edit().putInt(pfx + "fixed_res", mode).apply();
+    }
+
     // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
     public boolean isHapticFeedback() {
         return p.getBoolean(pfx + "haptic", global.isHapticFeedback());
@@ -188,6 +204,7 @@ public class InstanceSettings {
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")
+                .remove(pfx + "fixed_res")
                 .remove(pfx + "render_scale_pct")
                 .remove(pfx + "controls")
                 .apply();

@@ -389,9 +389,18 @@ public class SettingsFragment extends Fragment {
         java.util.List<String> resLabels = new java.util.ArrayList<>();
         for (int p : pcts) {
             int W = Math.round(sLong * p / 100f), H = Math.round(sShort * p / 100f);
-            String tag = (p == 100) ? " — native" : (p == MIN) ? " — fastest" : " — balanced";
-            resLabels.add(W + "×" + H + tag);
+            // "fastest" belongs to the fixed 720p entry below, not here: it crops to 16:9 while these
+            // keep the device's wider aspect, so it draws fewer pixels than even the smallest of them.
+            String tag = (p == 100) ? " — native" : (p == MIN) ? " — lowest" : " — medium";
+            // Spell out that these three follow the device's own screen — the fourth entry below
+            // deliberately does not, and the difference is the whole point of it.
+            resLabels.add(getString(R.string.render_res_relative) + " " + W + "×" + H + tag);
         }
+        // Then a fixed monitor resolution, which ignores the device's aspect and letterboxes instead:
+        // a real 1280x720, asked for by players coming from PC emulators. Fewest pixels of all the
+        // options, so it also gives the best FPS; the black margins are somewhere to put the buttons.
+        final int FIXED_169_POS = pcts.size();
+        resLabels.add(getString(R.string.render_res_fixed_169));
         android.widget.ArrayAdapter<String> resAd = new android.widget.ArrayAdapter<>(
                 requireContext(), android.R.layout.simple_spinner_item, resLabels);
         resAd.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -402,12 +411,19 @@ public class SettingsFragment extends Fragment {
             int d = Math.abs(pcts.get(i) - curPct);
             if (d < resBest) { resBest = d; resSel = i; }
         }
+        int curFixed = inst.getFixedResMode();
+        if (curFixed != com.rimdroid.InstanceSettings.FIXED_NONE) resSel = FIXED_169_POS;
         spRes.setSelection(resSel);
         spRes.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             boolean first = true;   // skip the programmatic initial selection — only react to the user
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View v, int pos, long id) {
                 if (first) { first = false; return; }
-                inst.setRenderScalePercent(pcts.get(pos));
+                int mode = (pos == FIXED_169_POS) ? com.rimdroid.InstanceSettings.FIXED_720_16_9
+                         : com.rimdroid.InstanceSettings.FIXED_NONE;
+                inst.setFixedResMode(mode);
+                // Keep the stored percentage meaningful for when the user comes back to a
+                // device-relative preset; while a fixed mode is on, GameActivity ignores it anyway.
+                if (mode == com.rimdroid.InstanceSettings.FIXED_NONE) inst.setRenderScalePercent(pcts.get(pos));
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });

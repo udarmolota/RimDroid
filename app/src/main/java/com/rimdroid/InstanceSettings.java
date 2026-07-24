@@ -79,9 +79,11 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "debug", v).apply();
     }
 
-    // --- Drag-to-pan (move the camera by dragging the map with a finger). Default ON. ---
+    // --- Drag-to-pan (move the camera by dragging the map with a finger). Default OFF (changed
+    // 2026-07-23): with it on, a stray drag on the bare map moves the camera when the user meant to
+    // tap; opt-in for those who want it. ---
     public boolean isDragPan() {
-        return p.getBoolean(pfx + "drag_pan", true);
+        return p.getBoolean(pfx + "drag_pan", false);
     }
 
     public void setDragPan(boolean v) {
@@ -115,6 +117,17 @@ public class InstanceSettings {
 
     public void setFixedResMode(int mode) {
         p.edit().putInt(pfx + "fixed_res", mode).apply();
+    }
+
+    // --- Frame-rate cap (0 = uncapped, else 30/60…). RimWorld is CPU-bound under emulation, so
+    // capping the render rate evens out the FPS swings AND frees CPU for the simulation → steadier,
+    // often higher TPS. Default 0 (uncapped). ---
+    public int getFpsCap() {
+        return p.getInt(pfx + "fps_cap", 0);
+    }
+
+    public void setFpsCap(int fps) {
+        p.edit().putInt(pfx + "fps_cap", fps).apply();
     }
 
     // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
@@ -205,6 +218,7 @@ public class InstanceSettings {
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")
                 .remove(pfx + "fixed_res")
+                .remove(pfx + "fps_cap")
                 .remove(pfx + "render_scale_pct")
                 .remove(pfx + "controls")
                 .apply();

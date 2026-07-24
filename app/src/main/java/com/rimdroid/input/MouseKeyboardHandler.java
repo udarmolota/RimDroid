@@ -118,11 +118,12 @@ public class MouseKeyboardHandler {
         }
 
         try {
-            GameActivity.nativeKey(sc, keysym(kc, sc, e), down ? 1 : 0);
-            if (down) {
-                int uni = e.getUnicodeChar(meta);
-                if (uni >= 32 && uni != 127) GameActivity.nativeText(String.valueOf((char) uni));
-            }
+            // TEXT-INPUT EXPERIMENT (2026-07-23): route through keyInput (nativeKey + an X11 KeyPress
+            // that now carries the real keysym) instead of nativeKey alone, and DROP the nativeText
+            // synthetic SDL_TEXTINPUT so any character that appears must have come from SDL converting
+            // our X11 keysym — the clean test of whether RimWorld accepts that. nativeText was ignored
+            // anyway. To restore old behaviour: call nativeKey(...) + nativeText(...) again.
+            GameActivity.keyInput(sc, keysym(kc, sc, e), down ? 1 : 0);
         } catch (UnsatisfiedLinkError ignored) {}
         return true;
     }

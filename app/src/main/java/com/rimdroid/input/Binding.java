@@ -20,6 +20,10 @@ public enum Binding {
     // bring them back). Bind it to the default "V" button.
     TOGGLE_CONTROLS(Kind.SPECIAL, 0, 0, null, "Hide/show controls"),
 
+    // Summon / dismiss the Android on-screen keyboard for typing into game text fields (rename a
+    // colonist, name a save). Handled by GameActivity, not injected as a key.
+    TOGGLE_KEYBOARD(Kind.SPECIAL, 0, 0, null, "Show/hide keyboard"),
+
     // --- Mouse buttons (injected at the on-screen cursor) ---
     MOUSE_LEFT(Kind.MOUSE, 1, 0, null, "Left click"),
     MOUSE_MIDDLE(Kind.MOUSE, 2, 0, null, "Middle click"),

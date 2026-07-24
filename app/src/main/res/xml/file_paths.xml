@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- The bug-report log zip is written under the app's cache dir and shared from there. -->
+    <cache-path name="reports" path="reports/" />
+</paths>

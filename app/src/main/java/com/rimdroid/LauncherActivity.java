@@ -163,6 +163,7 @@ public class LauncherActivity extends AppCompatActivity {
         });
 
         wireHeaderLinks();
+        maybeDailyUpdateCheck();
     }
 
     /** The four external links pinned at the bottom of the drawer (icon row, not menu rows). */
@@ -200,17 +201,64 @@ public class LauncherActivity extends AppCompatActivity {
         if (mv != null) mv.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
     }
 
-    /** Open the user's email app pre-filled with a bug report to the maintainer. */
+    /**
+     * Open the user's email app pre-filled with a bug report to the maintainer — with the same log
+     * bundle that "Export logs" produces attached, so a report arrives diagnosable. Building the zip
+     * can touch multi-MB Player.logs, so it runs off the UI thread; the intent fires once it's ready.
+     * If there's no instance (nothing to log) it falls back to a text-only mailto.
+     */
     private void sendBugReport() {
-        String date = new java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.US)
+        final String date = new java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.US)
                 .format(new java.util.Date());
-        String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+        final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + "\nAndroid: " + android.os.Build.VERSION.RELEASE
                 + "\nRimDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")";
-        Intent i = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"));
-        i.putExtra(Intent.EXTRA_EMAIL, new String[]{ getString(R.string.bug_report_email) });
-        i.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.bug_report_subject, date));
-        i.putExtra(Intent.EXTRA_TEXT, getString(R.string.bug_report_body, device));
+        final GameInstance instance = currentInstance();
+        if (instance == null) { startBugReportEmail(date, device, null); return; }
+
+        toast("Preparing bug report…");
+        new Thread(() -> {
+            Uri attach = null;
+            try {
+                java.io.File dir = new java.io.File(getCacheDir(), "reports");
+                if (dir.isDirectory() || dir.mkdirs()) {
+                    java.io.File zip = new java.io.File(dir, "rimdroid_report.zip");
+                    try (OutputStream out = new java.io.FileOutputStream(zip)) {
+                        LogExporter.export(instance, out);
+                    }
+                    if (zip.length() > 0)
+                        attach = androidx.core.content.FileProvider.getUriForFile(
+                                this, "com.rimdroid.fileprovider", zip);
+                }
+            } catch (Throwable t) { attach = null; }   // no logs → still send the text report
+            final Uri fAttach = attach;
+            ui.post(() -> startBugReportEmail(date, device, fAttach));
+        }).start();
+    }
+
+    private void startBugReportEmail(String date, String device, Uri attachment) {
+        String[] to = { getString(R.string.bug_report_email) };
+        String subject = getString(R.string.bug_report_subject, date);
+        String body = getString(R.string.bug_report_body, device);
+        Intent i;
+        if (attachment != null) {
+            // ACTION_SEND carries an attachment (mailto/SENDTO can't). A chooser lets the user pick
+            // their mail app; to/subject/body/zip are all prefilled.
+            i = new Intent(Intent.ACTION_SEND);
+            i.setType("application/zip");
+            i.putExtra(Intent.EXTRA_EMAIL, to);
+            i.putExtra(Intent.EXTRA_SUBJECT, subject);
+            i.putExtra(Intent.EXTRA_TEXT, body);
+            i.putExtra(Intent.EXTRA_STREAM, attachment);
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            try { startActivity(Intent.createChooser(i, getString(R.string.nav_bug_report))); return; }
+            catch (android.content.ActivityNotFoundException ignored) { /* fall through to mailto */ }
+        }
+        // No attachment (or no app took the SEND) → plain mailto, text only.
+        i = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"));
+        i.putExtra(Intent.EXTRA_EMAIL, to);
+        i.putExtra(Intent.EXTRA_SUBJECT, subject);
+        i.putExtra(Intent.EXTRA_TEXT, body);
         try {
             startActivity(i);
         } catch (android.content.ActivityNotFoundException e) {
@@ -324,21 +372,35 @@ public class LauncherActivity extends AppCompatActivity {
 
     /** Fetch the latest GitHub release tag and compare it to the installed version. */
     private void checkForUpdates() {
-        String v;
-        try { v = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; }
-        catch (Exception e) { v = "?"; }
-        final String installed = v;
+        final String installed = installedVersion();
         toast("Checking for updates…");
         new Thread(() -> {
-            String latest = null, err = null;
+            String[] res = fetchLatestTag();   // {tag, error}
+            final String fLatest = res[0], fErr = res[1];
+            if (fLatest != null) {
+                LauncherPreferences lp = LauncherPreferences.getSingleton();
+                if (lp != null) lp.setLatestSeenTag(fLatest);   // keep the badge state in sync
+            }
+            ui.post(() -> { showUpdateDialog(installed, fLatest, fErr); refreshUpdateBadge(); });
+        }, "rd-update-check").start();
+    }
+
+    private String installedVersion() {
+        try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; }
+        catch (Exception e) { return "?"; }
+    }
+
+    /** Fetch the latest release tag from GitHub. Returns {tag|null, error|null}. */
+    private static String[] fetchLatestTag() {
+        try {
+            java.net.HttpURLConnection c = (java.net.HttpURLConnection)
+                    new java.net.URL("https://api.github.com/repos/udarmolota/rimdroid/releases/latest")
+                            .openConnection();
+            c.setRequestProperty("Accept", "application/vnd.github+json");
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(8000);
+            int code = c.getResponseCode();
             try {
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection)
-                        new java.net.URL("https://api.github.com/repos/udarmolota/rimdroid/releases/latest")
-                                .openConnection();
-                c.setRequestProperty("Accept", "application/vnd.github+json");
-                c.setConnectTimeout(8000);
-                c.setReadTimeout(8000);
-                int code = c.getResponseCode();
                 if (code == 200) {
                     java.io.BufferedReader r = new java.io.BufferedReader(
                             new java.io.InputStreamReader(c.getInputStream()));
@@ -348,19 +410,70 @@ public class LauncherActivity extends AppCompatActivity {
                     com.google.gson.JsonObject o =
                             com.google.gson.JsonParser.parseString(sb.toString()).getAsJsonObject();
                     if (o.has("tag_name") && !o.get("tag_name").isJsonNull())
-                        latest = o.get("tag_name").getAsString();
+                        return new String[]{ o.get("tag_name").getAsString(), null };
+                    return new String[]{ null, "no tag in response" };
                 } else if (code == 404) {
-                    err = "no releases published yet";
-                } else {
-                    err = "GitHub returned " + code;
+                    return new String[]{ null, "no releases published yet" };
                 }
-                c.disconnect();
-            } catch (Exception e) {
-                err = e.getMessage();
-            }
-            final String fLatest = latest, fErr = err;
-            ui.post(() -> showUpdateDialog(installed, fLatest, fErr));
-        }, "rd-update-check").start();
+                return new String[]{ null, "GitHub returned " + code };
+            } finally { c.disconnect(); }
+        } catch (Exception e) {
+            return new String[]{ null, e.getMessage() };
+        }
+    }
+
+    /** True only if the seen GitHub tag is STRICTLY NEWER than the installed version. A plain
+     *  "differs" check falsely badged dev builds that run AHEAD of the public release. */
+    private boolean updateAvailable() {
+        LauncherPreferences lp = LauncherPreferences.getSingleton();
+        if (lp == null) return false;
+        String tag = lp.getLatestSeenTag();
+        if (tag == null || tag.trim().isEmpty()) return false;
+        return compareVersions(tag.replaceFirst("^[vV]", ""), installedVersion()) > 0;
+    }
+
+    /** Compare dotted version strings numerically ("0.2.10" > "0.2.3"). >0 if a is newer than b. */
+    private static int compareVersions(String a, String b) {
+        String[] pa = a.split("[.\\-+ ]"), pb = b.split("[.\\-+ ]");
+        int n = Math.max(pa.length, pb.length);
+        for (int i = 0; i < n; i++) {
+            int x = i < pa.length ? parseIntSafe(pa[i]) : 0;
+            int y = i < pb.length ? parseIntSafe(pb[i]) : 0;
+            if (x != y) return Integer.compare(x, y);
+        }
+        return 0;
+    }
+
+    private static int parseIntSafe(String s) {
+        try { return Integer.parseInt(s.trim()); } catch (Exception e) { return 0; }
+    }
+
+    private void refreshUpdateBadge() {
+        View dot = findViewById(R.id.update_badge);
+        if (dot != null) dot.setVisibility(updateAvailable() ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * Once per day, on launcher start, ask GitHub for the latest release and remember it so the
+     * drawer can badge the GitHub icon. The attempt DAY is recorded before the network call, so a
+     * phone with no internet still tries at most once a day. The stored tag is compared to the live
+     * installed version in {@link #updateAvailable()}, so the badge clears itself after an update.
+     */
+    private void maybeDailyUpdateCheck() {
+        refreshUpdateBadge();   // reflect whatever we already know, every start
+        LauncherPreferences lp = LauncherPreferences.getSingleton();
+        if (lp == null) return;
+        String today = new java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US)
+                .format(new java.util.Date());
+        if (today.equals(lp.getUpdateCheckDay())) return;   // already tried today
+        lp.setUpdateCheckDay(today);                        // count the attempt now (even if it fails)
+        new Thread(() -> {
+            String[] res = fetchLatestTag();
+            if (res[0] == null) return;                     // offline/failed — try again tomorrow
+            LauncherPreferences p = LauncherPreferences.getSingleton();
+            if (p != null) p.setLatestSeenTag(res[0]);
+            ui.post(this::refreshUpdateBadge);
+        }, "rd-daily-update-check").start();
     }
 
     private void showUpdateDialog(String installed, String latest, String err) {

@@ -63,9 +63,14 @@
     <string name="haptic_label">Вибрация при нажатии кнопок</string>
     <string name="audio_label">Звук в игре</string>
     <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
+    <string name="fps_cap_label">Ограничение FPS</string>
+    <string name="fps_cap_hint">Ограничивает FPS, чтобы сгладить скачки и освободить CPU под игру — это может поднять скорость игры (TPS) на слабых устройствах. Попробуй 60 или 30, если счётчик прыгает.</string>
+    <string name="fps_cap_30">30 FPS</string>
+    <string name="fps_cap_60">60 FPS</string>
+    <string name="fps_cap_off">Без ограничения</string>
     <string name="render_res_label">Разрешение рендера</string>
-    <string name="render_res_relative">во весь экран</string>
-    <string name="render_res_fixed_169">с чёрными краями 1280×720 — fastest</string>
+    <string name="render_res_relative">Во весь экран</string>
+    <string name="render_res_fixed_169">С чёрными краями 1280×720 — fastest</string>
     <string name="render_res_hint">Ниже = больше FPS на слабых GPU и крупнее интерфейс. Нативное = резче.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
@@ -91,6 +96,8 @@
     <string name="donate_message">Нравится RimDroid и хочешь поддержать?\n\nДелаю и поддерживаю: ko-fi.com/udarmolota\n\nЛюбая помощь помогает продолжать работу. Спасибо! ❤</string>
     <string name="on_screen_controls">Экранное управление</string>
     <string name="edit_controls">Редактировать экранные кнопки…</string>
+    <string name="editor_bg_set">Фон</string>
+    <string name="editor_bg_clear">Без фона</string>
     <string name="editor_add">Добавить</string>
     <string name="editor_reset">Сброс</string>
     <string name="editor_done">Готово</string>
@@ -187,6 +194,8 @@
     <string name="instance_name_hint">Имя инстанса</string>
     <string name="selected_zip_hint">Файл не выбран</string>
     <string name="error_name_required">Нужно указать имя</string>
+    <string name="error_name_too_long">Имя слишком длинное (максимум %1$d символов)</string>
+    <string name="error_name_exists">Инстанс с таким именем уже существует</string>
     <string name="nav_manage_storage">Управление файлами</string>
     <string name="clear">Очистить</string>
 

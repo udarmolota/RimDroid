@@ -225,6 +225,29 @@ pattern. CAVEAT (per the don't-be-rosy lesson): verbal report, no log — unknow
 played (whether the deep phasic bug shows in a long session). Counts as a positive green Adreno signal; get a
 log + play-duration to confirm depth if possible.
 
+### T12 — POCO X5 Pro 5G (Xiaomi 22101320G, SM7325 / **Adreno 642L**, Android 14, 8GB) 🟢 — PLAYS on old Turnip
+Instance `rimworld_1.5.4104_linux`. **Solved by driver revision, not by a code fix.** The whole story is a
+legacy-a6xx driver story with a deep-bug crash riding on the stock driver.
+
+| Build | Driver | Result |
+|---|---|---|
+| 0.2.2 | System (stock Adreno) ×2 logs | Never launched. `SIGSEGV @ box64/__tls_get_addr+0x13`, **native pc=0x0**, si_addr=0x0 → process survives as a zombie (2 frames only = "black screen") → thousands of log lines later `pthread_mutex_lock on a destroyed mutex` → SIGABRT. Canonical cluster-2 death. |
+| 0.2.2 | cycled the bundled drivers | "No result at all" — nothing launched. |
+| 0.2.3 (TLS/elfs fix) | System (stock) | **Same crash, same signature.** → the AddElfHeader/`__tls_get_addr` race fix does **not** close this path (see below). |
+| 0.2.3 | his own Zomboid Turnip (**Mesa 25.0.2**, reports the 642L as "Adreno 7c+ Gen 3") | **Launches** — 4681 frames, sound OK, no crash — but the picture **artifacts** (ripple). Wrong Turnip generation for an a6xx. |
+| 0.2.3 | **`turnip-23.3.0-A6XX.adpkg`** | **Game launched.** ✅ Matches the known rule: legacy a6xx need an *old* (Mesa ~23/24) Turnip. |
+
+Two findings worth carrying forward:
+1. **The TLS fix did not close this crash.** `native pc=0x0` = a jump to a NULL *native* address while the guest
+   is in the bridge — i.e. a corrupted bridge/jump-table pointer, which faults *before* the wrapper body runs, so
+   the new `TLSBAD` guard cannot fire (and indeed never did). Separate root from the elfs[]/elfsize race that
+   0.2.3 fixed. Next diagnostic step if it resurfaces: dump the bridge slot from the signal handler.
+2. **Crash correlates with the stock driver:** 3 crashes on stock / 0 on either Turnip. Suggestive, small sample —
+   could still be the phasic deep bug rather than causation.
+
+Stock-driver caveat (0.2.2 log): the 642L `doesn't support base Zink requirements: logicOp,
+have_EXT_custom_border_color` → stock was never going to render correctly on this GPU anyway.
+
 ## Resolved / reference (see device_compat.md for the full matrix)
 - Mali-G720 black textures — FIXED (MESA_EXTENSION_OVERRIDE s3tc/rgtc/bptc).
 - F5 / Adreno-725 **black screen** (distinct from T2's GC crash) — root fix MAPERR→ACCERR in signals.c.

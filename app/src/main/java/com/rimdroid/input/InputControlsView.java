@@ -206,6 +206,8 @@ public class InputControlsView extends View {
         // Special UI actions are handled here, not sent to the game; act once, on press.
         if (b.kind == Binding.Kind.SPECIAL) {
             if (pressed && b == Binding.TOGGLE_CONTROLS) toggleControlsHidden();
+            else if (pressed && b == Binding.TOGGLE_KEYBOARD && getContext() instanceof GameActivity)
+                ((GameActivity) getContext()).toggleSoftKeyboard();
             return;
         }
         try {

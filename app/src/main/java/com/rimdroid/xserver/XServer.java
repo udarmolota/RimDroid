@@ -160,6 +160,64 @@ public class XServer {
         }
     }
 
+    private final android.os.Handler injectHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+
+    private void injectKeyPressRaw(byte keycode, int keysym) {
+        try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
+            keyboard.setKeyPress(keycode, keysym);
+        }
+    }
+
+    private void injectKeyReleaseRaw(byte keycode) {
+        try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
+            keyboard.setKeyRelease(keycode);
+        }
+    }
+
+    /**
+     * Type finished text into the game as real X11 key events (soft-keyboard path). ASCII characters
+     * go through their REAL keycode from the keymap — with Shift for uppercase/symbols — so SDL turns
+     * them into text exactly as for a hardware keyboard (borrowing a "custom" keycode collided for
+     * some letters, e.g. s/f). A character not in the keymap (CJK) falls back to a custom keycode.
+     * Press/release are spaced out so SDL registers each keystroke; this replaces synthesising an
+     * SDL_TEXTINPUT, which RimWorld ignores.
+     */
+    public void injectText(String text) {
+        if (text == null) return;
+        int delay = 0;
+        for (int i = 0; i < text.length(); ) {
+            final int cp = text.codePointAt(i);
+            i += Character.charCount(cp);
+            int[] res = keyboard.resolveChar(cp);
+            if (res != null) {
+                final byte keycode = (byte) res[0];
+                final boolean shift = res[1] != 0;
+                if (shift) injectHandler.postDelayed(() -> injectKeyPress(XKeycode.KEY_SHIFT_L), delay);
+                injectHandler.postDelayed(() -> injectKeyPressRaw(keycode, cp), delay + (shift ? 5 : 0));
+                injectHandler.postDelayed(() -> injectKeyReleaseRaw(keycode), delay + 20);
+                if (shift) injectHandler.postDelayed(() -> injectKeyRelease(XKeycode.KEY_SHIFT_L), delay + 25);
+            } else {
+                // Non-ASCII (Cyrillic, Portuguese ã/ç, CJK…): NOT solved yet. SDL under box64 doesn't
+                // pick up the runtime keymap change, so a custom-keycode press produces no text. Kept
+                // as a harmless best-effort (English above types via real keycodes and works). To
+                // revisit: preload full alphabets into fixed keycodes, or find why SDL ignores the
+                // MappingNotify.
+                final int keysym = 0x01000000 | cp;
+                final XKeycode xk = keyboard.customKeycodeForKeysym(keysym);
+                injectHandler.postDelayed(() -> injectKeyPress(xk, keysym), delay);
+                injectHandler.postDelayed(() -> injectKeyRelease(xk), delay + 20);
+            }
+            delay += 45;
+        }
+    }
+
+    /** Backspace from the soft keyboard (IME deleteSurroundingText). */
+    public void injectBackspace() {
+        injectKeyPress(XKeycode.KEY_BKSP, 0xFF08);   // XK_BackSpace
+        injectHandler.postDelayed(() -> injectKeyRelease(XKeycode.KEY_BKSP), 20);
+    }
+
     private Extension[] setupExtensions() {
         byte opcode = Extension.START_MAJOR_OPCODE;
         return new Extension[]{

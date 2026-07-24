@@ -4,6 +4,15 @@
     android:layout_height="match_parent"
     android:background="#202830">
 
+    <!-- Optional reference image behind the controls: load a game screenshot so buttons can be
+         placed against what they'll actually sit on top of. Editor-only, never shown in-game. -->
+    <ImageView
+        android:id="@+id/editor_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/editor_bg_set" />
+
     <!-- The on-screen controls (edit mode) are added here programmatically -->
     <FrameLayout
         android:id="@+id/controls_host"
@@ -31,6 +40,20 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="@string/editor_reset" />
+
+        <Button
+            android:id="@+id/btn_bg_set"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/editor_bg_set" />
+
+        <Button
+            android:id="@+id/btn_bg_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/editor_bg_clear" />
 
         <TextView
             android:layout_width="0dp"

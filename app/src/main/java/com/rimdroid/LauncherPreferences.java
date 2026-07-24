@@ -282,6 +282,19 @@ public class LauncherPreferences {
         return prefs.getBoolean("strict_barriers", false);
     }
 
+    // --- Daily update check (GitHub latest release vs installed version) ---
+    // The last day (yyyyMMdd) we ATTEMPTED a check — recorded even on failure, so a phone with no
+    // internet still only tries once per day. And the latest tag GitHub reported, so the drawer can
+    // badge the GitHub icon; the badge auto-clears once the installed version matches it.
+
+    public String getUpdateCheckDay() { return prefs.getString("update_check_day", ""); }
+    public void setUpdateCheckDay(String day) { prefs.edit().putString("update_check_day", day).apply(); }
+
+    public String getLatestSeenTag() { return prefs.getString("update_latest_tag", ""); }
+    public void setLatestSeenTag(String tag) {
+        prefs.edit().putString("update_latest_tag", tag == null ? "" : tag).apply();
+    }
+
     // --- Custom env vars (advanced) ---
 
     @Nullable

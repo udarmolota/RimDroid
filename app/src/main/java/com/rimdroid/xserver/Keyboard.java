@@ -130,6 +130,31 @@ public class Keyboard {
         return true;
     }
 
+    /** Public entry for the soft-keyboard text path (XServer.injectText). */
+    public XKeycode customKeycodeForKeysym(int keysym) {
+        return getCustomXKeycodeForKeysym(keysym);
+    }
+
+    /**
+     * Resolve a typed character to a REAL key in the keymap (soft-keyboard text path). Every ASCII
+     * letter/digit/symbol already has a proper keycode + keysym set up here, so SDL turns it into
+     * text exactly as for a hardware key — far more reliable than borrowing a "custom" keycode, which
+     * collided for some letters (s, f). Returns {keycode, needsShift}, or null for a character not in
+     * the keymap (e.g. CJK), which the caller then routes through a custom keycode instead.
+     * needsShift is true when the char is the SHIFTED (upper) keysym of its key.
+     */
+    public int[] resolveChar(int cp) {
+        for (XKeycode xk : XKeycode.values()) {
+            int index = xk.id - MIN_KEYCODE;
+            if (index < 0 || index * KEYSYMS_PER_KEYCODE + 1 >= keysyms.length) continue;
+            int lower = keysyms[index * KEYSYMS_PER_KEYCODE + 0];
+            int upper = keysyms[index * KEYSYMS_PER_KEYCODE + 1];
+            if (lower == cp) return new int[]{ xk.id & 0xFF, 0 };
+            if (upper == cp && upper != lower && upper != 0) return new int[]{ xk.id & 0xFF, 1 };
+        }
+        return null;
+    }
+
     private XKeycode getCustomXKeycodeForKeysym(int keysym) {
         XKeycode[] customKeys = XKeycode.getCustomKeys();
         for (XKeycode xKeycode : customKeys) if (hasKeysym(xKeycode.id, keysym)) return xKeycode;

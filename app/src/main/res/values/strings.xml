@@ -64,9 +64,14 @@ In the cloud: %2$s
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
     <string name="show_fps_label">Show FPS counter (top-left)</string>
+    <string name="fps_cap_label">Frame rate limit</string>
+    <string name="fps_cap_hint">Caps FPS to smooth out swings and free the CPU for the game — which can raise the game speed (TPS) on weaker devices. Try 60 or 30 if the counter jumps around.</string>
+    <string name="fps_cap_30">30 FPS</string>
+    <string name="fps_cap_60">60 FPS</string>
+    <string name="fps_cap_off">No limit</string>
     <string name="render_res_label">Render resolution</string>
-    <string name="render_res_relative">fullscreen</string>
-    <string name="render_res_fixed_169">black margins 1280×720 — fastest</string>
+    <string name="render_res_relative">Fullscreen</string>
+    <string name="render_res_fixed_169">Black margins 1280×720 — fastest</string>
     <string name="render_res_hint">Lower = more FPS on weak GPUs and a bigger UI. Native = sharpest.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
@@ -100,6 +105,8 @@ In the cloud: %2$s
     <string name="url_reddit_sub" translatable="false">https://www.reddit.com/r/rimdroid/</string>
     <string name="on_screen_controls">On-screen controls</string>
     <string name="edit_controls">Edit on-screen controls…</string>
+    <string name="editor_bg_set">Background</string>
+    <string name="editor_bg_clear">No BG</string>
     <string name="editor_add">Add</string>
     <string name="editor_reset">Reset</string>
     <string name="editor_done">Done</string>
@@ -195,6 +202,8 @@ In the cloud: %2$s
     <string name="instance_name_hint">Instance name</string>
     <string name="selected_zip_hint">No file selected</string>
     <string name="error_name_required">Name is required</string>
+    <string name="error_name_too_long">Name is too long (max %1$d characters)</string>
+    <string name="error_name_exists">An instance with this name already exists</string>
     <string name="nav_manage_storage">Manage Storage</string>
     <string name="clear">Clear</string>
 

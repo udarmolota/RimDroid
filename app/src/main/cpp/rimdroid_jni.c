@@ -196,3 +196,12 @@ JNIEXPORT jlong JNICALL
 Java_com_rimdroid_GameActivity_nativeGetFrameCount(JNIEnv* env, jclass clazz) {
     return (jlong)g_rimdroid_frame_count;
 }
+
+// Frame-rate cap: 0 = uncapped, else limit presents to this many FPS (pacing in
+// rimdroid_frame_tick). CPU-bound RimWorld benefits — steadier delivery + CPU
+// freed for the tick loop.
+extern volatile uint64_t g_rimdroid_frame_min_ns;
+JNIEXPORT void JNICALL
+Java_com_rimdroid_GameActivity_nativeSetFpsCap(JNIEnv* env, jclass clazz, jint fps) {
+    g_rimdroid_frame_min_ns = (fps > 0) ? (1000000000ull / (uint64_t)fps) : 0;
+}

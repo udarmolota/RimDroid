@@ -32,6 +32,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     public static native void nativeText(String text);
     // FPS overlay: total presented frames so far (counted in box64's SwapWindow).
     public static native long nativeGetFrameCount();
+    public static native void nativeSetFpsCap(int fps);   // 0 = uncapped, else cap presents to fps
 
     // Input wrappers: the native path feeds synthetic SDL events (RimWorld 1.5's SDL video
     // driver). Under the 1.6 X11 path Unity's SDL takes input from CORE X EVENTS instead, so
@@ -119,9 +120,82 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         if (xs == null) return;
         com.rimdroid.xserver.XKeycode xk = xKey(scancode);
         if (xk == null) return;
-        if (down != 0) xs.injectKeyPress(xk);
+        // TEXT-INPUT EXPERIMENT (2026-07-23): carry the real keysym on the X11 KeyPress (was 0), so
+        // SDL-under-box64 can turn it into text itself the way it does for a hardware keyboard —
+        // instead of us synthesising an SDL_TEXTINPUT (nativeText), which RimWorld ignores. `keycode`
+        // here is the SDL keysym; for printable ASCII it equals the X keysym. Logged so we can see it
+        // land. If this types into a rename field, the whole soft-keyboard idea is unblocked.
+        int keysym = (keycode >= 32 && keycode < 127) ? keycode : 0;
+        android.util.Log.i(TAG, "keyInput X11: sc=" + scancode + " keysym=" + keysym + " down=" + down);
+        if (down != 0) xs.injectKeyPress(xk, keysym);
         else xs.injectKeyRelease(xk);
     }
+    // === Soft keyboard (text input) ===
+    private KeyboardCatcher keyboardCatcher;
+
+    /** Show the keyboard if hidden, hide it if shown. Bound to the on-screen TOGGLE_KEYBOARD button. */
+    public void toggleSoftKeyboard() {
+        if (keyboardCatcher == null) return;
+        keyboardCatcher.toggle();
+    }
+
+    /** Invisible view that owns the IME connection and forwards typed text into the X server. */
+    private static class KeyboardCatcher extends android.view.View {
+        private boolean accepting;
+        KeyboardCatcher(android.content.Context c) {
+            super(c);
+            setFocusable(true);
+            setFocusableInTouchMode(true);
+        }
+        void toggle() {
+            android.view.inputmethod.InputMethodManager imm =
+                    (android.view.inputmethod.InputMethodManager) getContext()
+                            .getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if (imm == null) return;
+            accepting = !accepting;
+            requestFocus();
+            imm.restartInput(this);
+            if (accepting) imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_FORCED);
+            else imm.hideSoftInputFromWindow(getWindowToken(), 0);
+        }
+        @Override public boolean onCheckIsTextEditor() { return accepting; }
+        @Override
+        public android.view.inputmethod.InputConnection onCreateInputConnection(
+                android.view.inputmethod.EditorInfo outAttrs) {
+            if (!accepting) return null;
+            outAttrs.inputType = android.text.InputType.TYPE_CLASS_TEXT;
+            outAttrs.imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN
+                    | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI;
+            return new android.view.inputmethod.BaseInputConnection(this, false) {
+                @Override public boolean commitText(CharSequence text, int newCursorPosition) {
+                    if (text == null) return true;
+                    com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+                    if (xs != null) {
+                        // 1.6: type through the X server (the proven path — SDL makes the text itself).
+                        xs.injectText(text.toString());
+                    } else {
+                        // 1.5 has NO X server (different SDL video driver); the only channel is the
+                        // synthetic SDL_TEXTINPUT. 1.6 ignored it, but 1.5's driver differs, so try it.
+                        try { nativeText(text.toString()); } catch (UnsatisfiedLinkError ignored) {}
+                    }
+                    return true;
+                }
+                @Override public boolean deleteSurroundingText(int before, int after) {
+                    com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+                    if (xs != null) {
+                        for (int i = 0; i < before; i++) xs.injectBackspace();
+                    } else {
+                        // 1.5: backspace as a synthetic SDL key (control keys ARE consumed there).
+                        for (int i = 0; i < before; i++) {
+                            try { nativeKey(42, 8, 1); nativeKey(42, 8, 0); } catch (UnsatisfiedLinkError ignored) {}
+                        }
+                    }
+                    return true;
+                }
+            };
+        }
+    }
+
     public static void scrollInput(int x, int y, int dy) {
         try { nativeScroll(x, y, dy); } catch (UnsatisfiedLinkError ignored) {}
         com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
@@ -237,6 +311,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             dragPanEnabled = is.isDragPan();
             reverseLandscape = is.isReverseLandscape();
             fixedRes = is.getFixedResMode();
+            try { nativeSetFpsCap(is.getFpsCap()); } catch (UnsatisfiedLinkError ignored) {}
             // 1.6/X11 render scale ENABLED (2026-07-11): the bring-up force-1.0 is gone. The old
             // race is covered — GameLauncher's settle loop waits for the FIXED-SIZE surfaceChanged
             // before starting the X server, so the buffer, the X screen and -screen-width/-height
@@ -306,6 +381,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         root.addView(controls, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         controls.setGameRect(boxLeft, boxTop, boxW, boxH);   // so cursor/tap map into the game rect
+
+        // Text-input catcher: an invisible focusable view that opens Android's soft keyboard and
+        // receives FINISHED text from any IME (commitText — handles CJK, accents, autocorrect). Each
+        // character is typed into the game as a real X11 key event (XServer.injectText), the path we
+        // are testing for RimWorld text fields. Toggled by the on-screen TOGGLE_KEYBOARD button.
+        keyboardCatcher = new KeyboardCatcher(this);
+        root.addView(keyboardCatcher, new FrameLayout.LayoutParams(1, 1));   // 1px, invisible
 
         // Post-layout diagnostic for the cropped-screen reports: the fact that matters is whether
         // the laid-out root ACTUALLY matches getBounds() now that cutout mode is ALWAYS. If root is

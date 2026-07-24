@@ -29,6 +29,17 @@ import java.io.InputStream;
 
 public class NewInstanceFragment extends Fragment {
 
+    // The instance name is a directory name inside the built-in X server's Unix-socket path
+    // (<home>/instances/<name>/tmp/.X11-unix/X0). Android's sun_path is only 108 bytes and our
+    // native binder silently truncates an over-long path, so a long name makes the X server fail
+    // to bind and the whole launch crashes with "Failed to allocate XConnectorEpoll" — the game
+    // never starts (seen on a Mi 10T Pro, 2026-07-23, whose name was auto-filled from a long zip
+    // filename). Cap the name well under the byte budget: the fixed prefix+suffix take ~59 bytes,
+    // leaving ~48; 40 keeps a margin for work-profile/cloned-app user dirs (/data/user/<n>/...).
+    private static final int MAX_NAME_LEN = 40;
+    // Short, always-fits default so the common "just install and go" path never hits the limit.
+    private static final String DEFAULT_NAME = "RimWorld";
+
     private EditText etInstanceName;
     private Button   btnPickZip;
     private Button   btnInstall;
@@ -61,16 +72,12 @@ public class NewInstanceFragment extends Fragment {
                 if (uri == null) return;
                 selectedZipUri = uri;
                 tvSelectedZip.setText(uri.getLastPathSegment());
-                // Auto-fill the instance name from the filename ONLY if the user hasn't typed one —
-                // otherwise picking the zip would clobber a name they already entered (which then
-                // installed under the zip's name and could collide with an existing instance).
+                // Deliberately do NOT auto-fill the name from the zip filename: repack zips carry
+                // very long names that blow the X-socket path budget (see MAX_NAME_LEN). The field
+                // is pre-filled with a short free default in onViewCreated; the user can still edit
+                // it, and startInstall enforces the length + collision checks.
                 if (etInstanceName.getText().toString().trim().isEmpty()) {
-                    String seg = uri.getLastPathSegment();
-                    if (seg != null) {
-                        if (seg.contains("/")) seg = seg.substring(seg.lastIndexOf('/') + 1);
-                        if (seg.toLowerCase().endsWith(".zip")) seg = seg.substring(0, seg.length() - 4);
-                        etInstanceName.setText(seg);
-                    }
+                    etInstanceName.setText(freeDefaultName());
                 }
                 btnInstall.setEnabled(true);
             });
@@ -90,6 +97,12 @@ public class NewInstanceFragment extends Fragment {
         tvSelectedZip  = view.findViewById(R.id.tv_selected_zip);
 
         btnInstall.setEnabled(false);
+
+        // Pre-fill a short, always-fits default so most users just tap Install and never hit the
+        // name-length limit; the field stays editable for anyone who wants a custom name.
+        if (etInstanceName.getText().toString().trim().isEmpty()) {
+            etInstanceName.setText(freeDefaultName());
+        }
 
         // A RimWorld .zip, or a zip wrapping GOG .sh installers (base + DLC) — GogInstallerExtractor
         // sniffs the content and unpacks the .sh files found inside.
@@ -131,6 +144,17 @@ public class NewInstanceFragment extends Fragment {
         }, "rd-gpu-advise").start();
     }
 
+    /** "RimWorld", or "RimWorld-2"/"-3"/... — the first name with no existing instance directory. */
+    private static String freeDefaultName() {
+        com.rimdroid.AppStorage st = com.rimdroid.AppStorage.requireSingleton();
+        if (!st.getInstanceDir(DEFAULT_NAME).exists()) return DEFAULT_NAME;
+        for (int i = 2; i < 1000; i++) {
+            String n = DEFAULT_NAME + "-" + i;
+            if (!st.getInstanceDir(n).exists()) return n;
+        }
+        return DEFAULT_NAME;   // 1000 instances named RimWorld* — practically unreachable
+    }
+
     private void startInstall() {
         if (selectedZipUri == null) return;
         String rawName = etInstanceName.getText().toString().trim();
@@ -142,6 +166,18 @@ public class NewInstanceFragment extends Fragment {
                                            .replaceAll("^-+|-+$", "");
         if (instanceName.isEmpty()) {
             etInstanceName.setError(getString(R.string.error_name_required));
+            return;
+        }
+        // Cap the length so the X-socket path can't overflow sun_path (see MAX_NAME_LEN).
+        if (instanceName.length() > MAX_NAME_LEN) {
+            etInstanceName.setError(getString(R.string.error_name_too_long, MAX_NAME_LEN));
+            return;
+        }
+        // Refuse a name whose instance directory already exists, so we never install over (or beside)
+        // an existing instance. InstallerService double-checks, but catching it here gives a clear
+        // field error instead of a late broadcast failure.
+        if (com.rimdroid.AppStorage.requireSingleton().getInstanceDir(instanceName).exists()) {
+            etInstanceName.setError(getString(R.string.error_name_exists));
             return;
         }
 

@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <wait.h>
 #include <errno.h>
@@ -167,7 +168,38 @@ void rimdroid_zfa_swap(void) {
 // (independent of the game's own frame estimate; needs no mod). The game runs
 // in-process (Unity relocatable, no fork), so this global is readable from JNI.
 volatile uint64_t g_rimdroid_frame_count = 0;
-void rimdroid_frame_tick(void) { g_rimdroid_frame_count++; }
+
+// ---- Frame-rate cap (present pacing) ----------------------------------------
+// RimWorld is CPU-bound under emulation, so rendering as fast as possible burns
+// CPU the simulation needs and generates heat → thermal throttling → the FPS
+// swings players see. Capping the present rate here (the one spot hit exactly
+// once per frame, for every renderer) evens out frame delivery AND frees CPU for
+// the game's tick loop → steadier, and often higher, TPS. 0 = uncapped.
+volatile uint64_t g_rimdroid_frame_min_ns = 0;   // min nanoseconds between presents
+static uint64_t g_rd_last_present_ns = 0;
+
+static uint64_t rd_now_ns(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+void rimdroid_frame_tick(void) {
+    g_rimdroid_frame_count++;
+    uint64_t cap = g_rimdroid_frame_min_ns;
+    if (!cap) { g_rd_last_present_ns = 0; return; }   // uncapped: forget the clock
+    uint64_t now = rd_now_ns();
+    if (g_rd_last_present_ns) {
+        uint64_t elapsed = now - g_rd_last_present_ns;
+        if (elapsed < cap) {
+            uint64_t s = cap - elapsed;
+            struct timespec req = { (time_t)(s / 1000000000ull), (long)(s % 1000000000ull) };
+            nanosleep(&req, NULL);
+            now = rd_now_ns();
+        }
+    }
+    g_rd_last_present_ns = now;
+}
 
 // ---- OSMesa (softpipe) software-renderer SMOKE TEST -------------------------
 // Milestone 1 of the CPU/software renderer: prove libOSMesa.so (built with

@@ -87,6 +87,51 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
         ((Button) findViewById(R.id.btn_add)).setOnClickListener(v -> showAddDialog());
         ((Button) findViewById(R.id.btn_reset)).setOnClickListener(v -> showResetDialog());
         ((Button) findViewById(R.id.btn_done)).setOnClickListener(v -> { controls.saveToPrefs(); finish(); });
+
+        // Reference background: pick a screenshot to place buttons against. Editor-only helper —
+        // copied to a file so it survives reopening the editor, and cleared on demand. Never affects
+        // the game itself.
+        editorBg = findViewById(R.id.editor_bg);
+        loadEditorBg();
+        ((Button) findViewById(R.id.btn_bg_set)).setOnClickListener(v -> {
+            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_GET_CONTENT);
+            i.setType("image/*");
+            try { startActivityForResult(i, REQ_PICK_BG); } catch (Throwable ignored) {}
+        });
+        ((Button) findViewById(R.id.btn_bg_clear)).setOnClickListener(v -> {
+            bgFile().delete();
+            editorBg.setImageDrawable(null);
+        });
+    }
+
+    private static final int REQ_PICK_BG = 4801;
+    private android.widget.ImageView editorBg;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_PICK_BG && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            try (java.io.InputStream in = getContentResolver().openInputStream(data.getData());
+                 java.io.FileOutputStream out = new java.io.FileOutputStream(bgFile())) {
+                byte[] buf = new byte[1 << 16];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            } catch (Throwable ignored) { return; }
+            loadEditorBg();
+        }
+    }
+
+    /** Editor background lives in app files, one per device (a design aid, not per-instance state). */
+    private java.io.File bgFile() { return new java.io.File(getFilesDir(), "editor_bg.png"); }
+
+    private void loadEditorBg() {
+        if (editorBg == null) return;
+        java.io.File f = bgFile();
+        if (f.isFile()) {
+            android.graphics.Bitmap bm = android.graphics.BitmapFactory.decodeFile(f.getAbsolutePath());
+            if (bm != null) { editorBg.setImageBitmap(bm); return; }
+        }
+        editorBg.setImageDrawable(null);
     }
 
     private void hideSystemBars() {

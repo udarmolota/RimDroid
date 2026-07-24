@@ -123,6 +123,49 @@
             android:id="@+id/spinner_render_res"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
+
+        <!-- FPS cap: even out the frame-rate swings and free CPU for the simulation. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fps_cap_label"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fps_cap_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_fps_cap"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rb_fps_30"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/fps_cap_30" />
+
+            <RadioButton
+                android:id="@+id/rb_fps_60"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/fps_cap_60" />
+
+            <RadioButton
+                android:id="@+id/rb_fps_off"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/fps_cap_off" />
+        </RadioGroup>
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

@@ -427,5 +427,17 @@ public class SettingsFragment extends Fragment {
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
+
+        // FPS cap: three radio buttons — 30 / 60 / No limit (0 = off). Takes effect on next launch.
+        android.widget.RadioGroup rgFps = view.findViewById(R.id.rg_fps_cap);
+        int curCap = inst.getFpsCap();
+        if (curCap == 30)      rgFps.check(R.id.rb_fps_30);
+        else if (curCap == 60) rgFps.check(R.id.rb_fps_60);
+        else                   rgFps.check(R.id.rb_fps_off);
+        rgFps.setOnCheckedChangeListener((group, checkedId) -> {
+            int cap = (checkedId == R.id.rb_fps_30) ? 30
+                    : (checkedId == R.id.rb_fps_60) ? 60 : 0;
+            inst.setFpsCap(cap);
+        });
     }
 }

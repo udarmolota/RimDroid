@@ -56,11 +56,6 @@ public class SettingsFragment extends Fragment {
         inst = new InstanceSettings(instName);
         requireActivity().setTitle(getString(R.string.nav_settings) + " — " + instName);
 
-        RadioGroup rgRenderer = view.findViewById(R.id.rg_renderer);
-        RadioButton rbGl4es   = view.findViewById(R.id.rb_gl4es);
-        RadioButton rbZinkZfa = view.findViewById(R.id.rb_zink_zfa);
-        RadioButton rbZinkOsmesa = view.findViewById(R.id.rb_zink_osmesa);
-        RadioButton rbSoftpipe = view.findViewById(R.id.rb_softpipe);
         Switch swDebug        = view.findViewById(R.id.sw_debug);
         Switch swStrict       = view.findViewById(R.id.sw_strict_barriers);
         Switch swDragPan      = view.findViewById(R.id.sw_drag_pan);
@@ -72,25 +67,10 @@ public class SettingsFragment extends Fragment {
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
         final TextView tvSteamDlStatus = view.findViewById(R.id.tv_steam_dl_status);
 
-        // Usable renderers: ZINK_ZFA (GPU, default) and SOFTPIPE (CPU fallback for
-        // non-Adreno GPUs / devices where Zink fails). Hide the non-working
-        // GL4ES / ZINK_OSMESA options.
-        rbGl4es.setVisibility(View.GONE);
-        rbZinkOsmesa.setVisibility(View.GONE);
-        // "Software" (SOFTPIPE) — CPU renderer that bypasses Vulkan. HIDDEN again: it does not
-        // render Unity's scene (only immediate-mode overlays reach FBO 0 → black/dark screen),
-        // so it is not user-ready. Code path kept; the radio is GONE and any instance still set to
-        // SOFTPIPE falls through to the GPU default (ZINK_ZFA) below.
-        boolean showSoftpipe = false;
-        rbSoftpipe.setVisibility(View.GONE);
-        switch (inst.getRenderer()) {
-            case SOFTPIPE:
-                if (showSoftpipe) { rbSoftpipe.setChecked(true); break; }
-                // else fall through → reset to the GPU default
-            case ZINK_ZFA:
-            default:        rbZinkZfa.setChecked(true);
-                            inst.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA); break;
-        }
+        // Renderer is pinned to Zink ZFA — the only one that works right now. The Video card shows an
+        // explanation (renderer_info) instead of a chooser; the driver picker is the real choice. Any
+        // instance previously set to another renderer is migrated to ZINK_ZFA here.
+        inst.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
         swDebug.setChecked(inst.isDebug());
         swStrict.setChecked(inst.isInterpreter());
         swDragPan.setChecked(inst.isDragPan());
@@ -264,17 +244,10 @@ public class SettingsFragment extends Fragment {
         // (Steam Cloud saves moved out of debug into its own screen: drawer -> "Steam Cloud saves"
         //  = CloudSavesFragment. The old debug spike button here was removed.)
 
-        rgRenderer.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.rb_zink_zfa) {
-                inst.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
-            } else if (checkedId == R.id.rb_softpipe) {
-                inst.setRenderer(LauncherPreferences.Renderer.SOFTPIPE);
-            } else if (checkedId == R.id.rb_gl4es) {
-                inst.setRenderer(LauncherPreferences.Renderer.GL4ES);
-            } else if (checkedId == R.id.rb_zink_osmesa) {
-                inst.setRenderer(LauncherPreferences.Renderer.ZINK_OSMESA);
-            }
-        });
+        // "Upload your custom driver" link (under the driver picker) → the device-global import screen.
+        View tvUpload = view.findViewById(R.id.tv_upload_driver);
+        tvUpload.setOnClickListener(v ->
+                androidx.navigation.Navigation.findNavController(v).navigate(R.id.action_open_custom_driver));
 
         swDebug.setOnCheckedChangeListener((btn, checked) -> {
             inst.setDebug(checked);   // per-instance debug
@@ -367,65 +340,55 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.btn_gamepad_mapper).setOnClickListener(v ->
             startActivity(new android.content.Intent(requireContext(), com.rimdroid.GamepadMapperActivity.class)));
 
-        // --- Render resolution dropdown (Video card): per-device presets, floor (~720p) .. native ---
-        // RE-ENABLED 2026-06-28: the "flicker" that caused the hold was RimWorld's missing-mods grey screen, not a
-        // render bug, so reduced res is safe. (Weak FPS lever — CPU-bound — but exposed for user agency + A/B test.)
-        // Lower internal resolution = more FPS on weak GPUs + a bigger in-game UI (slightly blurry); native is
-        // sharpest. The floor keeps the render >= ~1280x720 (RimWorld UI minimum) and is per-device (a 1440p
-        // screen floors at ~50%, a 1080p screen at ~67%). Width auto-fits the panel aspect so the game still
-        // fills the whole screen. Stored as a render-scale %, applied at the next launch.
-        android.widget.Spinner spRes = view.findViewById(R.id.spinner_render_res);
+        // --- Render resolution (Video card): vertical radios, just the resolution text. Per-device
+        // presets from a ~720p floor up to native. Lower = more FPS on weak GPUs + a bigger (blurrier)
+        // UI; native is sharpest. The floor keeps render >= ~1280x720 (RimWorld UI minimum), per-device.
+        // Applied at the next launch.
+        android.widget.RadioGroup rgRes = view.findViewById(R.id.rg_render_res);
         android.graphics.Rect bounds =
                 requireActivity().getWindowManager().getCurrentWindowMetrics().getBounds();
         final int sLong  = Math.max(bounds.width(), bounds.height());   // landscape width
         final int sShort = Math.min(bounds.width(), bounds.height());   // landscape height = native render height
         final int MIN = LauncherPreferences.minRenderScalePercent(sLong, sShort);
-        // Exactly 3 presets on every device: ~720p floor (fastest) · halfway (balanced) · native.
         final int MID = Math.max(MIN + 1, Math.min(99, (MIN + 100) / 2));
         java.util.LinkedHashSet<Integer> pctSet = new java.util.LinkedHashSet<>();
         pctSet.add(MIN); pctSet.add(MID); pctSet.add(100);
         final java.util.List<Integer> pcts = new java.util.ArrayList<>(pctSet);
-        java.util.Collections.sort(pcts);
-        java.util.List<String> resLabels = new java.util.ArrayList<>();
-        for (int p : pcts) {
+        java.util.Collections.sort(pcts);   // ascending; displayed native (high) → floor (low)
+
+        final int curPct = Math.max(MIN, inst.getRenderScalePercent());
+        final boolean curFixed = inst.getFixedResMode() != com.rimdroid.InstanceSettings.FIXED_NONE;
+        int nearestPct = pcts.get(0), nearestD = Integer.MAX_VALUE;   // relative preset closest to the stored %
+        for (int p : pcts) { int d = Math.abs(p - curPct); if (d < nearestD) { nearestD = d; nearestPct = p; } }
+
+        final int FIXED_TAG = -1;   // sentinel tag = the fixed 1280x720 letterboxed radio (not a percent)
+        for (int i = pcts.size() - 1; i >= 0; i--) {   // native first, down to the floor
+            int p = pcts.get(i);
             int W = Math.round(sLong * p / 100f), H = Math.round(sShort * p / 100f);
-            // "fastest" belongs to the fixed 720p entry below, not here: it crops to 16:9 while these
-            // keep the device's wider aspect, so it draws fewer pixels than even the smallest of them.
-            String tag = (p == 100) ? " — native" : (p == MIN) ? " — lowest" : " — medium";
-            // Spell out that these three follow the device's own screen — the fourth entry below
-            // deliberately does not, and the difference is the whole point of it.
-            resLabels.add(getString(R.string.render_res_relative) + " " + W + "×" + H + tag);
+            android.widget.RadioButton rb = new android.widget.RadioButton(requireContext());
+            rb.setId(View.generateViewId());
+            rb.setText(W + "×" + H + " (" + getString(R.string.render_res_fullscreen) + ")");
+            rb.setTag(p);
+            rgRes.addView(rb);
+            if (!curFixed && p == nearestPct) rb.setChecked(true);
         }
-        // Then a fixed monitor resolution, which ignores the device's aspect and letterboxes instead:
-        // a real 1280x720, asked for by players coming from PC emulators. Fewest pixels of all the
-        // options, so it also gives the best FPS; the black margins are somewhere to put the buttons.
-        final int FIXED_169_POS = pcts.size();
-        resLabels.add(getString(R.string.render_res_fixed_169));
-        android.widget.ArrayAdapter<String> resAd = new android.widget.ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_spinner_item, resLabels);
-        resAd.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spRes.setAdapter(resAd);
-        int curPct = Math.max(MIN, inst.getRenderScalePercent());
-        int resSel = 0, resBest = Integer.MAX_VALUE;
-        for (int i = 0; i < pcts.size(); i++) {
-            int d = Math.abs(pcts.get(i) - curPct);
-            if (d < resBest) { resBest = d; resSel = i; }
-        }
-        int curFixed = inst.getFixedResMode();
-        if (curFixed != com.rimdroid.InstanceSettings.FIXED_NONE) resSel = FIXED_169_POS;
-        spRes.setSelection(resSel);
-        spRes.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            boolean first = true;   // skip the programmatic initial selection — only react to the user
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View v, int pos, long id) {
-                if (first) { first = false; return; }
-                int mode = (pos == FIXED_169_POS) ? com.rimdroid.InstanceSettings.FIXED_720_16_9
-                         : com.rimdroid.InstanceSettings.FIXED_NONE;
-                inst.setFixedResMode(mode);
-                // Keep the stored percentage meaningful for when the user comes back to a
-                // device-relative preset; while a fixed mode is on, GameActivity ignores it anyway.
-                if (mode == com.rimdroid.InstanceSettings.FIXED_NONE) inst.setRenderScalePercent(pcts.get(pos));
+        android.widget.RadioButton rbFixed = new android.widget.RadioButton(requireContext());
+        rbFixed.setId(View.generateViewId());
+        rbFixed.setText("1280×720 (" + getString(R.string.render_res_black_margins) + ")");
+        rbFixed.setTag(FIXED_TAG);
+        rgRes.addView(rbFixed);
+        if (curFixed) rbFixed.setChecked(true);
+
+        rgRes.setOnCheckedChangeListener((group, checkedId) -> {   // set after the initial checks → no spurious writes
+            View rb = group.findViewById(checkedId);
+            if (rb == null || rb.getTag() == null) return;
+            int tag = (Integer) rb.getTag();
+            if (tag == FIXED_TAG) {
+                inst.setFixedResMode(com.rimdroid.InstanceSettings.FIXED_720_16_9);
+            } else {
+                inst.setFixedResMode(com.rimdroid.InstanceSettings.FIXED_NONE);
+                inst.setRenderScalePercent(tag);   // while fixed mode is off, GameActivity uses this %
             }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
 
         // FPS cap: three radio buttons — 30 / 60 / No limit (0 = off). Takes effect on next launch.

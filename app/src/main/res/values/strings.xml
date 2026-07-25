@@ -8,12 +8,15 @@
     <string name="choose_instance_prompt">— Choose an instance —</string>
     <string name="choose_instance_first">Choose an instance to install into</string>
     <string name="delete_instance">Delete instance</string>
+    <string name="more_options">More options</string>
     <string name="delete_instance_confirm">Delete instance \"%1$s\" and all its files? This cannot be undone.</string>
     <string name="log">Log</string>
     <string name="renderer">Renderer</string>
+    <string name="renderer_info">RimDroid currently renders only through Zink ZFA.</string>
     <string name="vulkan_driver">Vulkan driver</string>
-    <string name="vulkan_driver_hint">Pick the driver that matches your GPU. If not works try another one.</string>
+    <string name="vulkan_driver_hint">Pick the driver that matches your GPU — non-Snapdragon devices should choose the System driver. If not works try another one.</string>
     <string name="driver_recommend">Recommended driver (detect GPU)</string>
+    <string name="upload_custom_driver">Upload your custom driver</string>
     <string name="drag_pan_label">Drag the map with a finger to pan</string>
     <string name="reverse_landscape_label">Mirror the picture (180°)</string>
     <string name="nav_cloud_saves">Steam Cloud saves</string>
@@ -72,6 +75,8 @@ In the cloud: %2$s
     <string name="render_res_label">Render resolution</string>
     <string name="render_res_relative">Fullscreen</string>
     <string name="render_res_fixed_169">Black margins 1280×720 — fastest</string>
+    <string name="render_res_fullscreen">fullscreen</string>
+    <string name="render_res_black_margins">black margins</string>
     <string name="render_res_hint">Lower = more FPS on weak GPUs and a bigger UI. Native = sharpest.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Recommended driver set</string>
@@ -183,6 +188,7 @@ In the cloud: %2$s
 
     <!-- Settings cards -->
     <string name="card_video">Video</string>
+    <string name="card_fps">Frame rate</string>
     <string name="card_controls">Controls</string>
     <string name="card_sound">Sound</string>
     <string name="card_advanced">Advanced</string>

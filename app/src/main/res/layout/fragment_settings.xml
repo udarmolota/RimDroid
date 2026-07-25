@@ -25,55 +25,26 @@
           android:padding="16dp">
 
         <TextView
+            style="@style/AppTheme.CardHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/card_video"
-            android:textAppearance="?attr/textAppearanceTitleLarge"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="6dp" />
 
+        <!-- Renderer: only Zink ZFA works right now, so there's no chooser — explain it and point
+             the user at the driver picker below. -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/renderer"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:layout_marginBottom="8dp" />
-
-        <RadioGroup
-            android:id="@+id/rg_renderer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp">
-
-          <RadioButton
-              android:id="@+id/rb_gl4es"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:text="@string/gl4es_label" />
-
-          <RadioButton
-              android:id="@+id/rb_zink_zfa"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:text="@string/zink_zfa_label" />
-
-          <RadioButton
-              android:id="@+id/rb_zink_osmesa"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:text="@string/zink_osmesa_label" />
-
-          <RadioButton
-              android:id="@+id/rb_softpipe"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:text="@string/softpipe_label" />
-        </RadioGroup>
+            android:text="@string/renderer_info"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/vulkan_driver"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
             android:layout_marginBottom="4dp" />
 
         <TextView
@@ -96,19 +67,24 @@
             android:text="@string/driver_recommend"
             android:textSize="14dp" />
 
-        <Switch
-            android:id="@+id/sw_show_fps"
-            android:layout_width="match_parent"
+        <!-- Small text link to the device-global custom-driver import screen. -->
+        <TextView
+            android:id="@+id/tv_upload_driver"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/show_fps_label" />
+            android:layout_marginTop="8dp"
+            android:text="@string/upload_custom_driver"
+            android:textColor="?attr/colorPrimary"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:clickable="true"
+            android:focusable="true" />
 
         <!-- Render resolution (re-enabled 2026-06-28; the "flicker" hold reason was the missing-mods grey, not a render bug) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/render_res_label"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="4dp" />
 
@@ -119,17 +95,48 @@
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:layout_marginBottom="4dp" />
 
-        <Spinner
-            android:id="@+id/spinner_render_res"
+        <RadioGroup
+            android:id="@+id/rg_render_res"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ============================ FRAME RATE ============================ -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
+        <TextView
+            style="@style/AppTheme.CardHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_fps"
+            android:layout_marginBottom="6dp" />
+
+        <Switch
+            android:id="@+id/sw_show_fps"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:text="@string/show_fps_label" />
 
         <!-- FPS cap: even out the frame-rate swings and free CPU for the simulation. -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/fps_cap_label"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="4dp" />
 
@@ -184,11 +191,11 @@
           android:padding="16dp">
 
         <TextView
+            style="@style/AppTheme.CardHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/card_controls"
-            android:textAppearance="?attr/textAppearanceTitleLarge"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="6dp" />
 
         <Button
             android:id="@+id/btn_edit_controls"
@@ -208,6 +215,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:textSize="14sp"
             android:text="@string/haptic_label" />
 
         <Switch
@@ -215,6 +223,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:textSize="14sp"
             android:text="@string/drag_pan_label" />
 
         <Switch
@@ -222,6 +231,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:textSize="14sp"
             android:text="@string/reverse_landscape_label" />
 
         <TextView
@@ -255,10 +265,10 @@
              by default, so testers stop wandering in). Toggle + arrow flip wired in SettingsFragment. -->
         <TextView
             android:id="@+id/tv_advanced_header"
+            style="@style/AppTheme.CardHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/card_advanced"
-            android:textAppearance="?attr/textAppearanceTitleLarge"
             android:drawableEnd="@android:drawable/arrow_down_float"
             android:clickable="true"
             android:focusable="true" />
@@ -275,6 +285,7 @@
               android:layout_width="match_parent"
               android:layout_height="wrap_content"
               android:layout_marginTop="12dp"
+              android:textSize="14sp"
               android:text="@string/debug_mode" />
 
           <Switch
@@ -282,6 +293,7 @@
               android:layout_width="match_parent"
               android:layout_height="wrap_content"
               android:layout_marginTop="12dp"
+              android:textSize="14sp"
               android:text="@string/compat_mode_label" />
 
           <TextView
@@ -297,7 +309,7 @@
               android:layout_height="wrap_content"
               android:layout_marginTop="16dp"
               android:text="@string/env_section_header"
-              android:textAppearance="?attr/textAppearanceTitleMedium" />
+              android:textAppearance="?attr/textAppearanceTitleSmall" />
 
           <TextView
               android:layout_width="match_parent"
@@ -358,7 +370,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Render scale: 60%"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
+                android:textAppearance="?attr/textAppearanceTitleSmall" />
 
             <SeekBar
                 android:id="@+id/sb_render_scale"

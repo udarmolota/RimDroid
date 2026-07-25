@@ -7,11 +7,14 @@
     <string name="choose_instance_prompt">— Выберите инстанс —</string>
     <string name="choose_instance_first">Выберите инстанс для установки</string>
     <string name="delete_instance">Удалить инстанс</string>
+    <string name="more_options">Ещё</string>
     <string name="delete_instance_confirm">Удалить инстанс \"%1$s\" и все его файлы? Это нельзя отменить.</string>
     <string name="log">Лог</string>
     <string name="renderer">Рендерер</string>
+    <string name="renderer_info">Сейчас RimDroid работает только через Zink ZFA.</string>
     <string name="vulkan_driver">Vulkan-драйвер</string>
-    <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU. Если не сработало — попробуйте другой.</string>
+    <string name="vulkan_driver_hint">Выберите драйвер под ваш GPU — на устройствах не с Snapdragon выбирайте системный. Если не сработало — попробуйте другой.</string>
+    <string name="upload_custom_driver">Загрузить свой драйвер</string>
     <string name="driver_recommend">Рекомендуемый драйвер (определить GPU)</string>
     <string name="drag_pan_label">Двигать карту пальцем (панорама)</string>
     <string name="reverse_landscape_label">Зеркальная ориентация (180°)</string>
@@ -71,6 +74,8 @@
     <string name="render_res_label">Разрешение рендера</string>
     <string name="render_res_relative">Во весь экран</string>
     <string name="render_res_fixed_169">С чёрными краями 1280×720 — fastest</string>
+    <string name="render_res_fullscreen">весь экран</string>
+    <string name="render_res_black_margins">чёрные поля</string>
     <string name="render_res_hint">Ниже = больше FPS на слабых GPU и крупнее интерфейс. Нативное = резче.</string>
     <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
     <string name="driver_auto_set_title">Драйвер выставлен</string>
@@ -174,6 +179,7 @@
 
     <!-- Settings cards -->
     <string name="card_video">Видео</string>
+    <string name="card_fps">Частота кадров</string>
     <string name="card_controls">Управление</string>
     <string name="card_sound">Звук</string>
     <string name="card_advanced">Дополнительно</string>

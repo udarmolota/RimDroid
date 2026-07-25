@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/action_instance_settings"
-        android:title="@string/nav_settings" />
+        android:id="@+id/action_instance_storage"
+        android:title="@string/nav_manage_storage" />
     <item
         android:id="@+id/action_instance_delete"
         android:title="@string/delete_instance" />
-    <item
-        android:id="@+id/action_instance_storage"
-        android:title="@string/nav_manage_storage" />
 </menu>

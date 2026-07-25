@@ -55,16 +55,26 @@
                 android:maxLines="1" /-->
         </LinearLayout>
 
+        <!-- Three icons kept snug: 40dp width (vs the default 48dp) and no gaps, so ⋮/gear/play sit
+             as a tight cluster on the right instead of stretching across the card. -->
+        <ImageButton
+            android:id="@+id/instance_item_more"
+            style="@style/AppTheme.ImageButton"
+            android:layout_width="40dp"
+            android:src="@drawable/mt_icon_more_vert"
+            android:contentDescription="@string/more_options" />
+
         <ImageButton
             android:id="@+id/instance_item_settings"
             style="@style/AppTheme.ImageButton"
+            android:layout_width="40dp"
             android:src="@drawable/mt_icon_settings"
             android:contentDescription="@string/nav_settings" />
 
         <ImageButton
             android:id="@+id/instance_item_launch"
             style="@style/AppTheme.ImageButton"
-            android:layout_marginStart="4dp"
+            android:layout_width="40dp"
             android:src="@drawable/mt_icon_play"
             android:tint="?attr/colorPrimary"
             android:contentDescription="@string/launch" />

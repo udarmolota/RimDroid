@@ -150,6 +150,7 @@ public class LauncherFragment extends Fragment {
                 GameInstance gi = instances.get(position);
                 View v = holder.itemView;
                 TextView name = v.findViewById(R.id.instance_item_name);
+                ImageButton more = v.findViewById(R.id.instance_item_more);
                 ImageButton settings = v.findViewById(R.id.instance_item_settings);
                 ImageButton launch = v.findViewById(R.id.instance_item_launch);
 
@@ -160,7 +161,8 @@ public class LauncherFragment extends Fragment {
                 // (renderer subtitle is commented out in the layout — keep the binding out too)
 
                 launch.setOnClickListener(x -> launchInstance(gi));
-                settings.setOnClickListener(x -> showInstanceMenu(settings, gi));
+                settings.setOnClickListener(x -> openInstanceSettings(gi));   // gear = straight to Settings
+                more.setOnClickListener(x -> showInstanceMenu(more, gi));     // ⋮ = Manage storage / Delete
             }
 
             @Override
@@ -168,15 +170,15 @@ public class LauncherFragment extends Fragment {
         };
     }
 
-    /** Gear button → a small menu: Settings / Delete (Zomdroid-style). */
+    /** ⋮ button → a small menu: Manage storage / Delete instance. Settings now opens directly from
+     *  the gear icon, so it's no longer in here. */
     private void showInstanceMenu(View anchor, GameInstance gi) {
         android.widget.PopupMenu pm = new android.widget.PopupMenu(requireContext(), anchor);
         pm.getMenuInflater().inflate(R.menu.menu_game_instance, pm.getMenu());
         pm.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.action_instance_settings) { openInstanceSettings(gi); return true; }
-            if (id == R.id.action_instance_delete)   { confirmDeleteInstance(gi); return true; }
             if (id == R.id.action_instance_storage)  { openInstanceStorage(gi); return true; }
+            if (id == R.id.action_instance_delete)   { confirmDeleteInstance(gi); return true; }
             return false;
         });
         pm.show();

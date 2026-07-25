@@ -53,8 +53,7 @@ We'd rather set expectations honestly than overpromise.
 ## Device compatibility
 
 All tested devices now launch the game. Some run great out of the box; others may need
-**Compatibility mode** (Settings → Advanced). This is a living list; if your device isn't here, try
-it and send us a log.
+**Compatibility mode** (Settings → Advanced).
 
 ## System requirements
 

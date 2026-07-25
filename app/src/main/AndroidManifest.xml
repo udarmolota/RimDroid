@@ -17,9 +17,15 @@
          permission is acceptable; granted once by the user via the system "All files access" screen. -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
+    <!-- largeHeap: budget phones cap the app heap at 256 MB. JavaSteam's VZipUtil keeps an 8 MB
+         ThreadLocal decompression buffer PER THREAD, and the downloader's coroutine pool grows to
+         dozens of threads, so a long depot download walks straight into OutOfMemoryError and leaves
+         a half-downloaded (unlaunchable) game. largeHeap raises the cap (typically to 512 MB) and is
+         what makes the in-app download survive on those devices. -->
     <application
         android:name=".RimDroidApplication"
         android:appCategory="game"
+        android:largeHeap="true"
         android:extractNativeLibs="true"
         android:allowNativeHeapPointerTagging="false"
         android:allowBackup="true"

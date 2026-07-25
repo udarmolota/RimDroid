@@ -127,6 +127,15 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         public Dlc(int appId, String name) { this.appId = appId; this.name = name; }
     }
 
+    // Concurrency caps for DepotDownloader (library defaults are 8/8). JavaSteam's VZipUtil keeps an
+    // 8 MB decompression buffer in a ThreadLocal, which lives as long as the pooled thread does — so
+    // every additional worker thread permanently costs 8 MB of Java heap. On budget phones (256 MB
+    // heap cap) the defaults walk into OutOfMemoryError partway through a depot download and leave an
+    // unlaunchable half-copy of the game (reported twice, 2026-07-25). Fewer workers = fewer live
+    // buffers; costs some download speed, which is a good trade for finishing at all.
+    private static final int DL_MAX_DOWNLOADS  = 4;   // concurrent chunk downloads
+    private static final int DL_MAX_DECOMPRESS = 2;   // concurrent chunk decompressions
+
     private final String username, password;
     private final String instanceName;   // GAME mode: download lands in instances/<name>
     private final String installDir;      // GAME mode: ABSOLUTE path = AppStorage.getInstanceDir(name)
@@ -446,7 +455,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                         progress("  (pinned to 1.5 manifests " + manifests + ")");
                     }
                 }
-                try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true)) {
+                try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true,
+                        /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
                     dd.addListener(this);
                     AppItem item = new AppItem(
                             /* appId */ RIMWORLD_APP_ID,             // DLC depots are under the base app
@@ -590,7 +600,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                 if (!work.mkdirs()) { progress("✗ " + id + ": cannot create work dir"); skipped++; continue; }
                 lastError = null;
                 boolean got = false;
-                try (DepotDownloader dd = new DepotDownloader(steamClient, licenses, /* debug */ true)) {
+                try (DepotDownloader dd = new DepotDownloader(steamClient, licenses, /* debug */ true,
+                        /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
                     dd.addListener(this);
                     PubFileItem item = new PubFileItem(
                             /* appId */ RIMWORLD_APP_ID,
@@ -701,7 +712,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
         }
         progress((manifestOnly ? "[manifest-only] " : "")
                 + "[attempt " + downloadAttempts + "] " + verLabel + " → " + installDir);
-        try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true)) {
+        try (DepotDownloader dd = new DepotDownloader(steamClient, licenseList, /* debug */ true,
+                        /* useLanCache */ false, DL_MAX_DOWNLOADS, DL_MAX_DECOMPRESS)) {
             dd.addListener(this);
 
             AppItem rimworld = new AppItem(

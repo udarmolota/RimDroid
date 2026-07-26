@@ -69,6 +69,22 @@ public class AppStorage {
         return new File(getInstancesDir(), name);
     }
 
+    /** Short, always-fits default instance name (stays well under the sun_path byte budget). */
+    public static final String DEFAULT_INSTANCE_NAME = "RimWorld";
+
+    /** "RimWorld", or "RimWorld-2"/"-3"/... — the first name with no existing instance directory.
+     *  Shared by every screen that creates an instance (ZIP install and Steam download) so they
+     *  pre-fill the same default. */
+    public static String freeDefaultInstanceName() {
+        AppStorage st = requireSingleton();
+        if (!st.getInstanceDir(DEFAULT_INSTANCE_NAME).exists()) return DEFAULT_INSTANCE_NAME;
+        for (int i = 2; i < 1000; i++) {
+            String n = DEFAULT_INSTANCE_NAME + "-" + i;
+            if (!st.getInstanceDir(n).exists()) return n;
+        }
+        return DEFAULT_INSTANCE_NAME;   // 1000 instances named RimWorld* — practically unreachable
+    }
+
     /**
      * Shared library for DLC and Workshop mods, in the PUBLIC Android "Download" folder
      * (/storage/emulated/0/Download/RimDroid) so the user can see/move/share/delete them with any

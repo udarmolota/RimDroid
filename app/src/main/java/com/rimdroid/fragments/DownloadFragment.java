@@ -61,6 +61,11 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         super.onViewCreated(v, savedInstanceState);
         appCtx = requireContext().getApplicationContext();
         etInstance = v.findViewById(R.id.et_dl_instance);
+        // Pre-fill the same default the ZIP-install screen uses ("RimWorld", or "RimWorld-2"…), so the
+        // field is never left blank. The download lands directly in instances/<name>, and re-running a
+        // download with the SAME name resumes it — so the name is worth showing, not guessing.
+        if (etInstance.getText().length() == 0)
+            etInstance.setText(com.rimdroid.AppStorage.freeDefaultInstanceName());
         etUser     = v.findViewById(R.id.et_dl_user);
         etPass     = v.findViewById(R.id.et_dl_pass);
         etManifest = v.findViewById(R.id.et_dl_manifest);

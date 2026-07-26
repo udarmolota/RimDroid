@@ -37,8 +37,6 @@ public class NewInstanceFragment extends Fragment {
     // filename). Cap the name well under the byte budget: the fixed prefix+suffix take ~59 bytes,
     // leaving ~48; 40 keeps a margin for work-profile/cloned-app user dirs (/data/user/<n>/...).
     private static final int MAX_NAME_LEN = 40;
-    // Short, always-fits default so the common "just install and go" path never hits the limit.
-    private static final String DEFAULT_NAME = "RimWorld";
 
     private EditText etInstanceName;
     private Button   btnPickZip;
@@ -144,15 +142,10 @@ public class NewInstanceFragment extends Fragment {
         }, "rd-gpu-advise").start();
     }
 
-    /** "RimWorld", or "RimWorld-2"/"-3"/... — the first name with no existing instance directory. */
+    /** "RimWorld", or "RimWorld-2"/"-3"/... — the first name with no existing instance directory.
+     *  Lives in AppStorage so the Steam download screen pre-fills the same default. */
     private static String freeDefaultName() {
-        com.rimdroid.AppStorage st = com.rimdroid.AppStorage.requireSingleton();
-        if (!st.getInstanceDir(DEFAULT_NAME).exists()) return DEFAULT_NAME;
-        for (int i = 2; i < 1000; i++) {
-            String n = DEFAULT_NAME + "-" + i;
-            if (!st.getInstanceDir(n).exists()) return n;
-        }
-        return DEFAULT_NAME;   // 1000 instances named RimWorld* — practically unreachable
+        return com.rimdroid.AppStorage.freeDefaultInstanceName();
     }
 
     private void startInstall() {

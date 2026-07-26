@@ -150,7 +150,7 @@ In the cloud: %2$s
 
     <!-- Download screen -->
     <string name="download_game_title">Download RimWorld from Steam</string>
-    <string name="download_version_note">RimDroid currently supports RimWorld 1.5. (Steam\'s latest is already 1.6.) Downloads the Linux build straight into a new instance — no Termux, no PC.</string>
+    <string name="download_version_note">Downloads the Linux build straight into a new instance — no Termux, no PC.</string>
     <string name="download_instance_hint">Instance name (e.g. RimWorld 1.5)</string>
     <string name="download_version_label">Game version</string>
     <string name="download_version_15">RimWorld 1.5</string>

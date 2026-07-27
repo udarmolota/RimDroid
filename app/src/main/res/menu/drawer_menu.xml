@@ -71,7 +71,7 @@
             android:title="@string/nav_export_logs" />
         <item
             android:id="@+id/action_bug_report"
-            android:icon="@drawable/mt_icon_mail"
+            android:icon="@drawable/ic_bug_report"
             android:title="@string/nav_bug_report" />
     </group>
 

@@ -112,7 +112,7 @@ public final class GogInstallerExtractor {
                 throw new IOException("No .sh installers found in " + source.getName());
 
             // Base game (the one carrying RimWorldLinux) first, so its root files land before DLC.
-            installers.sort((a, b) -> Boolean.compare(!installerHasBinary(b), !installerHasBinary(a)));
+            installers.sort((a, b) -> Boolean.compare(!installerHasBinary(a), !installerHasBinary(b)));
 
             int n = 0;
             for (File sh : installers) {

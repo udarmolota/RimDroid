@@ -54,6 +54,6 @@ public final class ZipUtil {
     private static void copy(InputStream in, OutputStream out) throws IOException {
         byte[] buf = new byte[65536];
         int n;
-        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+        while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
     }
 }

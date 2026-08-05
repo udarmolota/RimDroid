@@ -35,6 +35,11 @@ set APP_HOME=%DIRNAME%
 @rem Resolve any "." and ".." in APP_HOME to make it shorter.
 for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
 
+@rem Android Studio records its Gradle JDK in .gradle/config.properties, but the command-line
+@rem wrapper does not read that IDE-only file. Use Studio's bundled JBR when JAVA_HOME was not
+@rem explicitly supplied, so local terminal builds consistently use the project's Java 21 runtime.
+if not defined JAVA_HOME if exist "%ProgramFiles%\Android\Android Studio\jbr\bin\java.exe" set "JAVA_HOME=%ProgramFiles%\Android\Android Studio\jbr"
+
 @rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
 set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
 

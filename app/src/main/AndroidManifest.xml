@@ -41,9 +41,13 @@
             android:name="android.game_mode_config"
             android:resource="@xml/game_mode_config" />
 
+        <!-- adjustResize: without it the window doesn't shrink for the soft keyboard, so a ScrollView
+             can't scroll a focused field above it — the Environment variables input at the bottom of
+             Settings was typed blind. Applies to every launcher screen with a text field. -->
         <activity
             android:name=".LauncherActivity"
             android:exported="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

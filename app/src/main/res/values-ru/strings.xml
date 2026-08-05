@@ -6,6 +6,8 @@
     <string name="no_instances">Нет установленных инстансов</string>
     <string name="choose_instance_prompt">— Выберите инстанс —</string>
     <string name="choose_instance_first">Выберите инстанс для установки</string>
+    <string name="incomplete_game_title">Файлы игры неполные</string>
+    <string name="incomplete_game_msg">Этот инстанс не запустится — эти файлы игры отсутствуют или повреждены:\n\n%1$s\n\nОбычно это значит, что загрузка не завершилась. Скачайте игру заново с ТЕМ ЖЕ именем инстанса — загрузка продолжится с места остановки.</string>
     <string name="delete_instance">Удалить инстанс</string>
     <string name="more_options">Ещё</string>
     <string name="delete_instance_confirm">Удалить инстанс \"%1$s\" и все его файлы? Это нельзя отменить.</string>
@@ -68,6 +70,11 @@
     <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
     <string name="fps_cap_label">Ограничение FPS</string>
     <string name="fps_cap_hint">Ограничивает FPS, чтобы сгладить скачки и освободить CPU под игру — это может поднять скорость игры (TPS) на слабых устройствах. Попробуй 60 или 30, если счётчик прыгает.</string>
+    <string name="texq_label">Сжатие текстур</string>
+    <string name="texq_hint">Ужимает текстуры ради памяти и FPS — без этого несколько DLC могут не загрузиться на слабых телефонах. Затрагивает в основном растительность и ресурсы; пешки и животные не трогаются никогда. «Низкое» — хороший баланс, «Очень низкое» чуть быстрее, но растения выглядят мыльными.</string>
+    <string name="texq_no">Нет</string>
+    <string name="texq_low">Низкое</string>
+    <string name="texq_ultra">Очень низкое</string>
     <string name="fps_cap_30">30 FPS</string>
     <string name="fps_cap_60">60 FPS</string>
     <string name="fps_cap_off">Без ограничения</string>

@@ -178,10 +178,16 @@ public class NewInstanceFragment extends Fragment {
         btnInstall.setEnabled(false);
         btnInstall.setText(R.string.installing);
 
+        // Grab the context HERE, on the UI thread: copying the zip takes long enough for the user to
+        // leave the screen, and requireContext()/requireActivity() from the worker then throw
+        // IllegalStateException ("Fragment not attached") — an uncaught crash on a background thread,
+        // seen in a tester's log. The application context outlives the fragment; UI touches go
+        // through mainHandler behind an isAdded() check.
+        final android.content.Context appCtx = requireContext().getApplicationContext();
         new Thread(() -> {
             try {
-                File cacheZip = new File(requireContext().getCacheDir(), "instance.zip");
-                try (InputStream in = requireContext().getContentResolver()
+                File cacheZip = new File(appCtx.getCacheDir(), "instance.zip");
+                try (InputStream in = appCtx.getContentResolver()
                         .openInputStream(selectedZipUri);
                      FileOutputStream out = new FileOutputStream(cacheZip)) {
                     byte[] buf = new byte[65536];
@@ -189,9 +195,10 @@ public class NewInstanceFragment extends Fragment {
                     while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
                 }
                 InstallerService.startInstallInstance(
-                        requireContext(), cacheZip.getAbsolutePath(), instanceName);
+                        appCtx, cacheZip.getAbsolutePath(), instanceName);
             } catch (Exception e) {
-                requireActivity().runOnUiThread(() -> {
+                mainHandler.post(() -> {
+                    if (!isAdded() || getView() == null) return;
                     btnInstall.setEnabled(true);
                     btnInstall.setText(R.string.install);
                 });

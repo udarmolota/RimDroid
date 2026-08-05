@@ -7,6 +7,8 @@
     <string name="no_instances">No instances installed</string>
     <string name="choose_instance_prompt">— Choose an instance —</string>
     <string name="choose_instance_first">Choose an instance to install into</string>
+    <string name="incomplete_game_title">Incomplete game files</string>
+    <string name="incomplete_game_msg">This instance can\'t start — these game files are missing or incomplete:\n\n%1$s\n\nThis usually means a download didn\'t finish. Download the game again using the SAME instance name and it will continue where it stopped.</string>
     <string name="delete_instance">Delete instance</string>
     <string name="more_options">More options</string>
     <string name="delete_instance_confirm">Delete instance \"%1$s\" and all its files? This cannot be undone.</string>
@@ -69,6 +71,11 @@ In the cloud: %2$s
     <string name="show_fps_label">Show FPS counter (top-left)</string>
     <string name="fps_cap_label">Frame rate limit</string>
     <string name="fps_cap_hint">Caps FPS to smooth out swings and free the CPU for the game — which can raise the game speed (TPS) on weaker devices. Try 60 or 30 if the counter jumps around.</string>
+    <string name="texq_label">Texture compression</string>
+    <string name="texq_hint">Shrinks textures to save memory and gain FPS — needed to load several DLC on weaker phones. It mainly affects vegetation and resources; pawns and animals are never touched. Low is a good balance; Ultra low is a bit faster but plants look blurry.</string>
+    <string name="texq_no">No</string>
+    <string name="texq_low">Low</string>
+    <string name="texq_ultra">Ultra low</string>
     <string name="fps_cap_30">30 FPS</string>
     <string name="fps_cap_60">60 FPS</string>
     <string name="fps_cap_off">No limit</string>

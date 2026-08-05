@@ -291,10 +291,8 @@ public class LauncherFragment extends Fragment {
         java.util.List<String> missing = gi.missingCoreFiles();
         if (!missing.isEmpty()) {
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("Incomplete game files")
-                    .setMessage("This instance is missing base game content and won't start:\n\n"
-                            + String.join("\n", missing) + "\n\nRimWorld needs the Data/Core folder. "
-                            + "Install a complete copy of the game — the in-app Download provides a clean one.")
+                    .setTitle(R.string.incomplete_game_title)
+                    .setMessage(getString(R.string.incomplete_game_msg, String.join("\n", missing)))
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
             return;

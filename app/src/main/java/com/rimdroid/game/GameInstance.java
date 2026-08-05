@@ -167,7 +167,54 @@ public class GameInstance {
         java.util.List<String> missing = new ArrayList<>();
         for (String rel : required)
             if (!new File(root, rel).isFile()) missing.add(rel);
+        // Existence alone is not enough: an interrupted download (the Steam downloader can die
+        // mid-way on low-memory phones) leaves a truncated or empty RimWorldLinux that passes
+        // isFile(). box64 then reports only "is not an executable file", which reads like an app
+        // bug. Verify it really is an x86-64 ELF of plausible size, so the launcher can say
+        // "incomplete, download again" instead.
+        if (missing.isEmpty() && !isX86_64Elf(new File(root, C.files.RIMWORLD_BIN)))
+            missing.add(C.files.RIMWORLD_BIN + " (incomplete or corrupted)");
         return missing;
+    }
+
+    /**
+     * True if {@code f} is a complete x86-64 ELF executable: right magic/class/machine, and the
+     * header and section tables it declares actually fit inside the file. Do NOT gate this on a
+     * minimum size — RimWorldLinux is a ~14 KB launcher stub (the engine lives in UnityPlayer.so),
+     * and an earlier size floor flagged healthy instances as incomplete.
+     */
+    private static boolean isX86_64Elf(File f) {
+        final long len = f.length();
+        if (!f.isFile() || len < 64) return false;             // smaller than an ELF64 header
+        try (java.io.InputStream in = new java.io.FileInputStream(f)) {
+            byte[] h = new byte[64];
+            int n = 0;
+            while (n < h.length) {
+                int r = in.read(h, n, h.length - n);
+                if (r < 0) return false;
+                n += r;
+            }
+            if (!(h[0] == 0x7f && h[1] == 'E' && h[2] == 'L' && h[3] == 'F')) return false;
+            if (h[4] != 2 || h[5] != 1) return false;          // ELFCLASS64, little-endian
+            if (le16(h, 18) != 0x3e) return false;             // e_machine = EM_X86_64
+            // Truncation check: a half-downloaded file keeps a valid header but loses the tail the
+            // header points at, which is exactly what box64 reports as "not an executable file".
+            long phEnd = le64(h, 32) + (long) le16(h, 54) * le16(h, 56);   // e_phoff + e_phentsize*e_phnum
+            long shEnd = le64(h, 40) + (long) le16(h, 58) * le16(h, 60);   // e_shoff + e_shentsize*e_shnum
+            return phEnd <= len && shEnd <= len;
+        } catch (java.io.IOException e) {
+            return false;
+        }
+    }
+
+    private static int le16(byte[] b, int off) {
+        return (b[off] & 0xff) | ((b[off + 1] & 0xff) << 8);
+    }
+
+    private static long le64(byte[] b, int off) {
+        long v = 0;
+        for (int i = 7; i >= 0; i--) v = (v << 8) | (b[off + i] & 0xffL);
+        return v;
     }
 
     /** True if the base game content is present enough for RimWorld to load (see {@link #missingCoreFiles}). */

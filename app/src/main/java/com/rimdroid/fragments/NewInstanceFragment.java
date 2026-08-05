@@ -192,7 +192,7 @@ public class NewInstanceFragment extends Fragment {
                      FileOutputStream out = new FileOutputStream(cacheZip)) {
                     byte[] buf = new byte[65536];
                     int len;
-                    while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+                    while ((len = in.read(buf)) != -1) out.write(buf, 0, len);
                 }
                 InstallerService.startInstallInstance(
                         appCtx, cacheZip.getAbsolutePath(), instanceName);

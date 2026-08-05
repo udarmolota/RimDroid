@@ -5,7 +5,9 @@ import com.rimdroid.game.GameInstance;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -69,11 +71,60 @@ public final class LogExporter {
                 zos.closeEntry();
                 r.items.add(f.getName());
             }
+            addLogcat(zos, buf, r);
         } catch (Exception e) {
             r.error = e.getMessage();
             return r;
         }
         if (r.items.isEmpty()) r.error = "No logs found yet (run the game first).";
         return r;
+    }
+
+    /**
+     * Adds recent logcat lines visible to this app UID. Android normally hides other apps' logs,
+     * but Java, native and box64 output from RimDroid remains available. A capture failure is
+     * recorded inside the entry instead of preventing the regular log files from being exported.
+     */
+    private static void addLogcat(ZipOutputStream zos, byte[] buf, Result r)
+            throws java.io.IOException {
+        final String name = "logcat.txt";
+        Process process = null;
+        long written = 0;
+        zos.putNextEntry(new ZipEntry(name));
+        try {
+            process = new ProcessBuilder(
+                    "logcat", "-b", "all", "-d", "-v", "threadtime", "-t", "8000")
+                    .redirectErrorStream(true)
+                    .start();
+            try (InputStream in = process.getInputStream()) {
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    zos.write(buf, 0, n);
+                    written += n;
+                }
+            }
+            int exitCode = process.waitFor();
+            if (written == 0) {
+                byte[] message = ("logcat returned no accessible entries (exit "
+                        + exitCode + ").\n").getBytes(StandardCharsets.UTF_8);
+                zos.write(message);
+                written += message.length;
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            byte[] message = "logcat capture interrupted.\n".getBytes(StandardCharsets.UTF_8);
+            zos.write(message);
+            written += message.length;
+        } catch (Exception e) {
+            byte[] message = ("logcat capture failed: " + e + "\n")
+                    .getBytes(StandardCharsets.UTF_8);
+            zos.write(message);
+            written += message.length;
+        } finally {
+            if (process != null) process.destroy();
+            zos.closeEntry();
+        }
+        r.bytes += written;
+        r.items.add(name);
     }
 }

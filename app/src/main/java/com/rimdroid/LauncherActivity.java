@@ -208,8 +208,12 @@ public class LauncherActivity extends AppCompatActivity {
      * If there's no instance (nothing to log) it falls back to a text-only mailto.
      */
     private void sendBugReport() {
+        final java.util.Date now = new java.util.Date();
         final String date = new java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.US)
-                .format(new java.util.Date());
+                .format(now);
+        final String reportName = "rimdroid_report_"
+                + new java.text.SimpleDateFormat("ddMMyyyy_HHmm", java.util.Locale.US).format(now)
+                + ".zip";
         final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + "\nAndroid: " + android.os.Build.VERSION.RELEASE
                 + "\nRimDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")";
@@ -222,7 +226,7 @@ public class LauncherActivity extends AppCompatActivity {
             try {
                 java.io.File dir = new java.io.File(getCacheDir(), "reports");
                 if (dir.isDirectory() || dir.mkdirs()) {
-                    java.io.File zip = new java.io.File(dir, "rimdroid_report.zip");
+                    java.io.File zip = new java.io.File(dir, reportName);
                     try (OutputStream out = new java.io.FileOutputStream(zip)) {
                         LogExporter.export(instance, out);
                     }

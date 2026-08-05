@@ -94,6 +94,12 @@ public class GameLauncher {
             + "vulkan actual : " + VulkanDriverPolicy.displayName(actualSo) + "\n"
             + "driver policy : " + decisionReason + "\n"
             + "render scale  : " + s.getRenderScalePercent() + "%\n"
+            // Which render-resolution mode the user picked. Without this a report showing a 720p
+            // surface is ambiguous — we had to infer it from the ZFA make_current size (S22+ blurry
+            // -text report, 2026-08-05). The fixed modes render fewer pixels and upscale, so soft
+            // text on a 1080p panel is expected there, not a bug.
+            + "resolution    : " + fixedResReport(s) + fixedGeomReport() + "\n"
+            + "texture compr : " + texTierReport(s) + "\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
@@ -112,6 +118,33 @@ public class GameLauncher {
      * box64 forwards to the guest. "(NULL!)" means the setenv did not stick (e.g. malformed token).
      * Called from buildLaunchConfig, which runs AFTER the env field is applied, so the readback is valid.
      */
+    /** Render-resolution mode for the log header (see the "resolution" line). */
+    private static String fixedResReport(InstanceSettings s) {
+        switch (s.getFixedResMode()) {
+            case InstanceSettings.FIXED_720_16_9:
+                return "fixed 1280x720 16:9 (black margins) — renders 720p, upscaled to the box";
+            case InstanceSettings.FIXED_720_4_3:
+                return "fixed 960x720 4:3 (black margins) — renders 720p, upscaled to the box";
+            default:
+                return "fullscreen (device native x render scale)";
+        }
+    }
+
+    /** The actual geometry a fixed mode produced, once GameActivity has laid it out. */
+    private static String fixedGeomReport() {
+        String g = lastFixedGeom;
+        return (g == null) ? "" : "\n                " + g;
+    }
+
+    /** Texture-compression tier for the log header. */
+    private static String texTierReport(InstanceSettings s) {
+        switch (s.getTexTier()) {
+            case InstanceSettings.TEX_ULTRA: return "Ultra low (shift 2 from 2048)";
+            case InstanceSettings.TEX_LOW:   return "Low (shift 2 from 4096)";
+            default:                         return "No (shift 1)";
+        }
+    }
+
     private static String envFieldReport(InstanceSettings s) {
         String raw = s.getEnvVars();
         if (raw == null || raw.trim().isEmpty()) return "(none entered)";
@@ -222,6 +255,28 @@ public class GameLauncher {
         // tree (rd_savefix_off() checks mere PRESENCE of this env var); the shadow-sorter
         // diagnostic (RIMDROID QSORTDIV) stays active as the sensor for the no-fix validation runs.
         Os.setenv("RIMDROID_NO_SAVEFIX", "1", true);
+        // Texture quality (Settings → Video): "Half" makes the box64 GL shim drop the top mip of
+        // every mipped 2D texture — 4x less texture memory/upload, for DLC-heavy loads on 6GB
+        // phones. Always set explicitly ("1"/"0"): setenv persists in this process, so a bare
+        // "set when on" would leak the previous launch's value into the next instance.
+        // Texture tier (Settings → Video). Shift 1 = halve, 2 = quarter; DEEP_MIN is the smallest
+        // side that gets the deep shift, which is what separates Low (only the >=4096 bake giants)
+        // from Ultra low (the >=2048 item/plant atlases too). Always set BOTH explicitly: setenv
+        // persists in this process, so an unset var would leak the previous launch's value.
+        switch (gameInstance.settings().getTexTier()) {
+            case com.rimdroid.InstanceSettings.TEX_ULTRA:
+                Os.setenv("RIMDROID_TEX_SHRINK", "2", true);
+                Os.setenv("RIMDROID_TEX_DEEP_MIN", "2048", true);
+                break;
+            case com.rimdroid.InstanceSettings.TEX_LOW:
+                Os.setenv("RIMDROID_TEX_SHRINK", "2", true);
+                Os.setenv("RIMDROID_TEX_DEEP_MIN", "4096", true);
+                break;
+            default:
+                Os.setenv("RIMDROID_TEX_SHRINK", "1", true);
+                Os.setenv("RIMDROID_TEX_DEEP_MIN", "4096", true);
+                break;
+        }
         // RimWorld 1.6 GLES pivot: presence of an "rd_force_gles" marker denies Vulkan to Unity
         // (my_vkCreateInstance -> VK_ERROR_INCOMPATIBLE_DRIVER) so its auto graphics-API selection
         // falls back to the GfxDeviceGLES backend, which presents via native EGL and bypasses the
@@ -768,6 +823,8 @@ public class GameLauncher {
     // forever until lmkd killed the process (PSS grew to 8 GB). See memory rimworld_16_port.
     public static volatile int lastSurfaceWidth = 0;
     public static volatile int lastSurfaceHeight = 0;
+    /** Set by GameActivity when a fixed-resolution mode is active; printed in the launch header. */
+    public static volatile String lastFixedGeom = null;
 
     public static int setSurfaceTracked(Surface surface, int width, int height) {
         lastSurfaceWidth = width;

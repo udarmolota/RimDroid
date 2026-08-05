@@ -339,9 +339,13 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             // Overrides the render-scale setting on purpose — this mode IS the resolution. 720 lines
             // is also our readability floor, so pinning it can't make the UI too small.
             renderScale = (float) TARGET_W / boxW;
-            Log.i(TAG, "fixed " + (wide ? "16:9" : "4:3") + ": box=" + boxW + "x" + boxH
-                    + " scale=" + renderScale + " -> buffer "
-                    + Math.round(boxW * renderScale) + "x" + Math.round(boxH * renderScale));
+            // Log.i alone doesn't reach rimdroid.log (logcat race), and this geometry is exactly
+            // what explains "why is my text soft" in a bug report. Hand it to GameLauncher, which
+            // runs later (it waits for the surface to settle) and prints it in the launch header.
+            String geom = "screen=" + sw + "x" + sh + " box=" + boxW + "x" + boxH
+                    + " buffer=" + Math.round(boxW * renderScale) + "x" + Math.round(boxH * renderScale);
+            Log.i(TAG, "fixed " + (wide ? "16:9" : "4:3") + ": " + geom + " scale=" + renderScale);
+            com.rimdroid.GameLauncher.lastFixedGeom = geom;
         } else {
             // Full screen (game stretched to fill — in-game world stays aspect-correct via
             // RimWorld's camera; only the loading screen/menus stretch). No black bars.

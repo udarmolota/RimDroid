@@ -391,6 +391,21 @@ public class SettingsFragment extends Fragment {
             }
         });
 
+        // Texture compression tier: No / Low / Ultra low (see InstanceSettings.getTexTier).
+        // Takes effect on the next launch.
+        android.widget.RadioGroup rgTexq = view.findViewById(R.id.rg_texq);
+        switch (inst.getTexTier()) {
+            case com.rimdroid.InstanceSettings.TEX_ULTRA: rgTexq.check(R.id.rb_texq_ultra); break;
+            case com.rimdroid.InstanceSettings.TEX_LOW:   rgTexq.check(R.id.rb_texq_low);   break;
+            default:                                     rgTexq.check(R.id.rb_texq_no);    break;
+        }
+        rgTexq.setOnCheckedChangeListener((group, checkedId) -> {
+            int tier = (checkedId == R.id.rb_texq_ultra) ? com.rimdroid.InstanceSettings.TEX_ULTRA
+                     : (checkedId == R.id.rb_texq_low)   ? com.rimdroid.InstanceSettings.TEX_LOW
+                     : com.rimdroid.InstanceSettings.TEX_NONE;
+            inst.setTexTier(tier);
+        });
+
         // FPS cap: three radio buttons — 30 / 60 / No limit (0 = off). Takes effect on next launch.
         android.widget.RadioGroup rgFps = view.findViewById(R.id.rg_fps_cap);
         int curCap = inst.getFpsCap();

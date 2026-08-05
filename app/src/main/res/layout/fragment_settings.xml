@@ -100,6 +100,50 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical" />
+
+        <!-- Texture quality: Half = the GL-layer shim halves mipped textures (4x less texture
+             memory) — for DLC-heavy loads and weaker phones. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/texq_label"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/texq_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_texq"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rb_texq_no"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/texq_no" />
+
+            <RadioButton
+                android:id="@+id/rb_texq_low"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/texq_low" />
+
+            <RadioButton
+                android:id="@+id/rb_texq_ultra"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/texq_ultra" />
+        </RadioGroup>
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -288,11 +332,39 @@
               android:textSize="14sp"
               android:text="@string/debug_mode" />
 
+          <!-- Environment variables sits ABOVE Compatibility mode, and its field above its own
+               description: it's the only text input here, and at the bottom of the last card the
+               soft keyboard covered it (typing blind). Everything below it is push-down padding. -->
+          <TextView
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="16dp"
+              android:text="@string/env_section_header"
+              android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+          <EditText
+              android:id="@+id/et_env_vars"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="4dp"
+              android:fontFamily="monospace"
+              android:textSize="13sp"
+              android:inputType="textNoSuggestions|textMultiLine|textVisiblePassword"
+              android:hint="@string/env_vars_hint_example" />
+
+          <TextView
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:text="@string/env_vars_hint"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:layout_marginTop="4dp"
+              android:layout_marginBottom="4dp" />
+
           <Switch
               android:id="@+id/sw_compat_mode"
               android:layout_width="match_parent"
               android:layout_height="wrap_content"
-              android:layout_marginTop="12dp"
+              android:layout_marginTop="16dp"
               android:textSize="14sp"
               android:text="@string/compat_mode_label" />
 
@@ -303,29 +375,6 @@
               android:textAppearance="?attr/textAppearanceBodySmall"
               android:alpha="0.7"
               android:text="@string/compat_mode_hint" />
-
-          <TextView
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:layout_marginTop="16dp"
-              android:text="@string/env_section_header"
-              android:textAppearance="?attr/textAppearanceTitleSmall" />
-
-          <TextView
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:text="@string/env_vars_hint"
-              android:textAppearance="?attr/textAppearanceBodySmall"
-              android:layout_marginBottom="4dp" />
-
-          <EditText
-              android:id="@+id/et_env_vars"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:fontFamily="monospace"
-              android:textSize="13sp"
-              android:inputType="textNoSuggestions|textMultiLine|textVisiblePassword"
-              android:hint="@string/env_vars_hint_example" />
 
           <!-- Hidden dev/diagnostic elements — kept so SettingsFragment.findViewById() still resolves
                them (set GONE in code). Do not remove. -->

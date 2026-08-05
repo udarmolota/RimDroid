@@ -130,6 +130,26 @@ public class InstanceSettings {
         p.edit().putInt(pfx + "fps_cap", fps).apply();
     }
 
+    // --- Texture compression tier. The box64 GL shim drops top mip level(s) of big mipped 2D
+    // textures — no recompression, the game already ships every smaller mip. Measured on a 5-DLC
+    // 1.6 colony (peak of simultaneously live textures, ~500 MB unshrunk):
+    //   NONE  — every big texture halved. The baseline everyone gets; visually indistinguishable.
+    //   LOW   — plus quarter for >=4096 (the transient bake giants): ~349 MB saved with only 6
+    //           textures deep-shifted; item/plant atlases stay at half.
+    //   ULTRA — quarter from >=2048 too (36 textures, ~398 MB): the last ~50 MB and slightly more
+    //           FPS (those atlases are sampled every frame), at the cost of blurry vegetation.
+    // Pawn/animal atlases are FBO render targets — never touched at any tier. New pref key: the
+    // old "tex_shrink" was a boolean, reading it as an int would throw. ---
+    public static final int TEX_NONE = 0, TEX_LOW = 1, TEX_ULTRA = 2;
+
+    public int getTexTier() {
+        return p.getInt(pfx + "tex_tier", TEX_NONE);
+    }
+
+    public void setTexTier(int tier) {
+        p.edit().putInt(pfx + "tex_tier", tier).apply();
+    }
+
     // --- Haptic feedback: light vibration tick on on-screen button presses. Default OFF. ---
     public boolean isHapticFeedback() {
         return p.getBoolean(pfx + "haptic", global.isHapticFeedback());

@@ -743,21 +743,14 @@ public class GameLauncher {
             // are never recycled → "Vulkan - Out of memory" at ~3GB. The gfx thread presents
             // between load steps like on desktop. 1.5 (SDL/GL path) keeps gfx-direct.
             boolean rdX11 = new java.io.File(gameInstance.getGamePath(), "rd_x11").exists();
-            // RIMDROID_NO_GFX_DIRECT=1 (extra env) drops the flag on the 1.5 path too, so threaded
-            // rendering can be A/B'd there without a build. 1.5 is measurably slower than 1.6 even
-            // with fewer DLC, and single-threaded gfx is the obvious suspect — but the flag also
-            // predates that: it was the guard against the black screen when the ZFA GL context
-            // migrates between Unity's main and render threads (zfaReleaseCurrent is still a no-op
-            // stub in libzfa). So: opt-in only, default unchanged. Black screen => the migration
-            // really does need the libzfa symbol; more FPS => a real lever for the 1.5 half of the
-            // audience. Never forced on: this is a diagnostic switch, not a setting.
-            boolean noGfxDirect = "1".equals(Os.getenv("RIMDROID_NO_GFX_DIRECT"));
-            if (noGfxDirect && !rdX11)
-                postLog("RIMDROID_NO_GFX_DIRECT=1 -> launching WITHOUT -force-gfx-direct (threaded render test)");
+            // NOTE: the RIMDROID_NO_GFX_DIRECT switch does NOT belong here. This exec path is not the
+            // one 1.5 actually launches through — the args come from GameInstance.getArgs(), which is
+            // where the flag is really decided (and where the switch now lives). Putting it here once
+            // produced a build where the env var did nothing at all.
             int code = execStandaloneGame(
                     gameInstance.getGamePath(),
                     gameInstance.getNativeLibraryPath(),
-                    (rdX11 || noGfxDirect) ? null : "-force-gfx-direct");
+                    rdX11 ? null : "-force-gfx-direct");
             postLog("Standalone exec exited, code=" + code);
             Log.i(TAG, "execStandaloneGame returned code=" + code);
         } else {

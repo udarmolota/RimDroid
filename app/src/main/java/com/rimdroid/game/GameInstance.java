@@ -136,6 +136,17 @@ public class GameInstance {
             android.util.Log.i("RimDroid", "getArgs: rd_x11 -> threaded rendering (default 2-thread)");
             return new String[]{};
         }
+        // 1.5 (SDL/GL path). RIMDROID_NO_GFX_DIRECT=1 in extra env drops the flag here so threaded
+        // rendering can be A/B'd on 1.5 without a build — 1.5 measures slower than 1.6 even with
+        // fewer DLC, and sim+render sharing one thread is the obvious suspect. Opt-in only: the flag
+        // predates that question, it is the guard against the black screen when the ZFA context has
+        // to migrate between Unity's main and render threads (zfaReleaseCurrent is still a stub in
+        // libzfa). Black screen => the migration really does need that symbol; more FPS => a real
+        // lever for the 1.5 half of the audience.
+        if ("1".equals(android.system.Os.getenv("RIMDROID_NO_GFX_DIRECT"))) {
+            android.util.Log.i("RimDroid", "getArgs: RIMDROID_NO_GFX_DIRECT=1 -> threaded rendering (no -force-gfx-direct)");
+            return new String[]{};
+        }
         android.util.Log.i("RimDroid", "getArgs: default -force-gfx-direct (gamePath=" + getGamePath() + ")");
         // -force-gfx-direct: disable Unity's threaded render device (threaded=1).
         // Our single ZFA/Zink GL context is made current on one thread only;

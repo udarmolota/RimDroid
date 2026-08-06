@@ -428,8 +428,15 @@ public class GameLauncher {
                 // Software path needs no Vulkan ICD; GPU (Zink) path uses the chosen driver.
                 String configuredDriver = soft ? "" : gameInstance.settings().getVulkanDriverSo();
                 launchGpu = GpuInfo.query();
+                // A stored, empty driver = the player deliberately picked "System" in the spinner
+                // (instance creation always writes the advised driver, so an empty stored value is
+                // a conscious override). Honour it instead of re-imposing a Turnip — Adreno 640
+                // crashes on every bundled Turnip, so System is its only working path.
+                boolean explicitSystem = !soft
+                        && gameInstance.settings().hasExplicitDriver()
+                        && configuredDriver.isEmpty();
                 driverDecision = VulkanDriverPolicy.resolve(
-                        configuredDriver, launchGpu, forceGlesZfa);
+                        configuredDriver, launchGpu, forceGlesZfa, explicitSystem);
                 if (!driverDecision.configuredSo.equals(driverDecision.effectiveSo)) {
                     // Migrate stale or incompatible saved choices so Settings and later launches
                     // reflect the driver that actually worked on this device.

@@ -33,9 +33,27 @@ public class VulkanDriverPolicyTest {
 
     @Test
     public void adrenoSystemGetsMatchingTurnipForOneSix() {
+        // No driver chosen yet (explicitSystem=false) → auto-pick the matching Turnip.
         VulkanDriverPolicy.Decision d = VulkanDriverPolicy.resolve(
                 "", gpu("Adreno (TM) 830", "Qualcomm", 830), true);
         assertEquals("libvulkan_freedreno.v25.so", d.effectiveSo);
+    }
+
+    @Test
+    public void explicitSystemPickIsHonouredOnAdreno() {
+        // Player deliberately chose "System" on an Adreno device under 1.6 — must NOT be overridden
+        // with a Turnip (Adreno 640 crashes on every bundled Turnip; System is its only path).
+        VulkanDriverPolicy.Decision d = VulkanDriverPolicy.resolve(
+                "", gpu("Adreno (TM) 640", "Qualcomm", 640), true, true);
+        assertEquals("", d.effectiveSo);
+    }
+
+    @Test
+    public void adrenoAutoPickStillWorksWhenNotExplicit() {
+        // Same device, but no explicit choice → auto-pick still applies (regression guard).
+        VulkanDriverPolicy.Decision d = VulkanDriverPolicy.resolve(
+                "", gpu("Adreno (TM) 640", "Qualcomm", 640), true, false);
+        assertEquals("libvulkan_freedreno_7xx_new.so", d.effectiveSo);
     }
 
     @Test

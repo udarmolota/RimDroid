@@ -21,8 +21,21 @@ public final class VulkanDriverPolicy {
     }
 
     @NonNull
+    /** Backwards-compatible overload: treats an empty driver as "not explicitly chosen". */
     public static Decision resolve(String configuredSo, @NonNull GpuInfo gpu,
                                    boolean autoSelectAdrenoTurnip) {
+        return resolve(configuredSo, gpu, autoSelectAdrenoTurnip, false);
+    }
+
+    /**
+     * @param explicitSystem the user deliberately picked "System" in the driver spinner (a stored,
+     *     empty driver choice) — as opposed to an instance that simply has no driver set yet. When
+     *     true we NEVER auto-substitute a Turnip: on Adreno 640 every bundled Turnip crashes at
+     *     zfaCreateContext, so silently overriding an explicit System pick trapped those devices
+     *     with no working option (field-confirmed on Galaxy S10+ / Poco X3 Pro, both Adreno 640).
+     */
+    public static Decision resolve(String configuredSo, @NonNull GpuInfo gpu,
+                                   boolean autoSelectAdrenoTurnip, boolean explicitSystem) {
         String configured = normalize(configuredSo);
         String candidate = configured;
         String prefix = "";
@@ -42,7 +55,9 @@ public final class VulkanDriverPolicy {
                             + "; using System");
         }
 
-        if (autoSelectAdrenoTurnip && candidate.isEmpty()) {
+        // Auto-pick a Turnip only when the instance has no driver chosen yet. An explicit System
+        // pick is honoured as-is — the player's choice wins over the recommendation.
+        if (autoSelectAdrenoTurnip && candidate.isEmpty() && !explicitSystem) {
             String recommended = gpu.recommendedDriverSo();
             if (!recommended.isEmpty()) {
                 return new Decision(configured, recommended,
@@ -55,7 +70,8 @@ public final class VulkanDriverPolicy {
         }
 
         return new Decision(configured, candidate,
-                prefix + (candidate.isEmpty() ? "using configured System driver"
+                prefix + (candidate.isEmpty()
+                        ? (explicitSystem ? "honouring explicit System pick" : "using configured System driver")
                         : "keeping configured driver"));
     }
 

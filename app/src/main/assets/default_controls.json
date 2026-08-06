@@ -57,6 +57,20 @@
   {
     "type": "BUTTON",
     "shape": "RECT",
+    "text": "Esc",
+    "centerXRelative": 0.14976867,
+    "centerYRelative": 0.075,
+    "scale": 0.55,
+    "alpha": 28,
+    "bindings": [
+      "KEY_ESCAPE"
+    ],
+    "sensitivity": 2.0,
+    "isToggle": false
+  },
+  {
+    "type": "BUTTON",
+    "shape": "RECT",
     "text": "Space",
     "centerXRelative": 0.22771867,
     "centerYRelative": 0.075,

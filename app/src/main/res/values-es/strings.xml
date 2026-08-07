@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spanish (neutral Latin American). Most active testers write in Spanish, and the audience is
+     largely LatAm, so avoid Spain-only vocabulary: "PC" not "ordenador", "teléfono" not "móvil".
+     RimWorld's own Spanish calls pawns "colonos" — keep that so the wording matches the game. -->
+<resources>
+    <string name="launch">Iniciar</string>
+    <string name="stop">Detener</string>
+    <string name="install_instance">Instalar instancia (ZIP)…</string>
+    <string name="no_instances">No hay instancias instaladas</string>
+    <string name="choose_instance_prompt">— Elige una instancia —</string>
+    <string name="choose_instance_first">Elige la instancia donde instalar</string>
+    <string name="incomplete_game_title">Archivos del juego incompletos</string>
+    <string name="incomplete_game_msg">Esta instancia no puede iniciar: faltan estos archivos del juego o están incompletos:\n\n%1$s\n\nNormalmente significa que una descarga no terminó. Descarga el juego otra vez usando el MISMO nombre de instancia y continuará donde se detuvo.</string>
+    <string name="delete_instance">Eliminar instancia</string>
+    <string name="more_options">Más opciones</string>
+    <string name="delete_instance_confirm">¿Eliminar la instancia \"%1$s\" y todos sus archivos? Esto no se puede deshacer.</string>
+    <string name="log">Registro</string>
+    <string name="renderer">Renderizador</string>
+    <string name="renderer_info">Por ahora RimDroid solo renderiza mediante Zink ZFA.</string>
+    <string name="vulkan_driver">Controlador Vulkan</string>
+    <string name="vulkan_driver_hint">Elige el controlador que corresponda a tu GPU: los dispositivos que no son Snapdragon deben usar el controlador del sistema. Si no funciona, prueba otro.</string>
+    <string name="driver_recommend">Controlador recomendado (detectar GPU)</string>
+    <string name="upload_custom_driver">Subir tu propio controlador</string>
+    <string name="drag_pan_label">Mover el mapa arrastrando con el dedo</string>
+    <string name="reverse_landscape_label">Girar la imagen (180°)</string>
+    <string name="nav_cloud_saves">Partidas en Steam Cloud</string>
+    <string name="cloud_saves_title">Partidas en Steam Cloud</string>
+    <string name="cloud_saves_hint">Si también juegas RimWorld en la PC con Steam, tus partidas se sincronizan con Steam Cloud, y aquí puedes traerlas al teléfono.\n\nEl inicio de sesión se confirma desde la app Steam Mobile: debes haber entrado allí al menos una vez y tener activado Steam Guard. Al tocar el botón, Steam envía una solicitud de aprobación a esa app. La contraseña va directo a Steam y nunca se guarda aquí.</string>
+    <string name="cloud_saves_user">Usuario de Steam</string>
+    <string name="cloud_saves_pass">Contraseña de Steam</string>
+    <string name="cloud_saves_instance">Copiar las partidas en</string>
+    <string name="cloud_saves_pull">Traer partidas desde Steam Cloud</string>
+    <string name="cloud_saves_push">Enviar partidas a Steam Cloud</string>
+    <string name="cloud_saves_pull_note">Primero se descarga todo lo que hay en tu nube y luego se copia en esta instancia. Si ya existe aquí una partida con el mismo nombre, podrás elegir cuál conservar.</string>
+    <string name="cloud_saves_push_note">Las partidas que la nube todavía no tiene se envían de inmediato. Todo lo que reemplazaría una partida que ya está allí se muestra antes, para que decidas. Cierra el juego antes de enviar.</string>
+    <string name="cloud_saves_log_connecting">Conectando con Steam…</string>
+    <string name="cloud_saves_log_placed">Copiada: %1$s</string>
+    <string name="cloud_saves_log_kept">Se conservó la copia de este teléfono: %1$s</string>
+    <string name="cloud_saves_place_done">Listo: %1$d copiadas, %2$d sin cambios.</string>
+    <string name="cloud_saves_clash_title">%1$s ya existe aquí</string>
+    <string name="cloud_saves_clash_msg">En este teléfono: %1$s
+En la nube: %2$s
+
+%3$s</string>
+    <string name="cloud_saves_clash_cloud_newer">La copia de la nube es más reciente.</string>
+    <string name="cloud_saves_clash_local_newer">La copia de este teléfono es más reciente.</string>
+    <string name="cloud_saves_clash_replace">Usar la de la nube</string>
+    <string name="cloud_saves_clash_keep">Conservar la mía</string>
+    <string name="cloud_saves_clash_both">Conservar ambas</string>
+    <string name="cloud_saves_clash_in_cloud">en la nube: %1$s</string>
+    <string name="cloud_saves_clash_on_phone">en este teléfono: %1$s</string>
+    <string name="cloud_saves_from_cloud_suffix">(de la nube)</string>
+    <string name="cloud_saves_push_replace">Reemplazarlas</string>
+    <string name="cloud_saves_push_only_new">Enviar solo las nuevas</string>
+    <string name="cloud_saves_dir_pull">Desde la nube</string>
+    <string name="cloud_saves_dir_push">A la nube</string>
+    <string name="cloud_saves_keepalive">Sincronizando partidas con Steam: puedes cambiar a Steam Mobile para aprobar</string>
+    <string name="cloud_saves_push_confirm_title">¿Enviar las partidas a la nube?</string>
+    <string name="cloud_saves_push_confirm_replace">Estas ya existen en la nube y serán REEMPLAZADAS por la copia del teléfono; tu PC cargará esta versión:\n\n• %1$s\n\nAsegúrate de que el juego esté cerrado en ambos dispositivos.</string>
+    <string name="cloud_saves_no_instances">Todavía no hay instancias</string>
+    <string name="cloud_saves_need_login">Escribe tu usuario y contraseña de Steam</string>
+    <string name="cloud_saves_code_title">Escribe el código de Steam Guard</string>
+    <string name="cloud_saves_code_wrong">Código incorrecto: inténtalo de nuevo</string>
+    <string name="cloud_saves_code">Código de Steam Guard</string>
+    <string name="cloud_saves_code_email">Código enviado por correo a %1$s</string>
+    <string name="reverse_landscape_hint">Voltea el juego al modo horizontal opuesto; sigue fijo, sin rotación libre. Actívalo si tu control o soporte sostiene el teléfono al revés.</string>
+    <string name="compat_mode_label">Modo de compatibilidad</string>
+    <string name="compat_mode_hint">Actívalo si el juego no inicia (pantalla negra o se queda en la carga). Es un poco más lento, pero ayuda a que arranque en algunos dispositivos.</string>
+    <string name="compat_mode_dialog_title">Modo de compatibilidad: léelo antes</string>
+    <string name="compat_mode_dialog_msg">Esto es una solución temporal. Puede no funcionar, o funcionar solo en parte (fallos gráficos, texturas faltantes, errores al cargar).\n\nSi tienes problemas con las partidas guardadas, es decir, colonos que desaparecen, descarga e instala el mod <b>RimDroidSaveFix</b>.</string>
+    <string name="haptic_label">Vibrar al pulsar un botón</string>
+    <string name="audio_label">Sonido del juego</string>
+    <string name="show_fps_label">Mostrar contador de FPS (arriba a la izquierda)</string>
+    <string name="fps_cap_label">Límite de FPS</string>
+    <string name="fps_cap_hint">Limita los FPS para suavizar los saltos y liberar CPU para el juego, lo que puede subir la velocidad del juego (TPS) en dispositivos más débiles. Prueba 60 o 30 si el contador salta mucho.</string>
+    <string name="texq_label">Compresión de texturas</string>
+    <string name="texq_hint">Reduce las texturas para ahorrar memoria y ganar FPS; hace falta para cargar varios DLC en teléfonos más débiles. Afecta sobre todo a la vegetación y los recursos; los colonos y los animales nunca se tocan. Baja es un buen equilibrio; Muy baja es algo más rápida, pero las plantas se ven borrosas.</string>
+    <string name="texq_no">No</string>
+    <string name="texq_low">Baja</string>
+    <string name="texq_ultra">Muy baja</string>
+    <string name="fps_cap_30">30 FPS</string>
+    <string name="fps_cap_60">60 FPS</string>
+    <string name="fps_cap_off">Sin límite</string>
+    <string name="render_res_label">Resolución de renderizado</string>
+    <string name="render_res_relative">Pantalla completa</string>
+    <string name="render_res_fixed_169">Bordes negros 1280×720 — la más rápida</string>
+    <string name="render_res_fullscreen">pantalla completa</string>
+    <string name="render_res_black_margins">bordes negros</string>
+    <string name="render_res_hint">Menor = más FPS en GPU débiles y una interfaz más grande. Nativa = más nítida.</string>
+    <string name="driver_recommend_result">GPU: %1$s → %2$s</string>
+    <string name="driver_auto_set_title">Controlador recomendado aplicado</string>
+    <string name="driver_auto_set">GPU detectada: %1$s.\n\nSe aplicó el controlador Vulkan recomendado para esta instancia: %2$s.\n\nSi ves una pantalla negra o artefactos, cámbialo en los ajustes de la instancia (el icono de engranaje en su tarjeta).</string>
+    <string name="nav_import_mods">Importar mods (ZIP)…</string>
+    <string name="nav_export_saves">Exportar partidas</string>
+    <string name="nav_import_saves">Importar partidas</string>
+    <string name="nav_export_settings">Exportar ajustes</string>
+    <string name="nav_import_settings">Importar ajustes</string>
+    <string name="nav_export_logs">Exportar registros (ZIP)…</string>
+    <string name="nav_export_layout">Exportar diseño de controles…</string>
+    <string name="nav_import_layout">Importar diseño de controles…</string>
+    <string name="nav_updates">Nuevas versiones (GitHub)</string>
+    <string name="nav_bug_report">Reportar un error</string>
+    <!-- Drawer footer icon labels (accessibility) -->
+    <string name="link_x">RimDroid en X</string>
+    <string name="link_reddit">RimDroid en Reddit</string>
+    <string name="link_support">Apoyar al desarrollador</string>
+    <string name="link_soon">Próximamente</string>
+    <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
+    <string name="bug_report_body">Hola, tengo un nuevo reporte de error.\n\nDescripción: \n\n\n---\n%1$s</string>
+    <string name="bug_report_no_mail">No se encontró una app de correo en este dispositivo.</string>
+    <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
+    <string name="donate_title">Apoyar el desarrollo</string>
+    <string name="donate_message">¿Te gusta RimDroid y quieres apoyarlo?\n\nCreado y mantenido por: ko-fi.com/udarmolota\n\nCada aporte ayuda a que el trabajo siga adelante. ¡Gracias! ❤</string>
+    <string name="on_screen_controls">Controles en pantalla</string>
+    <string name="edit_controls">Editar controles en pantalla…</string>
+    <string name="editor_bg_set">Fondo</string>
+    <string name="editor_bg_clear">Sin fondo</string>
+    <string name="editor_add">Añadir</string>
+    <string name="editor_reset">Restablecer</string>
+    <string name="editor_done">Listo</string>
+    <string name="editor_delete">Eliminar elemento</string>
+    <string name="editor_hint">Toca para seleccionar • arrastra para mover</string>
+    <string name="editor_reset_confirm">¿Restablecer todos los controles en pantalla al diseño predeterminado?</string>
+    <string name="nav_launcher">Lanzador</string>
+    <string name="nav_settings">Ajustes</string>
+    <string name="app_settings_theme">Tema</string>
+    <string name="app_settings_note">Los ajustes del juego (renderizador, controlador, depuración, escala de renderizado, controles) son de cada instancia: ábrelos desde el icono de engranaje de su tarjeta.</string>
+    <string name="theme_system">Seguir el sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="custom_driver_title">Controlador Vulkan personalizado</string>
+    <string name="custom_driver_note">Importa un controlador Vulkan/Turnip (un archivo .so o un .zip de AdrenoTools). Luego, en el engranaje de una tarjeta → Controlador Vulkan, elige \"Custom driver (imported)\". El controlador lo comparten todas las instancias de este dispositivo.</string>
+    <string name="custom_driver_import">Importar controlador (.so / .zip)</string>
+    <string name="custom_driver_remove">Quitar</string>
+    <string name="custom_driver_status_none">No hay ningún controlador personalizado importado.</string>
+    <string name="custom_driver_status_installed">Importado ✓ (%1$s)</string>
+    <string name="custom_driver_importing">Importando controlador…</string>
+    <string name="custom_driver_imported">Controlador personalizado importado (%1$s)</string>
+    <string name="custom_driver_import_failed">Error al importar: %1$s</string>
+    <string name="custom_driver_removed">Controlador personalizado eliminado</string>
+    <string name="nav_new_instance">Añadir instancia del juego</string>
+    <string name="nav_download_game">Descargas de Steam</string>
+    <string name="nav_install_content">Instalar mod / DLC (ZIP)…</string>
+    <string name="nav_custom_driver">Controlador Vulkan personalizado…</string>
+    <string name="install_content_note">Elige un .zip (mod o DLC) de tu teléfono, selecciona la instancia y el tipo, y pulsa Instalar. Se extrae la carpeta real del zip (la que tiene About/About.xml); las envolturas como Data/ se quitan automáticamente.</string>
+    <string name="install_content_instance">Instalar en la instancia</string>
+    <string name="install_content_type">Tipo</string>
+    <string name="install_content_mod">Mod → Mods/</string>
+    <string name="install_content_dlc">DLC → Data/</string>
+    <string name="install_content_pick">Elegir archivo ZIP…</string>
+    <string name="install_content_no_file">Ningún archivo seleccionado</string>
+    <string name="install_content_go">Instalar</string>
+
+    <!-- Download screen -->
+    <string name="download_game_title">Descargar RimWorld desde Steam</string>
+    <string name="download_version_note">Descarga la versión de Linux directamente en una instancia nueva: sin Termux y sin PC.</string>
+    <string name="download_instance_hint">Nombre de la instancia (p. ej. RimWorld 1.5)</string>
+    <string name="download_version_label">Versión del juego</string>
+    <string name="download_version_15">RimWorld 1.5</string>
+    <string name="download_version_16">RimWorld 1.6</string>
+    <string name="download_user_hint">Usuario de Steam</string>
+    <string name="download_pass_hint">Contraseña de Steam</string>
+    <string name="download_login_note">Tus datos se envían a Steam (igual que hace DepotDownloader) y NO se guardan. Aprueba el inicio de sesión en tu app Steam Mobile, o escribe el código de Steam Guard cuando se te pida.</string>
+    <string name="download_manifest_hint">Avanzado: ID de manifiesto — vacío = 1.5 recomendada</string>
+    <string name="download_start">Descargar</string>
+    <string name="download_tab_game">Juego</string>
+    <string name="download_tab_dlc">DLC</string>
+    <string name="download_tab_mods">Mods</string>
+    <string name="download_dlc_note">Elige los DLC que tenga tu cuenta. Cada uno se descarga como un .zip portable en /Download/RimDroid; impórtalo en cualquier instancia desde el menú. (Los DLC que no tengas se omiten.)</string>
+    <string name="download_dlc_start">Descargar los DLC seleccionados</string>
+    <string name="download_install_content">Instalar un mod / DLC en una instancia…</string>
+    <string name="download_mods_note">Descarga mods del Workshop por ID (el número de la URL del workshop: …/sharedfiles/filedetails/?id=NÚMERO). No hace falta iniciar sesión en Steam. Puedes poner varios ID separados por espacios. Cada uno se guarda como .zip en /Download/RimDroid.</string>
+    <string name="download_mods_hint">ID del Workshop — separados por espacios</string>
+    <string name="download_mods_hint_single">ID del Workshop</string>
+    <string name="download_mods_start">Descargar mods</string>
+    <string name="download_mods_login_head">Descarga directa (sin iniciar sesión)</string>
+    <string name="download_mods_browser_head">Descargar con el navegador (ggntw.com)</string>
+    <string name="download_mods_browser_note">Abre un descargador externo: baja el .zip allí y luego instálalo en una instancia. (Servicio de terceros; úsalo bajo tu criterio.)</string>
+    <string name="download_mods_browser_start">Obtener enlace de descarga (navegador)</string>
+    <string name="download_cancel">Cancelar la descarga</string>
+    <string name="download_cancel_confirm">¿Cancelar la descarga en curso?</string>
+    <string name="gl4es_label">GL4ES (compatible, GPU antiguas)</string>
+    <string name="zink_zfa_label">Zink ZFA (Vulkan, recomendado)</string>
+    <string name="zink_osmesa_label">Zink OSMesa (Vulkan, alternativa)</string>
+    <string name="softpipe_label">Software (lento, cualquier GPU — para Mali/PowerVR)</string>
+    <string name="debug_mode">Modo de depuración (registro detallado)</string>
+    <string name="strict_barriers">Modo intérprete (prueba — MUY lento, diagnóstico de partidas dañadas)</string>
+    <string name="env_vars_title">Avanzado: variables de inicio adicionales</string>
+    <string name="env_vars_hint">Pares CLAVE=VALOR (separados por espacios), aplicados al iniciar y con prioridad sobre los valores por defecto. Para pruebas de diagnóstico: déjalo vacío si no sabes lo que haces. </string>
+    <string name="env_vars_hint_example">p. ej. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
+
+    <!-- Settings cards -->
+    <string name="card_video">Vídeo</string>
+    <string name="card_fps">Fluidez</string>
+    <string name="card_controls">Controles</string>
+    <string name="card_sound">Sonido</string>
+    <string name="card_advanced">Avanzado</string>
+    <string name="sound_generate">Instalar el sonido del juego</string>
+    <string name="sound_generate_note">El sonido del juego se instala como un mod aparte por problemas del decodificador. El interruptor de abajo activa o desactiva ese mod. Con el sonido activado, el juego tarda un poco más en cargar.</string>
+    <string name="sound_installing_title">Instalando el sonido</string>
+    <string name="sound_generate_toast">Puede tardar hasta 2 minutos. Puedes seguir usando la app.</string>
+    <string name="sound_done">¡Paquete de sonido listo! Activa \"Sonido del juego\" en Ajustes para usarlo.</string>
+    <string name="sound_failed">Falló la generación del paquete de sonido. Revisa Download/_fmod_spike_result.txt.</string>
+    <string name="env_section_header">Variables de entorno</string>
+    <string name="smoketest_label">Probar el renderizador por software (OSMesa)</string>
+    <string name="steam_spike_label">Prueba de inicio de sesión en Steam (QR)</string>
+    <string name="steam_dl_label">Prueba de descarga de Steam (RimWorld)</string>
+    <string name="pick_zip">Elegir archivo ZIP…</string>
+    <string name="install">Instalar</string>
+    <string name="installing">Instalando…</string>
+    <string name="instance_name_hint">Nombre de la instancia</string>
+    <string name="selected_zip_hint">Ningún archivo seleccionado</string>
+    <string name="error_name_required">El nombre es obligatorio</string>
+    <string name="error_name_too_long">El nombre es demasiado largo (máximo %1$d caracteres)</string>
+    <string name="error_name_exists">Ya existe una instancia con ese nombre</string>
+    <string name="nav_manage_storage">Administrar almacenamiento</string>
+    <string name="clear">Borrar</string>
+
+    <!-- Gamepad button remapper -->
+    <string name="gamepad_mapper_settings_btn">Asignación del control</string>
+    <string name="gamepad_mapper_title">Asignación del control</string>
+    <string name="gamepad_mapper_instructions">Corrige un control con los botones cambiados. Pulsa Empezar y luego presiona el botón físico que quieras para cada acción.</string>
+    <string name="gamepad_mapper_start">Empezar</string>
+    <string name="gamepad_mapper_reset">Restablecer valores por defecto</string>
+    <string name="gamepad_mapper_reset_done">Asignación restablecida</string>
+    <string name="gamepad_mapper_step">Presiona el botón para:\n%1$s</string>
+    <string name="gamepad_mapper_done">Asignación guardada</string>
+    <string name="gamepad_mapper_dup">Ya está asignado: presiona otro botón</string>
+    <string-array name="gamepad_mapper_labels">
+        <item>A — F1</item>
+        <item>B — Escape</item>
+        <item>X — F2</item>
+        <item>Y — Q (rotar)</item>
+        <item>LB — Alejar</item>
+        <item>RB — Acercar</item>
+        <item>Select — Tab</item>
+        <item>Start — Siguiente colono (.)</item>
+        <item>L3 — Shift (selección múltiple)</item>
+        <item>R3 — Pulsar stick derecho (sin uso)</item>
+    </string-array>
+</resources>

@@ -22,6 +22,7 @@
 #include <asm-generic/fcntl.h>
 #include <bits/stdatomic.h>
 #include <stdio.h>
+#include <sys/syscall.h>
 
 #include "rimdroid_globals.h"
 #include "rimdroid.h"
@@ -679,6 +680,145 @@ unsigned int rd_input_get_mouse(int* x, int* y) {
 }
 // ============================================================================
 
+// ============================================================================
+// ZFA create-context hang watchdog — Adreno 640 / Android 11 diagnosis.
+//
+// Two field devices (Galaxy S10 / SD855 and Poco X3 Pro / SD860 — both Adreno
+// 640, both Android 11, system Vulkan driver built 03/2021) hang FOREVER inside
+// zfaCreateContext: the last log line is "calling zfaCreateContext...", no
+// crash, and the main thread keeps pumping input. Newer Turnip builds crash
+// outright on their old KGSL interface, so the system driver is their only
+// door — and it hangs. A healthy create returns in well under a second, so
+// 15 s without a return is definitely the hang, not a slow device.
+//
+// When it fires, the watchdog signals the stuck thread; the handler grabs
+// PC/LR from the ucontext and walks the frame-pointer chain (arm64 keeps frame
+// records), then the watchdog logs "libzfa.so+0x..." lines we symbolize
+// offline against the unstripped CI libzfa — the same technique that pinned
+// the a610 flush_resource crash. Two samples 3 s apart distinguish a live spin
+// (PCs move) from a blocked futex/ioctl (PCs identical). Diagnostic only: on a
+// healthy device the watchdog thread exits quietly once create returns.
+
+#define RD_WD_MAX_FRAMES 32
+static struct {
+    volatile int done;                     // set once zfaCreateContext returns
+    pid_t        tid;                      // thread executing zfaCreateContext
+    volatile int dump_ready;               // handler finished writing a sample
+    int          nframes;
+    uintptr_t    frames[RD_WD_MAX_FRAMES];
+} rd_zfa_wd;
+
+// Signal handler on the STUCK thread. Async-signal-safe: only reads the
+// ucontext and walks readable stack memory into a static buffer; all logging
+// and dladdr happen later on the watchdog thread.
+static void rd_zfa_wd_handler(int sig, siginfo_t* si, void* uctx_v) {
+    (void)sig; (void)si;
+    int n = 0;
+#if defined(__aarch64__)
+    ucontext_t* uc = (ucontext_t*)uctx_v;
+    uintptr_t pc = uc->uc_mcontext.pc;
+    uintptr_t lr = uc->uc_mcontext.regs[30];
+    uintptr_t fp = uc->uc_mcontext.regs[29];
+    uintptr_t sp = uc->uc_mcontext.sp;
+    rd_zfa_wd.frames[n++] = pc;
+    if (lr) rd_zfa_wd.frames[n++] = lr;
+    // Frame-record walk: [fp] = next fp, [fp+8] = return address. Bounds-check
+    // fp against the live thread stack so a garbage frame can't fault us.
+    while (n < RD_WD_MAX_FRAMES) {
+        if (fp == 0 || (fp & 0xf) || fp < sp || fp - sp > (8u << 20)) break;
+        uintptr_t next_fp = ((uintptr_t*)fp)[0];
+        uintptr_t ret     = ((uintptr_t*)fp)[1];
+        if (ret < 4096) break;
+        rd_zfa_wd.frames[n++] = ret;
+        if (next_fp <= fp) break;               // must grow toward stack base
+        fp = next_fp;
+    }
+#else
+    (void)uctx_v;
+#endif
+    rd_zfa_wd.nframes = n;
+    rd_zfa_wd.dump_ready = 1;
+}
+
+// Read the kernel run-state of a thread ('R' running/spinning, 'S' sleeping on
+// a futex/ioctl, 'D' uninterruptible IO) from /proc/self/task/<tid>/stat.
+static char rd_zfa_wd_thread_state(pid_t tid) {
+    char path[64], buf[256];
+    snprintf(path, sizeof(path), "/proc/self/task/%d/stat", tid);
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return '?';
+    ssize_t r = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (r <= 0) return '?';
+    buf[r] = 0;
+    char* p = strrchr(buf, ')');                // comm may contain spaces
+    return (p && p[1] == ' ' && p[2]) ? p[2] : '?';
+}
+
+static void rd_zfa_wd_log_sample(int sample) {
+    LOGE("ZFA WATCHDOG: sample %d — thread %d state '%c', %d frames:",
+         sample, rd_zfa_wd.tid, rd_zfa_wd_thread_state(rd_zfa_wd.tid), rd_zfa_wd.nframes);
+    for (int i = 0; i < rd_zfa_wd.nframes; i++) {
+        uintptr_t a = rd_zfa_wd.frames[i];
+        Dl_info info;
+        if (dladdr((void*)a, &info) && info.dli_fname) {
+            const char* base = strrchr(info.dli_fname, '/');
+            base = base ? base + 1 : info.dli_fname;
+            if (info.dli_sname)
+                LOGE("ZFA WATCHDOG:   #%02d %s+0x%lx (%s+0x%lx)", i, base,
+                     (unsigned long)(a - (uintptr_t)info.dli_fbase),
+                     info.dli_sname, (unsigned long)(a - (uintptr_t)info.dli_saddr));
+            else
+                LOGE("ZFA WATCHDOG:   #%02d %s+0x%lx", i, base,
+                     (unsigned long)(a - (uintptr_t)info.dli_fbase));
+        } else {
+            LOGE("ZFA WATCHDOG:   #%02d 0x%lx (unmapped?)", i, (unsigned long)a);
+        }
+    }
+}
+
+static void* rd_zfa_watchdog_main(void* arg) {
+    (void)arg;
+    for (int waited = 0; waited < 15000; waited += 100) {
+        if (rd_zfa_wd.done) return NULL;        // healthy path: exit silently
+        usleep(100 * 1000);
+    }
+    LOGE("ZFA WATCHDOG: zfaCreateContext stuck for 15 s — dumping thread %d", rd_zfa_wd.tid);
+    // Install the handler only now, on the hang path, so a healthy launch never
+    // carries it (and a later fork()ed child can't inherit it either).
+    struct sigaction sa = {0}, old;
+    sa.sa_sigaction = rd_zfa_wd_handler;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    const int sig = SIGRTMIN + 7;               // clear of bionic-reserved RT signals
+    if (sigaction(sig, &sa, &old) != 0) {
+        LOGE("ZFA WATCHDOG: sigaction failed: %s", strerror(errno));
+        return NULL;
+    }
+    for (int sample = 1; sample <= 2; sample++) {
+        rd_zfa_wd.dump_ready = 0;
+        rd_zfa_wd.nframes = 0;
+        if (syscall(SYS_tgkill, getpid(), rd_zfa_wd.tid, sig) != 0) {
+            LOGE("ZFA WATCHDOG: tgkill failed: %s", strerror(errno));
+            break;
+        }
+        for (int w = 0; w < 2000 && !rd_zfa_wd.dump_ready; w += 10) usleep(10 * 1000);
+        if (!rd_zfa_wd.dump_ready) {
+            // Signal never delivered — the thread is blocked in the kernel with
+            // the signal queued (uninterruptible ioctl). That is itself the answer.
+            LOGE("ZFA WATCHDOG: sample %d — no handler response in 2 s, thread state '%c'"
+                 " (blocked in kernel, signal undelivered)",
+                 sample, rd_zfa_wd_thread_state(rd_zfa_wd.tid));
+        } else {
+            rd_zfa_wd_log_sample(sample);
+        }
+        if (sample == 1) sleep(3);              // identical PCs => blocked; moving => spinning
+    }
+    sigaction(sig, &old, NULL);
+    LOGE("ZFA WATCHDOG: dump complete — leaving the process alive for log export");
+    return NULL;
+}
+
 static int rimdroid_init_zfa(ANativeWindow* nativeWindow) {
     (void)nativeWindow;  // window is bound later via zfaMakeCurrent()
     // Load libzfa.so into rimdroid_ns (NOT the default namespace): Zink must find
@@ -701,8 +841,22 @@ static int rimdroid_init_zfa(ANativeWindow* nativeWindow) {
     }
     // depth=24, stencil=8, compat=0 (CORE profile), GL 4.3 (matches
     // MESA_GL_VERSION_OVERRIDE; satisfies Unity's "OpenGL core 3.2+" check).
+    //
+    // Arm the hang watchdog (see rd_zfa_watchdog_main above) and turn on Mesa's
+    // own init logging JUST for the create: setenv before, unsetenv right after,
+    // so the later fork()ed game child never inherits MESA_DEBUG spam. Mesa's
+    // stderr is already piped into rimdroid.log, so anything it says before the
+    // hang lands next to the watchdog dump.
+    rd_zfa_wd.done = 0;
+    rd_zfa_wd.tid  = gettid();
+    setenv("MESA_DEBUG", "1", 0);
+    pthread_t wd_thread;
+    if (pthread_create(&wd_thread, NULL, rd_zfa_watchdog_main, NULL) == 0)
+        pthread_detach(wd_thread);
     LOGI("ZFA: calling zfaCreateContext(24,8,0,4,3)...");
     g_zfa_context = p_zfaCreateContext(24, 8, 0, 4, 3);
+    rd_zfa_wd.done = 1;
+    unsetenv("MESA_DEBUG");
     LOGI("ZFA: zfaCreateContext returned %p", g_zfa_context);
     if (!g_zfa_context) {
         LOGE("ZFA: zfaCreateContext failed");

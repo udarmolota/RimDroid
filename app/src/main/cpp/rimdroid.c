@@ -779,23 +779,35 @@ static void rd_zfa_wd_log_sample(int sample) {
 
 static void* rd_zfa_watchdog_main(void* arg) {
     (void)arg;
-    for (int waited = 0; waited < 15000; waited += 100) {
-        if (rd_zfa_wd.done) return NULL;        // healthy path: exit silently
-        usleep(100 * 1000);
-    }
-    LOGE("ZFA WATCHDOG: zfaCreateContext stuck for 15 s — dumping thread %d", rd_zfa_wd.tid);
-    // Install the handler only now, on the hang path, so a healthy launch never
-    // carries it (and a later fork()ed child can't inherit it either).
+    // Sample schedule (ms since arming). 5 s, not 15: a healthy create finishes in well under a
+    // second (the create duration is now logged on every launch to keep that claim honest), and
+    // the first field run taught us testers give a black screen ~6 s before touching something —
+    // the 15 s dump never happened. Sample 3 at 30 s tells a hang that sits in ONE kernel call
+    // from one that keeps crawling through init (PCs move between samples => crawling).
+    static const int fire_ms[3] = { 5000, 8000, 30000 };
     struct sigaction sa = {0}, old;
-    sa.sa_sigaction = rd_zfa_wd_handler;
-    sa.sa_flags = SA_SIGINFO;
-    sigemptyset(&sa.sa_mask);
+    int installed = 0;
     const int sig = SIGRTMIN + 7;               // clear of bionic-reserved RT signals
-    if (sigaction(sig, &sa, &old) != 0) {
-        LOGE("ZFA WATCHDOG: sigaction failed: %s", strerror(errno));
-        return NULL;
-    }
-    for (int sample = 1; sample <= 2; sample++) {
+    int elapsed = 0;
+    for (int sample = 1; sample <= 3; sample++) {
+        while (elapsed < fire_ms[sample - 1]) {
+            if (rd_zfa_wd.done) goto out;       // healthy path: exit silently
+            usleep(100 * 1000);
+            elapsed += 100;
+        }
+        if (sample == 1) {
+            LOGE("ZFA WATCHDOG: zfaCreateContext stuck for 5 s — dumping thread %d", rd_zfa_wd.tid);
+            // Install the handler only now, on the hang path, so a healthy launch never
+            // carries it (and a later fork()ed child can't inherit it either).
+            sa.sa_sigaction = rd_zfa_wd_handler;
+            sa.sa_flags = SA_SIGINFO;
+            sigemptyset(&sa.sa_mask);
+            if (sigaction(sig, &sa, &old) != 0) {
+                LOGE("ZFA WATCHDOG: sigaction failed: %s", strerror(errno));
+                return NULL;
+            }
+            installed = 1;
+        }
         rd_zfa_wd.dump_ready = 0;
         rd_zfa_wd.nframes = 0;
         if (syscall(SYS_tgkill, getpid(), rd_zfa_wd.tid, sig) != 0) {
@@ -806,16 +818,16 @@ static void* rd_zfa_watchdog_main(void* arg) {
         if (!rd_zfa_wd.dump_ready) {
             // Signal never delivered — the thread is blocked in the kernel with
             // the signal queued (uninterruptible ioctl). That is itself the answer.
-            LOGE("ZFA WATCHDOG: sample %d — no handler response in 2 s, thread state '%c'"
+            LOGE("ZFA WATCHDOG: sample %d (@%ds) — no handler response in 2 s, thread state '%c'"
                  " (blocked in kernel, signal undelivered)",
-                 sample, rd_zfa_wd_thread_state(rd_zfa_wd.tid));
+                 sample, fire_ms[sample - 1] / 1000, rd_zfa_wd_thread_state(rd_zfa_wd.tid));
         } else {
             rd_zfa_wd_log_sample(sample);
         }
-        if (sample == 1) sleep(3);              // identical PCs => blocked; moving => spinning
     }
-    sigaction(sig, &old, NULL);
     LOGE("ZFA WATCHDOG: dump complete — leaving the process alive for log export");
+out:
+    if (installed) sigaction(sig, &old, NULL);
     return NULL;
 }
 
@@ -853,11 +865,20 @@ static int rimdroid_init_zfa(ANativeWindow* nativeWindow) {
     pthread_t wd_thread;
     if (pthread_create(&wd_thread, NULL, rd_zfa_watchdog_main, NULL) == 0)
         pthread_detach(wd_thread);
+    // The armed line + the duration below double as the build fingerprint in field logs (version
+    // strings don't change between test builds; we've been burned identifying APKs before).
+    LOGI("ZFA: hang watchdog armed (samples at 5/8/30 s)");
+    struct timespec rd_t0, rd_t1;
+    clock_gettime(CLOCK_MONOTONIC, &rd_t0);
     LOGI("ZFA: calling zfaCreateContext(24,8,0,4,3)...");
     g_zfa_context = p_zfaCreateContext(24, 8, 0, 4, 3);
     rd_zfa_wd.done = 1;
     unsetenv("MESA_DEBUG");
-    LOGI("ZFA: zfaCreateContext returned %p", g_zfa_context);
+    clock_gettime(CLOCK_MONOTONIC, &rd_t1);
+    // First real create-duration telemetry across the device park: how close does a healthy
+    // create get to the 5 s watchdog threshold? (S25/Adreno 830 ballpark: tens of ms.)
+    LOGI("ZFA: zfaCreateContext returned %p in %lld ms", g_zfa_context,
+         (long long)((rd_t1.tv_sec - rd_t0.tv_sec) * 1000 + (rd_t1.tv_nsec - rd_t0.tv_nsec) / 1000000));
     if (!g_zfa_context) {
         LOGE("ZFA: zfaCreateContext failed");
         return -1;

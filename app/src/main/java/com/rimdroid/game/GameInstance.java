@@ -81,6 +81,7 @@ public class GameInstance {
         // ARM64 renderer libs — per this instance's renderer choice
         switch (settings().getRenderer()) {
             case GL4ES:
+            case MOBILEGLUES:   // same deps dir; the launcher maps it onto the GL4ES plumbing
                 paths.add(storage.getGl4esLibsPath());
                 break;
             case ZINK_ZFA:
@@ -127,8 +128,12 @@ public class GameInstance {
             // def-load + destroyed-mutex abort — seen on e.g. Adreno 644/725, NOT a GPU-vendor
             // thing) use COMPAT MODE, which forces the safe single-threaded path (-force-gfx-direct
             // here + BOX64_MAXCPU=1 in GameLauncher). Marker "rd_gfxdirect" also forces single.
+            // GL-translator (MobileGlues/NG via RIMDROID_GLT, exported by GameLauncher): the
+            // bridge binds ONE EGL context and EGL contexts don't follow Unity's render thread
+            // (the 1.5 threaded A/B black-screened at FPS 0) — force the single-threaded device.
             boolean gfxDirect = settings().isCompatibilityMode()
-                    || new File(getGamePath(), "rd_gfxdirect").exists();
+                    || new File(getGamePath(), "rd_gfxdirect").exists()
+                    || android.system.Os.getenv("RIMDROID_GLT") != null;
             if (gfxDirect) {
                 android.util.Log.i("RimDroid", "getArgs: rd_x11 -> single-threaded (-force-gfx-direct, compat/marker)");
                 return new String[]{ "-force-gfx-direct" };

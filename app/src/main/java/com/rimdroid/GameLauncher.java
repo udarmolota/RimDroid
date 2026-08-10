@@ -330,7 +330,13 @@ public class GameLauncher {
         // glXSwapBuffers -> zfa_swap -> ANativeWindow, bypassing the broken Vulkan present-gate.
         // Must run BEFORE the switch below so the full ZFA env (BOX64_LIBGL=libzfa etc.) applies.
         boolean forceGlesZfa = new java.io.File(gameInstance.getGamePath(), "rd_force_gles").exists();
-        if (forceGlesZfa) {
+        // 2026-08-09: MOBILEGLUES survives the 1.6 pin — wrappedlibgl's bridge grew an
+        // EGL-translator backend (rd_bridge_*), so Unity's glX calls can land on the
+        // GL4ES/EGL context running MobileGlues instead of ZFA. Every other renderer
+        // still pins to ZFA on 1.6.
+        if (forceGlesZfa && renderer == LauncherPreferences.Renderer.MOBILEGLUES) {
+            android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles + MOBILEGLUES -> GLX->EGL-translator bridge (experimental)");
+        } else if (forceGlesZfa) {
             renderer = LauncherPreferences.Renderer.ZINK_ZFA;
             android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> renderer=ZINK_ZFA (GLX->ZFA pivot for 1.6)");
             // (2026-07-10 cleanup: the earlier CALLRET=0/FORWARD=0/NODYNAREC/DYNACACHE=0 dynarec
@@ -344,6 +350,40 @@ public class GameLauncher {
             // init, zero steady-state cost); dynarec stays on everywhere else. Range covers the
             // loader + its visual-picking helper (0x3f019460fb).
             android.util.Log.i("RimDroid", "GameLauncher: rd_force_gles -> dynarec fully on (diag knobs removed)");
+        }
+        // Experimental GL-translator harness (2026-08-09): RIMDROID_GLT=<soname> in the extra-env
+        // field routes the GL4ES plumbing at an alternative GL->GLES translator dropped into the
+        // deps dir — the NG-GL4ES (Krypton 4.50) vs MobileGlues smoke test for the broken-Vulkan
+        // device class (A11 Adreno 640, Mali). Parsed from the SETTING here because the extra-env
+        // field itself is only exported to the environment further down, AFTER this switch.
+        // 1.5/SDL path only: on 1.6 the rd_force_gles marker owns the renderer (GLX->ZFA bridge).
+        String glTranslator = null;
+        {
+            String rawEarly = gameInstance.settings().getEnvVars();
+            if (rawEarly != null) {
+                for (String tok : rawEarly.trim().split("\\s+"))
+                    if (tok.startsWith("RIMDROID_GLT="))
+                        glTranslator = tok.substring("RIMDROID_GLT=".length()).trim();
+            }
+            if (glTranslator != null && glTranslator.isEmpty()) glTranslator = null;
+            // The MOBILEGLUES renderer setting is exactly this harness with the lib pre-picked —
+            // no env var needed. On 1.6 it now flows through too (GLX->EGL-translator bridge).
+            // An explicit RIMDROID_GLT still wins for A/B.
+            if (glTranslator == null && renderer == LauncherPreferences.Renderer.MOBILEGLUES) {
+                glTranslator = "libmobileglues.so";
+                android.util.Log.i("RimDroid", "GameLauncher: renderer=MOBILEGLUES -> translator libmobileglues.so");
+            }
+            if (glTranslator != null) {
+                renderer = LauncherPreferences.Renderer.GL4ES;   // reuse the whole GL4ES/EGL plumbing
+                // Exported so BOTH later stages see it without re-parsing the settings field:
+                // GameInstance.getArgs() forces -force-gfx-direct while a translator is active
+                // (EGL contexts don't migrate to Unity's render thread — the 1.5 threaded A/B
+                // black-screened), and the native side logs it with the launch config.
+                Os.setenv("RIMDROID_GLT", glTranslator, true);
+                android.util.Log.i("RimDroid", "GameLauncher: RIMDROID_GLT=" + glTranslator + " -> renderer=GL4ES (translator active)");
+            } else {
+                Os.unsetenv("RIMDROID_GLT");   // stale value from a previous launch must not leak
+            }
         }
         // The enum name maps 1:1 to the native renderer token parsed in rimdroid.c
         // (GL4ES / ZINK_ZFA / ZINK_OSMESA / SOFTPIPE).
@@ -362,12 +402,27 @@ public class GameLauncher {
                 // Without this box64 logs "Cannot dlopen libgl4es.so" → no GL
                 // backend → every GL entry point resolves to NULL → Unity crashes
                 // (SIGSEGV @0x0) the moment it calls a GL function.
+                String gltSo = glTranslator != null ? glTranslator : "libgl4es.so";
                 Os.setenv("BOX64_LIBGL",
-                    AppStorage.requireSingleton().getGl4esLibsPath() + "/libgl4es.so",
+                    AppStorage.requireSingleton().getGl4esLibsPath() + "/" + gltSo,
                     true);
-                Os.setenv("LIBGL_ES", "3", true);   // GL4ES: use GLES3 backend → reports OpenGL 3.2
-                Os.setenv("LIBGL_GL", "32", true);  // GL4ES: advertise OpenGL 3.2 (Unity requires ≥3.2)
-                Os.setenv("LIBGL_MIPMAP", "1", true);
+                if (gltSo.contains("ng_gl4es")) {
+                    // NG-GL4ES (Krypton): per the 2026-08-07 audit — GLES3 backend, EXPLICIT GL 3.3
+                    // (an explicit LIBGL_GL also bypasses its internal Qualcomm gate). The mandatory
+                    // updateSimpleShaderConvState(0) call happens native-side (rimdroid.c, GLT block).
+                    Os.setenv("LIBGL_ES", "3", true);
+                    Os.setenv("LIBGL_GL", "33", true);
+                } else if (gltSo.contains("mobileglues")) {
+                    // MobileGlues: no LIBGL_* knobs — its config lives in MG_DIR_PATH/config.json and
+                    // it writes its own log there too; point it at our cache dir so both are reachable.
+                    // Stock config first ("Unsupported launcher" fallback is fine for the smoke).
+                    Os.setenv("MG_DIR_PATH", AppStorage.requireSingleton().getCachePath(), true);
+                    android.util.Log.i("RimDroid", "GameLauncher: MobileGlues translator — MG_DIR_PATH=" + AppStorage.requireSingleton().getCachePath());
+                } else {
+                    Os.setenv("LIBGL_ES", "3", true);   // GL4ES: use GLES3 backend → reports OpenGL 3.2
+                    Os.setenv("LIBGL_GL", "32", true);  // GL4ES: advertise OpenGL 3.2 (Unity requires ≥3.2)
+                    Os.setenv("LIBGL_MIPMAP", "1", true);
+                }
                 Os.setenv("RIMDROID_GLES_MAJOR", "3", true);
                 Os.setenv("RIMDROID_GLES_MINOR", "0", true);
                 // SDL2 is statically linked into RimWorldLinux — GOM/ALTMY wrappers in

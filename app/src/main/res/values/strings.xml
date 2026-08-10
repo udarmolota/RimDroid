@@ -187,6 +187,7 @@ In the cloud: %2$s
     <string name="zink_zfa_label">Zink ZFA (Vulkan, recommended)</string>
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, fallback)</string>
     <string name="softpipe_label">Software (slow, any GPU — for Mali/PowerVR)</string>
+    <string name="mobileglues_label">MobileGlues (GL over GLES — experimental, no Vulkan)</string>
     <string name="debug_mode">Debug mode (verbose log)</string>
     <string name="strict_barriers">Interpreter mode (test — VERY slow, diagnostic for save corruption)</string>
     <string name="env_vars_title">Advanced: extra launch variables</string>

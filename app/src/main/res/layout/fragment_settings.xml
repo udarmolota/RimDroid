@@ -31,14 +31,36 @@
             android:text="@string/card_video"
             android:layout_marginBottom="6dp" />
 
-        <!-- Renderer: only Zink ZFA works right now, so there's no chooser — explain it and point
-             the user at the driver picker below. -->
+        <!-- Renderer chooser, back from the dead (2026-08-09): the A11/Adreno-640 hang proved
+             SOFTPIPE (CPU, no Vulkan at all) is the only path for devices whose Vulkan driver
+             breaks zink — a player got RimWorld's loading screen with it on a phone where zink
+             hangs forever. Known defect being debugged: Unity's scene mostly misses FBO 0
+             (pale/dark picture) — see SettingsFragment for state. GL4ES/ZINK_OSMESA stay gone. -->
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/renderer_info"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:layout_marginBottom="16dp" />
+            android:text="@string/renderer"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_renderer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+          <RadioButton
+              android:id="@+id/rb_zink_zfa"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/zink_zfa_label" />
+
+          <RadioButton
+              android:id="@+id/rb_mobileglues"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:text="@string/mobileglues_label" />
+        </RadioGroup>
 
         <TextView
             android:layout_width="wrap_content"

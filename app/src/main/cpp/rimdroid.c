@@ -555,6 +555,28 @@ int rimdroid_zfa_release_current(void) {
     return 0;
 }
 
+// ---- GLX -> EGL-translator bridge helpers (RimWorld 1.6 on MobileGlues/NG) --------
+// wrappedlibgl.c weak-imports these for its rd_bridge_* dispatch: when the renderer is
+// a GL->GLES translator (g_egl_context set, no ZFA), Unity's glX calls land on the one
+// EGL context rimdroid_init_gl4es_egl created. Same thread-affinity rules as any EGL
+// context: bind/release happen on the CALLING thread (single-threaded render enforced
+// by getArgs while the translator is active).
+int rimdroid_eglt_make_current(void) {
+    if (!g_egl_display || !g_egl_surface || !g_egl_context) return 0;
+    if (!eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context)) {
+        LOGE("EGLT: eglMakeCurrent failed: 0x%x", eglGetError());
+        return 0;
+    }
+    return 1;
+}
+int rimdroid_eglt_release_current(void) {
+    if (!g_egl_display) return 0;
+    return eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) ? 1 : 0;
+}
+void rimdroid_eglt_swap(void) {
+    if (g_egl_display && g_egl_surface) eglSwapBuffers(g_egl_display, g_egl_surface);
+}
+
 // ===================== RimDroid injected input (Phase A) =====================
 // Lock-protected ring of pre-built x86_64 SDL_Event records. The Android touch
 // handler (JNI, UI thread) pushes events here; box64's my2_SDL_PollEvent drains
@@ -924,6 +946,50 @@ static int rimdroid_init_zfa(ANativeWindow* nativeWindow) {
 }
 
 static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
+    // Experimental GL-translator harness (2026-08-09): BOX64_LIBGL may point at NG-GL4ES
+    // ("Krypton", reports GL 4.50) or MobileGlues instead of classic gl4es — the smoke test for
+    // the broken-Vulkan device class. Pre-load it with RTLD_GLOBAL because (a) NG's GetProcAddress
+    // table is commented out upstream and its lookup is a bare dlsym(RTLD_DEFAULT), which only
+    // finds the lib's own symbols if they are globally visible; (b) NG boots in a Zomboid-specific
+    // SIMPLE shader-conversion mode that no Unity GLSL survives — the exported
+    // updateSimpleShaderConvState(0) switches it to the glslang/SPIR-V path (full audit: memory
+    // ng_gl4es_audit). Classic libgl4es just gets one extra harmless dlopen + a log line.
+    {
+        const char* libgl = getenv("BOX64_LIBGL");
+        if (libgl && libgl[0]) {
+            // Preload known translator DT_NEEDED deps from the SAME dir by absolute path first:
+            // the deps dir is not on the default namespace search path, so NEEDED-by-soname would
+            // fail; a lib already loaded under that soname satisfies NEEDED for both our dlopen
+            // and box64's own one. NG-GL4ES needs libspirv-cross-c-shared.so (glslang out path).
+            {
+                const char* slash = strrchr(libgl, '/');
+                if (slash) {
+                    char dep[512];
+                    int dirlen = (int)(slash - libgl);
+                    snprintf(dep, sizeof(dep), "%.*s/libspirv-cross-c-shared.so", dirlen, libgl);
+                    void* dh = dlopen(dep, RTLD_NOW | RTLD_GLOBAL);
+                    if (dh) LOGI("GLT: preloaded dep %s", dep);
+                }
+            }
+            void* h = dlopen(libgl, RTLD_NOW | RTLD_GLOBAL);
+            LOGI("GLT: dlopen('%s') -> %p%s%s", libgl, h,
+                 h ? "" : " FAILED: ", h ? "" : dlerror());
+            if (h) {
+                void (*fSimple)(int) = (void(*)(int))dlsym(h, "updateSimpleShaderConvState");
+                if (fSimple) {
+                    fSimple(0);
+                    LOGI("GLT: updateSimpleShaderConvState(0) — NG simple shader path OFF, glslang path ON");
+                } else {
+                    LOGI("GLT: no updateSimpleShaderConvState export (classic gl4es / MobileGlues / older NG)");
+                }
+                // Fingerprint the exports the smoke cares about: what Unity's GL bootstrap will find.
+                LOGI("GLT: exports: glGetString=%p glXGetProcAddress=%p glGenQueries=%p glTexStorage2D=%p glGenVertexArrays=%p glMapBufferRange=%p",
+                     dlsym(h, "glGetString"), dlsym(h, "glXGetProcAddress"),
+                     dlsym(h, "glGenQueries"), dlsym(h, "glTexStorage2D"),
+                     dlsym(h, "glGenVertexArrays"), dlsym(h, "glMapBufferRange"));
+            }
+        }
+    }
     g_egl_display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (g_egl_display == EGL_NO_DISPLAY) {
         LOGE("EGL: eglGetDisplay failed");

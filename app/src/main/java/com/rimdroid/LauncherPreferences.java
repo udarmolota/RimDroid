@@ -16,7 +16,13 @@ public class LauncherPreferences {
         GL4ES("libGL.so.1"),
         ZINK_ZFA("libGL.so.1"),       // Mesa Zink via ZFA window (GPU, Vulkan)
         ZINK_OSMESA("libGL.so.1"),    // Mesa Zink via OSMesa (unused fallback)
-        SOFTPIPE("libGL.so.1");       // Mesa softpipe (CPU) via OSMesa + blit — works on any GPU
+        SOFTPIPE("libGL.so.1"),       // Mesa softpipe (CPU) via OSMesa + blit — works on any GPU
+        // MobileGlues: desktop GL 4.0 translated to the phone's own GLES 3.2 driver — hardware
+        // rendering with ZERO Vulkan involved. First full RimWorld 1.5 session 2026-08-09 (S25,
+        // 62 fps single-thread, see memory gl_translator_smoke). Launch-wise it is the GL4ES/EGL
+        // plumbing with libmobileglues.so; GameLauncher maps it there and rimdroid.c never sees
+        // this enum name (it receives the GL4ES token).
+        MOBILEGLUES("libGL.so.1");
 
         public final String libName;
         Renderer(String libName) { this.libName = libName; }

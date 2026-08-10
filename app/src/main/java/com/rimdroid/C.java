@@ -13,7 +13,9 @@ public class C {
         //   v2 = + 24 Debian x86_64 X11 client libs (libX11/xcb/Xrandr…) for RimWorld 1.6 SDL video
         //   v3 = libzfa.so rebuilt with the NULL-resource guards in our ZFA frontend (fixes the
         //        Adreno 610 SIGSEGV in tc_flush_resource before the first frame)
-        public static final int BUNDLE_VERSION = 3;
+        //   v4 = + libmobileglues.so 2.0.0 (the MobileGlues renderer: desktop GL over the phone's
+        //        own GLES driver, zero Vulkan — the broken-Vulkan/A11/Mali fallback)
+        public static final int BUNDLE_VERSION = 4;
         // x86_64 game libs (libgcc_s.so.1, libjniwrapper.so, etc.)
         public static final String LIBS_LINUX_X86_64 = ROOT + "/linux-x86_64";
         // Android ARM64 renderer libs — all in one flat directory

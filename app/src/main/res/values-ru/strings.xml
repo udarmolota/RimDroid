@@ -178,6 +178,7 @@
     <string name="zink_zfa_label">Zink ZFA (Vulkan, рекомендуется)</string>
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, запасной)</string>
     <string name="softpipe_label">Программный (медленный, любой GPU — для Mali/PowerVR)</string>
+    <string name="mobileglues_label">MobileGlues (GL через GLES — экспериментальный, без Vulkan)</string>
     <string name="debug_mode">Режим отладки (подробный лог)</string>
     <string name="strict_barriers">Режим интерпретатора (тест — ОЧЕНЬ медленно, диагностика порчи сейвов)</string>
     <string name="env_vars_title">Дополнительно: переменные запуска</string>

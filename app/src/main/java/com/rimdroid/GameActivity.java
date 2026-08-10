@@ -781,30 +781,25 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         // value is the Unity default 1024x768 (4:3) the game renders stretched into our
         // surface. Writing the matching size + fullscreen=True before RimWorld reads
         // Prefs (during its init, seconds later) keeps the render 1:1 with correct aspect.
-        // SOFTPIPE (OSMesa) renders into a CPU buffer sized to THIS surface and
-        // blits it 1:1. If RimWorld re-applies a saved Prefs resolution (e.g. the
-        // 1024x768 default) its glViewport would no longer match the buffer →
-        // image in a corner. Pinning Prefs to the buffer size keeps softpipe 1:1.
-        boolean softpipe = false;
-        try {
-            if (instanceName != null) {
-                softpipe = new com.rimdroid.InstanceSettings(instanceName).getRenderer()
-                        == LauncherPreferences.Renderer.SOFTPIPE;
-            } else {
-                LauncherPreferences lp = LauncherPreferences.getSingleton();
-                softpipe = lp != null && lp.getRenderer() == LauncherPreferences.Renderer.SOFTPIPE;
-            }
-        } catch (Throwable ignored) {}
         // Pin RimWorld's Prefs.xml ONCE per launch (NOT on every surface-change — per-change rewrites
         // were what caused the resolution PING-PONG) to fullscreen at our render-buffer resolution, so
         // RimWorld doesn't override -screen-width with its own saved/default resolution (the cause of
-        // the small / doubled / "warping" render seen on the 725 and flagships). ZFA/Zink renders into
-        // a surface*renderScale buffer; softpipe into a surface-sized CPU buffer.
+        // the small / doubled / "warping" render seen on the 725 and flagships).
+        //
+        // ONE formula for ALL renderers (2026-08-09). Softpipe used to pin to the raw callback
+        // width/height ("buffer sized to THIS surface") — that dates from its scale-1.0 era and
+        // turned into a RACE once render scale existed: pin fires on the FIRST surfaceChanged,
+        // which can be the native size from before setFixedSize shrinks the surface, so the game
+        // pinned 2340x1080 while the OSMesa buffer followed the tracked surface to 72% → viewport
+        // off the buffer → black screen with live sound (S25 field test). The OSMesa CPU buffer
+        // resizes itself to the tracked surface (= boxW*renderScale once the fixed size lands),
+        // which is exactly what this formula computes — deterministically, no callback-order luck.
+        // Side effect: selecting Software on a 1.6 instance (where the rd_force_gles marker forces
+        // ZFA back on) no longer mis-pins geometry either — the 3/4-picture bug of the same day.
         if (!prefsPinned) {
             prefsPinned = true;
-            if (softpipe) pinGamePrefs(width, height);
-            else pinGamePrefs(Math.max(1, Math.round(boxW * renderScale)),
-                              Math.max(1, Math.round(boxH * renderScale)));
+            pinGamePrefs(Math.max(1, Math.round(boxW * renderScale)),
+                         Math.max(1, Math.round(boxH * renderScale)));
         }
     }
 

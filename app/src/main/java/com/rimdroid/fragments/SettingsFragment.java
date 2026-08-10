@@ -67,10 +67,32 @@ public class SettingsFragment extends Fragment {
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
         final TextView tvSteamDlStatus = view.findViewById(R.id.tv_steam_dl_status);
 
-        // Renderer is pinned to Zink ZFA — the only one that works right now. The Video card shows an
-        // explanation (renderer_info) instead of a chooser; the driver picker is the real choice. Any
-        // instance previously set to another renderer is migrated to ZINK_ZFA here.
-        inst.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
+        // Renderer chooser: ZINK_ZFA (GPU via Vulkan, default) or MOBILEGLUES (GPU via the phone's
+        // own GLES driver — zero Vulkan; first full 1.5 session 2026-08-09, 62 fps on the S25).
+        // MobileGlues replaced the short-lived softpipe entry the same day: softpipe (CPU) proved
+        // the stack works on broken-Vulkan devices but is a 1-2 fps diagnostic tool, not a
+        // renderer — its code path stays, reachable via the RIMDROID_GLT/env harness only.
+        // GL4ES / ZINK_OSMESA stay hidden; any instance set to a non-UI renderer migrates to ZFA.
+        android.widget.RadioGroup rgRenderer = view.findViewById(R.id.rg_renderer);
+        android.widget.RadioButton rbZinkZfa = view.findViewById(R.id.rb_zink_zfa);
+        android.widget.RadioButton rbMobileGlues = view.findViewById(R.id.rb_mobileglues);
+        switch (inst.getRenderer()) {
+            case MOBILEGLUES:
+                rbMobileGlues.setChecked(true);
+                break;
+            case ZINK_ZFA:
+            default:
+                rbZinkZfa.setChecked(true);
+                inst.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
+                break;
+        }
+        rgRenderer.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_zink_zfa) {
+                inst.setRenderer(LauncherPreferences.Renderer.ZINK_ZFA);
+            } else if (checkedId == R.id.rb_mobileglues) {
+                inst.setRenderer(LauncherPreferences.Renderer.MOBILEGLUES);
+            }
+        });
         swDebug.setChecked(inst.isDebug());
         swStrict.setChecked(inst.isInterpreter());
         swDragPan.setChecked(inst.isDragPan());

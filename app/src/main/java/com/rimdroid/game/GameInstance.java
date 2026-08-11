@@ -148,7 +148,12 @@ public class GameInstance {
         // to migrate between Unity's main and render threads (zfaReleaseCurrent is still a stub in
         // libzfa). Black screen => the migration really does need that symbol; more FPS => a real
         // lever for the 1.5 half of the audience.
-        if ("1".equals(android.system.Os.getenv("RIMDROID_NO_GFX_DIRECT"))) {
+        if ("1".equals(android.system.Os.getenv("RIMDROID_NO_GFX_DIRECT"))
+                && android.system.Os.getenv("RIMDROID_GLT") == null) {
+            // The threaded-rendering lever is a ZFA-only experiment. With MobileGlues (RIMDROID_GLT
+            // set by the launcher) it must stay inert: the single EGL context cannot follow Unity's
+            // render thread — threaded MG was a black screen at FPS 0 on the S25, and the Infinix
+            // tester ran exactly this combination by accident (stale lever in the extra-env field).
             android.util.Log.i("RimDroid", "getArgs: RIMDROID_NO_GFX_DIRECT=1 -> threaded rendering (no -force-gfx-direct)");
             return new String[]{};
         }

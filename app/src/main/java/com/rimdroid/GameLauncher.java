@@ -381,8 +381,20 @@ public class GameLauncher {
                 // black-screened), and the native side logs it with the launch config.
                 Os.setenv("RIMDROID_GLT", glTranslator, true);
                 android.util.Log.i("RimDroid", "GameLauncher: RIMDROID_GLT=" + glTranslator + " -> renderer=GL4ES (translator active)");
+                // Non-Adreno (Mali/PowerVR/Xclipse): no S3TC in the GLES driver, and Unity's
+                // GLCore uploads DXT without asking (desktop GL always has it) -> black world
+                // with a live UI (Infinix Mali-G615 field report). The box64 shim decodes DXT
+                // to RGBA8 at upload time when this is set. Adreno keeps native S3TC. The
+                // extra-env field applies later, so =0/=1 there overrides for A/B.
+                if (!GpuInfo.query().isAdreno()) {
+                    Os.setenv("RIMDROID_GLT_DECODE_S3TC", "1", true);
+                    android.util.Log.i("RimDroid", "GameLauncher: non-Adreno GPU -> RIMDROID_GLT_DECODE_S3TC=1 (shim decodes DXT)");
+                } else {
+                    Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
+                }
             } else {
-                Os.unsetenv("RIMDROID_GLT");   // stale value from a previous launch must not leak
+                Os.unsetenv("RIMDROID_GLT");   // stale values from a previous launch must not leak
+                Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
             }
         }
         // The enum name maps 1:1 to the native renderer token parsed in rimdroid.c

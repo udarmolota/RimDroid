@@ -128,16 +128,22 @@ public class GameInstance {
             // def-load + destroyed-mutex abort — seen on e.g. Adreno 644/725, NOT a GPU-vendor
             // thing) use COMPAT MODE, which forces the safe single-threaded path (-force-gfx-direct
             // here + BOX64_MAXCPU=1 in GameLauncher). Marker "rd_gfxdirect" also forces single.
-            // GL-translator (MobileGlues/NG via RIMDROID_GLT, exported by GameLauncher): the
-            // bridge binds ONE EGL context and EGL contexts don't follow Unity's render thread
-            // (the 1.5 threaded A/B black-screened at FPS 0) — force the single-threaded device.
+            // MobileGlues (RIMDROID_GLT, exported by GameLauncher) runs single-threaded by
+            // default: the bridge binds ONE EGL context, and on the 1.5/SDL path a second thread
+            // meant a black screen at FPS 0. BUT the 1.6 glX bridge DOES implement the proper
+            // unbind/rebind handoff (it carries zink's threaded mode every day), so threading may
+            // just work here. RIMDROID_GLT_THREADED=1 in extra env is the opt-in experiment —
+            // threading is zink's single biggest 1.6 lever (26-39 -> 62-65), worth chasing.
+            boolean gltActive   = android.system.Os.getenv("RIMDROID_GLT") != null;
+            boolean gltThreaded = "1".equals(android.system.Os.getenv("RIMDROID_GLT_THREADED"));
             boolean gfxDirect = settings().isCompatibilityMode()
                     || new File(getGamePath(), "rd_gfxdirect").exists()
-                    || android.system.Os.getenv("RIMDROID_GLT") != null;
+                    || (gltActive && !gltThreaded);
             if (gfxDirect) {
                 android.util.Log.i("RimDroid", "getArgs: rd_x11 -> single-threaded (-force-gfx-direct, compat/marker)");
                 return new String[]{ "-force-gfx-direct" };
             }
+            if (gltActive) android.util.Log.i("RimDroid", "getArgs: rd_x11 -> RIMDROID_GLT_THREADED=1, MobileGlues goes TWO-threaded (experiment)");
             android.util.Log.i("RimDroid", "getArgs: rd_x11 -> threaded rendering (default 2-thread)");
             return new String[]{};
         }

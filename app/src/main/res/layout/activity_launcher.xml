@@ -57,6 +57,10 @@
             android:layout_height="1dp"
             android:background="?attr/colorPrimary"/>
 
+        <!-- Bottom link row: GitHub / X / Reddit / Donate / Zomdroid. Each is a labelled column of
+             equal weight, so the captions decide the spacing and the glyphs are self-explanatory
+             (an unlabelled heart read as "favourite", an unlabelled Zomdroid glyph as nothing at
+             all). Zomdroid is a cross-promo: same author, sibling launcher for Project Zomboid. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -65,64 +69,132 @@
             android:paddingTop="6dp"
             android:paddingBottom="6dp">
 
-            <FrameLayout
-                android:layout_width="48dp"
-                android:layout_height="48dp">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center_horizontal">
+
+                    <ImageButton
+                        android:id="@+id/link_github"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerInside"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_github"
+                        android:tint="?attr/colorOnSurfaceVariant"
+                        android:contentDescription="@string/nav_updates"/>
+
+                    <!-- "update available" dot; shown by refreshUpdateBadge() when GitHub has a newer release -->
+                    <View
+                        android:id="@+id/update_badge"
+                        android:layout_width="9dp"
+                        android:layout_height="9dp"
+                        android:layout_gravity="top|end"
+                        android:layout_marginTop="7dp"
+                        android:layout_marginEnd="7dp"
+                        android:background="@drawable/update_badge_dot"
+                        android:visibility="gone"/>
+                </FrameLayout>
+
+                <TextView
+                    style="@style/AppTheme.NavBottomLabel"
+                    android:text="@string/nav_label_github"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <ImageButton
-                    android:id="@+id/link_github"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:id="@+id/link_x"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center_horizontal"
                     android:scaleType="centerInside"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_github"
+                    android:src="@drawable/ic_x"
                     android:tint="?attr/colorOnSurfaceVariant"
-                    android:contentDescription="@string/nav_updates"/>
+                    android:contentDescription="@string/link_x"/>
 
-                <!-- "update available" dot; shown by refreshUpdateBadge() when GitHub has a newer release -->
-                <View
-                    android:id="@+id/update_badge"
-                    android:layout_width="9dp"
-                    android:layout_height="9dp"
-                    android:layout_gravity="top|end"
-                    android:layout_marginTop="9dp"
-                    android:layout_marginEnd="9dp"
-                    android:background="@drawable/update_badge_dot"
-                    android:visibility="gone"/>
-            </FrameLayout>
+                <TextView
+                    style="@style/AppTheme.NavBottomLabel"
+                    android:text="@string/nav_label_x"/>
+            </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/link_x"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="7dp"
-                android:scaleType="centerInside"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_x"
-                android:tint="?attr/colorOnSurfaceVariant"
-                android:contentDescription="@string/link_x"/>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <ImageButton
-                android:id="@+id/link_reddit"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="7dp"
-                android:scaleType="centerInside"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_reddit"
-                android:tint="?attr/colorOnSurfaceVariant"
-                android:contentDescription="@string/link_reddit"/>
+                <ImageButton
+                    android:id="@+id/link_reddit"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center_horizontal"
+                    android:scaleType="centerInside"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_reddit"
+                    android:tint="?attr/colorOnSurfaceVariant"
+                    android:contentDescription="@string/link_reddit"/>
 
-            <ImageButton
-                android:id="@+id/link_support"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="7dp"
-                android:scaleType="centerInside"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_heart"
-                android:tint="?attr/colorOnSurfaceVariant"
-                android:contentDescription="@string/link_support"/>
+                <TextView
+                    style="@style/AppTheme.NavBottomLabel"
+                    android:text="@string/nav_label_reddit"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageButton
+                    android:id="@+id/link_support"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center_horizontal"
+                    android:scaleType="centerInside"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_donate"
+                    android:tint="?attr/colorOnSurfaceVariant"
+                    android:contentDescription="@string/nav_label_donate"/>
+
+                <TextView
+                    style="@style/AppTheme.NavBottomLabel"
+                    android:text="@string/nav_label_donate"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageButton
+                    android:id="@+id/link_zomdroid"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center_horizontal"
+                    android:padding="9dp"
+                    android:scaleType="centerInside"
+                    android:background="@drawable/bg_circle_zomdroid"
+                    android:src="@drawable/ic_zomdroid"
+                    android:tint="?attr/colorOnSurfaceVariant"
+                    android:contentDescription="@string/nav_label_zomdroid"/>
+
+                <TextView
+                    style="@style/AppTheme.NavBottomLabel"
+                    android:text="@string/nav_label_zomdroid"/>
+            </LinearLayout>
         </LinearLayout>
 
         <View

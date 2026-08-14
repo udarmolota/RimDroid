@@ -101,6 +101,8 @@
     <string name="link_reddit">RimDroid на Reddit</string>
     <string name="link_support">Поддержать разработчика</string>
     <string name="link_soon">Скоро</string>
+    <string name="nav_label_donate">Донат</string>
+    <string name="zomdroid_dialog_message">Zomdroid запускает Project Zomboid на Android — так же, как этот лаунчер запускает RimWorld. Тот же автор, тот же подход.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
     <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
     <string name="bug_report_body">Hi, I have a new bug report.\n\nDescription: \n\n\n---\n%1$s</string>
     <string name="bug_report_no_mail">На устройстве нет почтового приложения.</string>

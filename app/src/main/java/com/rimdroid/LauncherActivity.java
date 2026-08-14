@@ -172,6 +172,23 @@ public class LauncherActivity extends AppCompatActivity {
         findViewById(R.id.link_x).setOnClickListener(v -> openLink(R.string.url_x));
         findViewById(R.id.link_reddit).setOnClickListener(v -> openLink(R.string.url_reddit_sub));
         findViewById(R.id.link_support).setOnClickListener(v -> { binding.drawerLayout.close(); showDonateDialog(); });
+        findViewById(R.id.link_zomdroid).setOnClickListener(v -> { binding.drawerLayout.close(); showZomdroidDialog(); });
+    }
+
+    /** Cross-promo dialog for Zomdroid (sibling launcher, same author). Link is clickable. */
+    private void showZomdroidDialog() {
+        android.text.SpannableString s =
+                new android.text.SpannableString(getString(R.string.zomdroid_dialog_message));
+        android.text.util.Linkify.addLinks(s, android.text.util.Linkify.WEB_URLS);
+        androidx.appcompat.app.AlertDialog dialog =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle(R.string.nav_label_zomdroid)
+                        .setMessage(s)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .create();
+        dialog.show();
+        TextView mv = dialog.findViewById(android.R.id.message);
+        if (mv != null) mv.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
     }
 
     /** Open a link, or say "coming soon" if that URL hasn't been set yet (empty string resource). */

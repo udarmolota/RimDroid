@@ -62,6 +62,14 @@ JavaSteam              MIT License          Copyright (c) Lossy / JavaSteam cont
 javasteam-depotdownloader  MIT License      Copyright (c) JavaSteam contributors
 zstd-jni               BSD 2-Clause License Copyright (c) 2015-2024 Luben Karavelov
 
+--------------------------------------------------------------------------------
+ICONS
+--------------------------------------------------------------------------------
+
+Donate icon (app/src/main/res/drawable/ic_donate.xml): "Donate" by Edward Boatman
+from the Noun Project, licensed under CC BY 3.0.
+https://thenounproject.com/icon/donate-285/
+
 ================================================================================
 Full license texts for the above are available from each project's repository.
 All are permissive licenses compatible with GPL-3.0; AndroidX/Material/Commons/

@@ -103,6 +103,15 @@ In the cloud: %2$s
     <string name="link_reddit">RimDroid on Reddit</string>
     <string name="link_support">Support the developer</string>
     <string name="link_soon">Coming soon</string>
+    <!-- Captions shown under each drawer-footer icon. Brand names stay untranslated. -->
+    <string name="nav_label_github" translatable="false">GitHub</string>
+    <string name="nav_label_x" translatable="false">X</string>
+    <string name="nav_label_reddit" translatable="false">Reddit</string>
+    <string name="nav_label_donate">Donate</string>
+    <string name="nav_label_zomdroid" translatable="false">Zomdroid</string>
+    <!-- Cross-promo dialog for the sibling launcher. -->
+    <string name="zomdroid_dialog_message">Zomdroid runs Project Zomboid on Android, the same way this launcher runs RimWorld. Same author, same approach.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
+    <string name="zomdroid_url" translatable="false">https://github.com/udarmolota/Zomdroid/releases</string>
     <!-- Bug report email. Number = the tap date as ddMMyyyy, filled at runtime. -->
     <string name="bug_report_email" translatable="false">210478@mail.ru</string>
     <string name="bug_report_subject">RIMDROID REPORT %1$s</string>

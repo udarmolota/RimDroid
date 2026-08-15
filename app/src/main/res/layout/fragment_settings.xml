@@ -10,7 +10,7 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <!-- ============================ VIDEO ============================ -->
+    <!-- ============================ VIDEO (renderer + driver) ============================ -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -100,15 +100,30 @@
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:clickable="true"
             android:focusable="true" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-        <!-- Render resolution (re-enabled 2026-06-28; the "flicker" hold reason was the missing-mods grey, not a render bug) -->
+    <!-- ============================ RESOLUTION ============================ -->
+    <!-- Render resolution (re-enabled 2026-06-28; the "flicker" hold reason was the missing-mods grey, not a render bug) -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
         <TextView
+            style="@style/AppTheme.CardHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/render_res_label"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="6dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -122,29 +137,39 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical" />
+      </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-        <!-- Texture quality: Half = the GL-layer shim halves mipped textures (4x less texture
-             memory) — for DLC-heavy loads and weaker phones. -->
+    <!-- ============================ COMPRESSION ============================ -->
+    <!-- Texture quality: Half = the GL-layer shim halves mipped textures (4x less texture
+         memory) — for DLC-heavy loads and weaker phones. The chooser sits ABOVE its
+         explanatory text so the choice reads first and the "why" follows. -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="2dp">
+
+      <LinearLayout
+          android:layout_width="match_parent"
+          android:layout_height="wrap_content"
+          android:orientation="vertical"
+          android:padding="16dp">
+
         <TextView
+            style="@style/AppTheme.CardHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/texq_label"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/texq_hint"
-            android:textAppearance="?attr/textAppearanceBodySmall"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="6dp" />
 
         <RadioGroup
             android:id="@+id/rg_texq"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
 
             <RadioButton
                 android:id="@+id/rb_texq_no"
@@ -166,6 +191,12 @@
                 android:layout_height="wrap_content"
                 android:text="@string/texq_ultra" />
         </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/texq_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
       </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

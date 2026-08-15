@@ -42,7 +42,8 @@ const char*      g_rimdroid_vulkan_driver_name;
 // Declared as void* to avoid EGL type pollution in wrappedsdl2.c (EGL* are all void*).
 void* g_egl_display = NULL;   // EGLDisplay
 void* g_egl_surface = NULL;   // EGLSurface
-void* g_egl_context = NULL;   // EGLContext
+void* g_egl_context = NULL;   // EGLContext (the PRIMARY; workers share with it — see eglt_create_shared)
+static void* g_egl_config = NULL;   // EGLConfig the surface/contexts were created with
 
 // ZFA (Zink-for-Android) state for the ZINK_ZFA renderer.  ZFA presents a real
 // desktop OpenGL CORE profile (Mesa Zink over Vulkan/Turnip), which is what
@@ -555,6 +556,49 @@ int rimdroid_zfa_release_current(void) {
     return 0;
 }
 
+// ---- EGL routed through the GL translator (MobileGlues context tracking, 2026-08-13) ---------
+// MobileGlues keeps its per-context state -- texture-unit bindings, buffer/framebuffer shadows,
+// FSR1 -- only for contexts IT created. A handle it never saw falls into one process-wide
+// fallback record shared by every untracked context; its own gl/texture.cpp says so: "Two
+// untracked contexts on two threads therefore have one set of shadow values between them".
+// Ours were created straight against the system EGL, so in threaded rendering two contexts shared
+// one binding shadow: MG then skips a glBindTexture the other thread still needs and the upload
+// lands on the wrong texture -- the red patches, worst in the mip levels written after the first
+// bind (clean when zoomed in, red when zoomed out). Calling MG's own egl* entry points instead
+// gives every context its own record; they are thin pass-throughs to the same system EGL plus the
+// bookkeeping. Present goes through MG too: presentSurface is where its FSR1 upscaler lives, so
+// the config knob we write is inert while we swap directly. RIMDROID_GLT_EGLTRACK=1 to enable.
+static struct {
+    EGLContext (*create)(EGLDisplay, EGLConfig, EGLContext, const EGLint*);
+    EGLBoolean (*make_current)(EGLDisplay, EGLSurface, EGLSurface, EGLContext);
+    EGLBoolean (*destroy)(EGLDisplay, EGLContext);
+    EGLBoolean (*swap)(EGLDisplay, EGLSurface);
+} g_glt_egl;
+
+static void rimdroid_glt_egl_route(void* h) {
+    const char* e = getenv("RIMDROID_GLT_EGLTRACK");
+    if (!h || !e || e[0] != '1') return;
+    g_glt_egl.create       = (EGLContext(*)(EGLDisplay, EGLConfig, EGLContext, const EGLint*))dlsym(h, "eglCreateContext");
+    g_glt_egl.make_current = (EGLBoolean(*)(EGLDisplay, EGLSurface, EGLSurface, EGLContext))dlsym(h, "eglMakeCurrent");
+    g_glt_egl.destroy      = (EGLBoolean(*)(EGLDisplay, EGLContext))dlsym(h, "eglDestroyContext");
+    g_glt_egl.swap         = (EGLBoolean(*)(EGLDisplay, EGLSurface))dlsym(h, "eglSwapBuffers");
+    LOGI("GLT: EGL routed through translator (EGLTRACK=1): create=%p make_current=%p destroy=%p swap=%p",
+         (void*)g_glt_egl.create, (void*)g_glt_egl.make_current, (void*)g_glt_egl.destroy, (void*)g_glt_egl.swap);
+}
+
+static EGLContext rd_eglCreateContext(EGLDisplay d, EGLConfig c, EGLContext share, const EGLint* attr) {
+    return g_glt_egl.create ? g_glt_egl.create(d, c, share, attr) : eglCreateContext(d, c, share, attr);
+}
+static EGLBoolean rd_eglMakeCurrent(EGLDisplay d, EGLSurface draw, EGLSurface read, EGLContext c) {
+    return g_glt_egl.make_current ? g_glt_egl.make_current(d, draw, read, c) : eglMakeCurrent(d, draw, read, c);
+}
+static EGLBoolean rd_eglDestroyContext(EGLDisplay d, EGLContext c) {
+    return g_glt_egl.destroy ? g_glt_egl.destroy(d, c) : eglDestroyContext(d, c);
+}
+static EGLBoolean rd_eglSwapBuffers(EGLDisplay d, EGLSurface s) {
+    return g_glt_egl.swap ? g_glt_egl.swap(d, s) : eglSwapBuffers(d, s);
+}
+
 // ---- GLX -> EGL-translator bridge helpers (RimWorld 1.6 on MobileGlues/NG) --------
 // wrappedlibgl.c weak-imports these for its rd_bridge_* dispatch: when the renderer is
 // a GL->GLES translator (g_egl_context set, no ZFA), Unity's glX calls land on the one
@@ -563,7 +607,7 @@ int rimdroid_zfa_release_current(void) {
 // by getArgs while the translator is active).
 int rimdroid_eglt_make_current(void) {
     if (!g_egl_display || !g_egl_surface || !g_egl_context) return 0;
-    if (!eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context)) {
+    if (!rd_eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context)) {
         LOGE("EGLT: eglMakeCurrent failed: 0x%x", eglGetError());
         return 0;
     }
@@ -571,10 +615,67 @@ int rimdroid_eglt_make_current(void) {
 }
 int rimdroid_eglt_release_current(void) {
     if (!g_egl_display) return 0;
-    return eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) ? 1 : 0;
+    return rd_eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) ? 1 : 0;
 }
 void rimdroid_eglt_swap(void) {
-    if (g_egl_display && g_egl_surface) eglSwapBuffers(g_egl_display, g_egl_surface);
+    if (g_egl_display && g_egl_surface) rd_eglSwapBuffers(g_egl_display, g_egl_surface);
+}
+
+// ---- Multi-context factory (bridge Level 3, 2026-08-13) --------------------------------------
+// The one-real-context-under-N-names aliasing is what corrupts textures in threaded mode (proven:
+// zero upload collisions with TLS scratch, red patches persist). These give wrappedlibgl.c REAL
+// EGL contexts, one per Unity logical GLX context: objects (textures/buffers/programs) are shared
+// via the EGL share group with the primary, per-context STATE is kept by the driver itself, and
+// only the presenting context ever holds the window surface — workers bind surfaceless (with a
+// 1x1 pbuffer fallback for drivers without EGL_KHR_surfaceless_context).
+#define RD_EGLT_MAX_CTX 8
+static struct { void* ctx; void* pbuf; } g_eglt_ctxs[RD_EGLT_MAX_CTX];
+
+void* rimdroid_eglt_create_shared(void) {
+    if (!g_egl_display || !g_egl_config || !g_egl_context) return NULL;
+    const EGLint ctx3[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
+    void* ctx = rd_eglCreateContext(g_egl_display, g_egl_config, g_egl_context, ctx3);
+    if (ctx == EGL_NO_CONTEXT) {
+        LOGE("EGLT: shared context creation failed: 0x%x", eglGetError());
+        return NULL;
+    }
+    for (int i = 0; i < RD_EGLT_MAX_CTX; i++)
+        if (!g_eglt_ctxs[i].ctx) { g_eglt_ctxs[i].ctx = ctx; break; }
+    LOGI("EGLT: created shared context %p (share group of %p)", ctx, g_egl_context);
+    return ctx;
+}
+
+// Bind ctx on the CALLING thread. with_window=1 binds the real window surface (presenter only);
+// otherwise surfaceless, falling back to a per-context 1x1 pbuffer.
+int rimdroid_eglt_make_current_on(void* ctx, int with_window) {
+    if (!g_egl_display || !ctx) return 0;
+    if (with_window)
+        return rd_eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, ctx) ? 1 : 0;
+    if (rd_eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)) return 1;
+    // No surfaceless support: use (and lazily create) this context's own pbuffer.
+    void** pb = NULL;
+    for (int i = 0; i < RD_EGLT_MAX_CTX; i++)
+        if (g_eglt_ctxs[i].ctx == ctx) { pb = &g_eglt_ctxs[i].pbuf; break; }
+    if (pb && !*pb) {
+        const EGLint at[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
+        *pb = eglCreatePbufferSurface(g_egl_display, g_egl_config, at);
+        LOGI("EGLT: surfaceless unsupported — pbuffer %p for ctx %p", pb ? *pb : NULL, ctx);
+    }
+    if (pb && *pb && rd_eglMakeCurrent(g_egl_display, *pb, *pb, ctx)) return 1;
+    LOGE("EGLT: make-current(ctx=%p, window=%d) failed: 0x%x", ctx, with_window, eglGetError());
+    return 0;
+}
+
+void rimdroid_eglt_destroy_ctx(void* ctx) {
+    if (!g_egl_display || !ctx || ctx == g_egl_context) return;   // never the primary
+    for (int i = 0; i < RD_EGLT_MAX_CTX; i++)
+        if (g_eglt_ctxs[i].ctx == ctx) {
+            if (g_eglt_ctxs[i].pbuf) { eglDestroySurface(g_egl_display, g_eglt_ctxs[i].pbuf); g_eglt_ctxs[i].pbuf = NULL; }
+            g_eglt_ctxs[i].ctx = NULL;
+            break;
+        }
+    rd_eglDestroyContext(g_egl_display, ctx);
+    LOGI("EGLT: destroyed shared context %p", ctx);
 }
 
 // ===================== RimDroid injected input (Phase A) =====================
@@ -987,6 +1088,9 @@ static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
                      dlsym(h, "glGetString"), dlsym(h, "glXGetProcAddress"),
                      dlsym(h, "glGenQueries"), dlsym(h, "glTexStorage2D"),
                      dlsym(h, "glGenVertexArrays"), dlsym(h, "glMapBufferRange"));
+                // Before any context exists: everything below must go through these (see the
+                // EGLTRACK note above) or MG never records our contexts.
+                rimdroid_glt_egl_route(h);
             }
         }
     }
@@ -1050,21 +1154,33 @@ static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
 
     // Try GLES3 context first, fallback to GLES2.
     const EGLint ctx3[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
-    g_egl_context = eglCreateContext(g_egl_display, config, EGL_NO_CONTEXT, ctx3);
+    g_egl_context = rd_eglCreateContext(g_egl_display, config, EGL_NO_CONTEXT, ctx3);
     if (g_egl_context == EGL_NO_CONTEXT) {
         LOGW("EGL: GLES3 context failed (0x%x), trying GLES2", eglGetError());
         const EGLint ctx2[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
-        g_egl_context = eglCreateContext(g_egl_display, config, EGL_NO_CONTEXT, ctx2);
+        g_egl_context = rd_eglCreateContext(g_egl_display, config, EGL_NO_CONTEXT, ctx2);
     }
     if (g_egl_context == EGL_NO_CONTEXT) {
         LOGE("EGL: eglCreateContext failed: 0x%x", eglGetError());
         return -1;
     }
+    g_egl_config = config;   // kept for the multi-context bridge (worker contexts share this config)
 
     // Make current on this thread so GL4ES can query capabilities immediately.
-    if (!eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context)) {
+    if (!rd_eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context)) {
         LOGE("EGL: eglMakeCurrent failed: 0x%x", eglGetError());
         return -1;
+    }
+    // RIMDROID_GLT_NOVSYNC=1: present without waiting for the display tick. Diagnostic first
+    // (the menu FPS ceiling on MobileGlues read exactly 120 = the S25's refresh rate, masking
+    // the path's true throughput vs zink's unthrottled 500-600), possibly a small in-game win
+    // (frames that just miss a tick don't stall). Off by default: uncapped = heat/battery.
+    {
+        const char* nv = getenv("RIMDROID_GLT_NOVSYNC");
+        if (nv && nv[0] == '1') {
+            eglSwapInterval(g_egl_display, 0);
+            LOGI("EGL: swap interval 0 (RIMDROID_GLT_NOVSYNC=1) — present does not wait for vsync");
+        }
     }
     LOGI("EGL: context %p surface %p display %p — GL4ES ready",
          g_egl_context, g_egl_surface, g_egl_display);
@@ -1646,8 +1762,12 @@ void rimdroid_start_game(const char* game_dir_path,
         // operate after fork ("ProcessState can not be used after fork").
         if (g_rimdroid_renderer == RD_GL4ES) {
             if (g_egl_display && g_egl_surface && g_egl_context) {
-                if (!eglMakeCurrent(g_egl_display, g_egl_surface,
-                                    g_egl_surface, g_egl_context)) {
+                // Routed like every other bind: the translator's context records were built in
+                // the parent and copied by fork(), but nothing is CURRENT in the child until its
+                // own make-current runs -- go around it and the child renders on the shared
+                // fallback record, which is the whole bug this routing exists to fix.
+                if (!rd_eglMakeCurrent(g_egl_display, g_egl_surface,
+                                       g_egl_surface, g_egl_context)) {
                     LOGE("Child: eglMakeCurrent failed: 0x%x — GL may crash",
                          eglGetError());
                 } else {

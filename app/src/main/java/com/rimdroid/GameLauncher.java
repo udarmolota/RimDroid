@@ -381,20 +381,35 @@ public class GameLauncher {
                 // black-screened), and the native side logs it with the launch config.
                 Os.setenv("RIMDROID_GLT", glTranslator, true);
                 android.util.Log.i("RimDroid", "GameLauncher: RIMDROID_GLT=" + glTranslator + " -> renderer=GL4ES (translator active)");
-                // Non-Adreno (Mali/PowerVR/Xclipse): no S3TC in the GLES driver, and Unity's
-                // GLCore uploads DXT without asking (desktop GL always has it) -> black world
-                // with a live UI (Infinix Mali-G615 field report). The box64 shim decodes DXT
-                // to RGBA8 at upload time when this is set. Adreno keeps native S3TC. The
-                // extra-env field applies later, so =0/=1 there overrides for A/B.
-                if (!GpuInfo.query().isAdreno()) {
-                    Os.setenv("RIMDROID_GLT_DECODE_S3TC", "1", true);
-                    android.util.Log.i("RimDroid", "GameLauncher: non-Adreno GPU -> RIMDROID_GLT_DECODE_S3TC=1 (shim decodes DXT)");
-                } else {
-                    Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
-                }
+                // DXT -> ETC2 transcode ON BY DEFAULT for every MobileGlues launch (her call,
+                // 2026-08-13). Two reasons, one per GPU family: non-Adreno (Mali/PowerVR/Xclipse)
+                // has no S3TC at all — without the decode the world renders black (Infinix field
+                // report); and even Adreno turned out FASTER on ETC2 than on its own desktop-DXT
+                // path (+50% on the S25 same-save test) — mobile drivers treat ETC2 as the
+                // first-class format. The extra-env field applies later, so =0 there is the
+                // escape hatch for A/B on any device.
+                Os.setenv("RIMDROID_GLT_DECODE_S3TC", "1", true);
+                Os.setenv("RIMDROID_GLT_ETC2", "1", true);
+                // Threaded rendering, ON BY DEFAULT for MobileGlues (her call after playing it,
+                // 2026-08-15) — roughly double the frame rate on 1.6, and the loss of sharpness at
+                // low zoom turned out not to be noticeable in play.
+                //
+                // The two variables ship as a PAIR and cannot be split: the second render thread is
+                // what doubles the fps, and on this renderer it also corrupts sampling of minified
+                // texture copies (red patches over plants and rocks when zoomed out). Clamping
+                // minification to level 0 is the ONLY thing that removes it — the defect is inside
+                // MobileGlues or its use of the Adreno GLES driver, with everything above it cleared
+                // by experiment (docs/BRIEF_mg_threaded_red_textures_round2.md). Set explicitly so a
+                // power user can still override either half from the extra-env field, which is
+                // applied after this.
+                Os.setenv("RIMDROID_GLT_THREADED", "1", true);
+                Os.setenv("RIMDROID_GLT_NOMIP", "tex", true);
+                android.util.Log.i("RimDroid", "GameLauncher: threaded render ON by default (+mip clamp; override via extra env)");
+                android.util.Log.i("RimDroid", "GameLauncher: translator -> DXT->ETC2 transcode ON (default; override via extra env)");
             } else {
                 Os.unsetenv("RIMDROID_GLT");   // stale values from a previous launch must not leak
                 Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
+                Os.unsetenv("RIMDROID_GLT_ETC2");
             }
         }
         // The enum name maps 1:1 to the native renderer token parsed in rimdroid.c
@@ -427,9 +442,42 @@ public class GameLauncher {
                 } else if (gltSo.contains("mobileglues")) {
                     // MobileGlues: no LIBGL_* knobs — its config lives in MG_DIR_PATH/config.json and
                     // it writes its own log there too; point it at our cache dir so both are reachable.
-                    // Stock config first ("Unsupported launcher" fallback is fine for the smoke).
                     Os.setenv("MG_DIR_PATH", AppStorage.requireSingleton().getCachePath(), true);
-                    android.util.Log.i("RimDroid", "GameLauncher: MobileGlues translator — MG_DIR_PATH=" + AppStorage.requireSingleton().getCachePath());
+                    // Write MG's config.json ourselves (2026-08-13). Two knobs matter: the FSR1
+                    // upscaler (RIMDROID_GLT_FSR=1..4 in the extra-env field; render smaller,
+                    // upscale sharper — the blurry-fonts experiment) and the GLSL shader cache
+                    // (faster reloads + it dumps translated shaders to disk = the plant-jitter
+                    // diagnosis avenue). Every OTHER int key is written explicitly with today's
+                    // default: MG reads a MISSING key as -1, and -1 lands as "true" in some
+                    // boolean knobs — a partial file would silently enable compute shaders etc.
+                    int fsr = 0;
+                    String rawFsr = gameInstance.settings().getEnvVars();
+                    if (rawFsr != null) {
+                        for (String tok : rawFsr.trim().split("\\s+"))
+                            if (tok.startsWith("RIMDROID_GLT_FSR="))
+                                try { fsr = Integer.parseInt(tok.substring("RIMDROID_GLT_FSR=".length()).trim()); }
+                                catch (NumberFormatException ignored) {}
+                    }
+                    if (fsr < 0 || fsr > 4) fsr = 0;   // 0=off, 1=UltraQuality .. 4=Performance
+                    java.io.File mgCfg = new java.io.File(AppStorage.requireSingleton().getCachePath(), "config.json");
+                    try (java.io.FileWriter fw = new java.io.FileWriter(mgCfg)) {
+                        fw.write("{\n"
+                            + "  \"enableANGLE\": 0,\n"
+                            + "  \"enableNoError\": 0,\n"
+                            + "  \"enableExtComputeShader\": 0,\n"
+                            + "  \"enableExtTimerQuery\": 0,\n"
+                            + "  \"enableExtDirectStateAccess\": 0,\n"
+                            + "  \"maxGlslCacheSize\": 64,\n"
+                            + "  \"angleDepthClearFixMode\": 0,\n"
+                            + "  \"customGLVersion\": 0,\n"
+                            + "  \"hideMGEnvLevel\": 0,\n"
+                            + "  \"fsr1Setting\": " + fsr + "\n"
+                            + "}\n");
+                        android.util.Log.i("RimDroid", "GameLauncher: MobileGlues config.json written (fsr1Setting=" + fsr
+                            + ", glslCache=64MB)");
+                    } catch (java.io.IOException e) {
+                        android.util.Log.w("RimDroid", "GameLauncher: MobileGlues config.json write failed: " + e);
+                    }
                 } else {
                     Os.setenv("LIBGL_ES", "3", true);   // GL4ES: use GLES3 backend → reports OpenGL 3.2
                     Os.setenv("LIBGL_GL", "32", true);  // GL4ES: advertise OpenGL 3.2 (Unity requires ≥3.2)

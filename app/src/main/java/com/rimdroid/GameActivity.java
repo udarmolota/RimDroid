@@ -820,7 +820,17 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
             if (gi == null) return;
             // 1.6/X11 route: WINDOWED at surface size (fullscreen triggers SDL's WM-less
             // legacy-fullscreen dance → window loses SHOWN → Unity never presents).
-            if (new java.io.File(gi.getGamePath(), "rd_x11").exists())
+            //
+            // RIMDROID_WINDOWED=1 puts the 1.5/SDL route on the same footing, as an A/B for the
+            // blurry fonts there. In fullscreen Unity treats the desktop mode (the panel's real
+            // 2340x1080) as its target and scales its own frame up to it, so the picture is resized
+            // twice: once inside the game, once on the way to the display. Windowed at exactly the
+            // surface size — what 1.6 has always done — leaves one scale, in hardware. That fits
+            // what we see: 1.5 renders at a HIGHER resolution than 1.6 (1685x778 vs 1568x724) and
+            // still looks softer, so the resolution is not what separates them.
+            boolean windowed = new java.io.File(gi.getGamePath(), "rd_x11").exists()
+                    || "1".equals(android.system.Os.getenv("RIMDROID_WINDOWED"));
+            if (windowed)
                 PrefsXml.forceWindowed(new java.io.File(gi.getUserDataDir(), "Config"), width, height);
             else
                 PrefsXml.forceFullscreen(new java.io.File(gi.getUserDataDir(), "Config"), width, height);

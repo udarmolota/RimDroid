@@ -245,7 +245,7 @@ public class LauncherActivity extends AppCompatActivity {
                 if (dir.isDirectory() || dir.mkdirs()) {
                     java.io.File zip = new java.io.File(dir, reportName);
                     try (OutputStream out = new java.io.FileOutputStream(zip)) {
-                        LogExporter.export(instance, out);
+                        LogExporter.export(this, instance, out);
                     }
                     if (zip.length() > 0)
                         attach = androidx.core.content.FileProvider.getUriForFile(
@@ -586,7 +586,7 @@ public class LauncherActivity extends AppCompatActivity {
             LogExporter.Result res;
             try (OutputStream out = getContentResolver().openOutputStream(uri)) {
                 if (out == null) { ui.post(() -> toast("Export failed: cannot open file")); return; }
-                res = LogExporter.export(instance, out);
+                res = LogExporter.export(this, instance, out);
             } catch (Exception ex) {
                 ui.post(() -> toast("Export failed: " + ex.getMessage()));
                 return;

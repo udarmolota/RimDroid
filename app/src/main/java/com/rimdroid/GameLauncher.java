@@ -404,12 +404,19 @@ public class GameLauncher {
                 // applied after this.
                 Os.setenv("RIMDROID_GLT_THREADED", "1", true);
                 Os.setenv("RIMDROID_GLT_NOMIP", "tex", true);
+                // MobileGlues drops Unity 2019's GL_RED sub-uploads for dynamic font atlases.
+                // Enable the direct GLES replay only on the affected 1.5 SDL path.
+                if (!new java.io.File(gameInstance.getGamePath(), "rd_x11").exists())
+                    Os.setenv("RIMDROID_GLT_FONTFIX", "1", true);
+                else
+                    Os.unsetenv("RIMDROID_GLT_FONTFIX");
                 android.util.Log.i("RimDroid", "GameLauncher: threaded render ON by default (+mip clamp; override via extra env)");
                 android.util.Log.i("RimDroid", "GameLauncher: translator -> DXT->ETC2 transcode ON (default; override via extra env)");
             } else {
                 Os.unsetenv("RIMDROID_GLT");   // stale values from a previous launch must not leak
                 Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
                 Os.unsetenv("RIMDROID_GLT_ETC2");
+                Os.unsetenv("RIMDROID_GLT_FONTFIX");
             }
         }
         // The enum name maps 1:1 to the native renderer token parsed in rimdroid.c

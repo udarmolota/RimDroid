@@ -102,11 +102,9 @@ ARM64: [box64](https://github.com/ptitSeb/box64) emulates the x86_64 engine + Mo
 graphics go through your phone's real GPU, and Android touch and gamepad input is injected straight
 into the game.
 
-There are two renderers. **Zink** (Mesa) turns the game's OpenGL into Vulkan and is the default.
-**[MobileGlues](https://github.com/MobileGL-Dev/MobileGlues)** turns it into OpenGL ES instead and
-never touches Vulkan at all — which is why it works on phones whose Vulkan driver cannot carry Zink.
-On Samsung Exynos (Xclipse) that is the difference between distorted text and models and a game that
-simply looks right; it is switchable per instance in Settings → Video.
+There are two renderers, switchable per instance in Settings → Video. **Zink** (Mesa) turns the
+game's OpenGL into Vulkan and is the default. **[MobileGlues](https://github.com/MobileGL-Dev/MobileGlues)**
+turns it into OpenGL ES instead and needs no Vulkan at all.
 
 ## Build
 
@@ -114,7 +112,7 @@ simply looks right; it is switchable per instance in Settings → Video.
 - `box64/` is a fork ([udarmolota/rimdroid-box64](https://github.com/udarmolota/rimdroid-box64));
   `libzfa.so` (Mesa + Zink) is built via GitHub Actions
 - `libmobileglues.so` ships unmodified from [MobileGlues](https://github.com/MobileGL-Dev/MobileGlues)
-  in the bundled libraries; it is LGPL-2.1, so it stays a separate shared library that can be replaced
+  in the bundled libraries
 - An instance holds the extracted Linux build of RimWorld (`RimWorldLinux` + `RimWorldLinux_Data`)
 
 ## Supporting development
@@ -135,8 +133,7 @@ data we're missing, and they're how the device recommendations here will get mor
 
 - [box64](https://github.com/ptitSeb/box64) — x86_64→ARM64 emulation backend
 - [MobileGlues](https://github.com/MobileGL-Dev/MobileGlues) by [MobileGL-Dev](https://github.com/MobileGL-Dev)
-  — the second renderer (OpenGL→OpenGL ES), LGPL-2.1. It is what makes RimWorld run on phones whose
-  Vulkan driver cannot carry Zink — Samsung Exynos in particular
+  — the second renderer (OpenGL→OpenGL ES)
 - [Mesa / Zink](https://gitlab.freedesktop.org/mesa/mesa) — GPU rendering (OpenGL→Vulkan)
 - [Turnip / libvulkan_freedreno](https://gitlab.freedesktop.org/mesa/mesa) — Adreno Vulkan driver
 - [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access

@@ -1,0 +1,45 @@
+# Builds the relocatable stand-in for RimWorld 1.6's Unity launcher (shim/rd_unity_shim.c) as a
+# PIE x86_64 Linux executable — the thing box64 runs instead of the game's own non-PIE launcher on
+# devices where its fixed load address is already taken. No local Linux toolchain needed.
+#
+# Artifact: rd-unity-shim -> the `rd_unity_shim` ELF, to be deployed into an instance as
+# "RimWorldLinux" (original kept as RimWorldLinux.rdorig).
+
+name: Build Unity launcher shim
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - 'shim/**'
+      - '.github/workflows/unity-shim.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (PIE x86_64)
+        run: |
+          set -euo pipefail
+          gcc -O2 -fPIE -pie -Wall -Wextra -o rd_unity_shim shim/rd_unity_shim.c -ldl
+          strip rd_unity_shim
+          ls -l rd_unity_shim
+
+      - name: Verify it is a PIE x86-64 ELF
+        run: |
+          set -euo pipefail
+          file rd_unity_shim
+          readelf -h rd_unity_shim | grep -E 'Type|Machine'
+          # ET_DYN = position independent: it can load at ANY address, which is the entire point.
+          readelf -h rd_unity_shim | grep -q 'Type:.*DYN' \
+            || { echo "FAIL: not a PIE (ET_DYN) binary"; exit 1; }
+          # It must not need a fixed low load address like the binary it replaces.
+          readelf -l rd_unity_shim | awk '/LOAD/ {print "  LOAD vaddr:", $3}'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rd-unity-shim
+          path: rd_unity_shim
+          if-no-files-found: error

@@ -188,6 +188,11 @@ public class GameLauncher {
             Log.e(TAG, "asound shim load failed; game will be silent", t);
         }
 
+        // On devices where the game's fixed load address is already taken (see the reservation in
+        // rimdroid.c), run RimWorld 1.6 through our relocatable stand-in launcher instead. No-op
+        // everywhere else, and it puts the game's own binary back if the address becomes available.
+        UnityShimInstaller.applyTo(RimDroidApplication.APP, new java.io.File(gameInstance.getGamePath()));
+
         // --- Box64 tuning ---
         // BOX64_LOG: 0 normally (verbose tracing = gigabyte logs). Raise to 1-2
         // only for targeted call-sequence tracing.

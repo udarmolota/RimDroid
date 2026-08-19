@@ -86,7 +86,13 @@ public class GameLauncher {
             + "device        : " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + " (Android " + android.os.Build.VERSION.RELEASE + ", API " + android.os.Build.VERSION.SDK_INT + ")\n"
             + "soc           : " + deviceSoc() + "\n"
-            + "renderer      : " + actualRenderer.name() + "\n"
+            // Report the renderer the USER picked, not just the internal token. MOBILEGLUES (and the
+            // RIMDROID_GLT harness) are remapped onto the GL4ES/EGL plumbing before launch, so printing
+            // only `actualRenderer` showed "GL4ES" for a MobileGlues run and made tester reports read as
+            // if a dead renderer had been selected.
+            + "renderer      : " + s.getRenderer().name()
+                + (actualRenderer != s.getRenderer() ? " (via " + actualRenderer.name() + " plumbing)" : "")
+                + "\n"
             + "gpu probe     : " + (gpu != null
                     ? gpu.displayName() + " / " + (gpu.vendor != null ? gpu.vendor : "unknown vendor")
                     : "not queried") + "\n"

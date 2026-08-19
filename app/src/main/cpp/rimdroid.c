@@ -1199,7 +1199,10 @@ static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
                     set_gpa(rimdroid_gles_resolver);
                     LOGI("GL4ES: set_getprocaddress installed");
                 } else {
-                    LOGE("GL4ES: set_getprocaddress symbol not found in %s", gl4es_path);
+                    // Not an error: set_getprocaddress is a classic-GL4ES-only entry point. MobileGlues
+                    // and NG-GL4ES resolve the GLES driver themselves, so its absence is expected there.
+                    LOGI("GLT: no set_getprocaddress export in %s (expected for MobileGlues / NG-GL4ES)",
+                         gl4es_path);
                 }
             } else {
                 LOGE("GL4ES: dlopen(%s) failed: %s", gl4es_path, dlerror());

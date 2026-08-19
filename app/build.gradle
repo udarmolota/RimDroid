@@ -13,8 +13,8 @@ android {
         applicationId "com.rimdroid"
         minSdk = 30
         targetSdk = 35
-        versionCode 25
-        versionName "0.2.5"
+        versionCode 26
+        versionName "0.2.6"
         // JavaSteam + protobuf + kotlin push us past the 64K method limit. minSdk 30 has
         // native multidex, but the build still needs this flag to split the dex.
         multiDexEnabled true

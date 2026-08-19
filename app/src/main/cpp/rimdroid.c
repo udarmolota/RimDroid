@@ -29,6 +29,46 @@
 #include "android_linker_ns.h"
 #include "logger.h"
 
+// --- Reserve the low address range a non-PIE game needs -------------------------------------------
+// RimWorld's launcher binary is a non-PIE (ET_EXEC) ELF: it can only run from one fixed address
+// (0x400000 on 1.5, 0x200000 on 1.6). On some devices something else in the process grabs that range
+// first — seen on a Huawei Kirin 8000, where box64 then fails the load with EEXIST and the game can
+// never start. Our own startup order is the likely culprit: the GPU driver initialises long before we
+// load the game, and on that phone it maps low.
+//
+// Claim the range here, from a library constructor, i.e. before ANY of our graphics setup runs.
+// PROT_NONE + MAP_NORESERVE costs address space only, no memory. MAP_FIXED_NOREPLACE means we never
+// clobber an existing mapping: if the range is already taken this simply fails and we log it, leaving
+// the situation exactly as before. box64 later maps the game over our placeholder — it recognises the
+// range through RIMDROID_ELF_RESERVE (see rd_range_is_reserved in box64's elfloader.c).
+// Set RIMDROID_NO_ELF_RESERVE=1 to skip this, should holding the range ever upset a driver.
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE 0x100000
+#endif
+#define RD_ELF_RESERVE_BASE 0x200000UL
+#define RD_ELF_RESERVE_END  0x800000UL
+
+__attribute__((constructor))
+static void rd_reserve_elf_range(void)
+{
+    if (getenv("RIMDROID_NO_ELF_RESERVE")) return;
+    size_t len = RD_ELF_RESERVE_END - RD_ELF_RESERVE_BASE;
+    void* p = mmap((void*)RD_ELF_RESERVE_BASE, len, PROT_NONE,
+                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE, -1, 0);
+    if (p == (void*)RD_ELF_RESERVE_BASE) {
+        static char env[64];
+        snprintf(env, sizeof(env), "0x%lx-0x%lx", RD_ELF_RESERVE_BASE, RD_ELF_RESERVE_END);
+        setenv("RIMDROID_ELF_RESERVE", env, 1);
+        LOGI("ELF reserve: holding %s for the game's fixed load address", env);
+    } else {
+        if (p != MAP_FAILED) munmap(p, len);   // kernel ignored the flag and placed it elsewhere
+        LOGE("ELF reserve: could not hold 0x%lx-0x%lx (%s) — a non-PIE game may fail to load",
+             RD_ELF_RESERVE_BASE, RD_ELF_RESERVE_END,
+             (p == MAP_FAILED) ? strerror(errno) : "kernel relocated it");
+    }
+}
+// --------------------------------------------------------------------------------------------------
+
 #define LOG_TAG "rimdroid-main"
 
 // ---- Globals ----------------------------------------------------------------

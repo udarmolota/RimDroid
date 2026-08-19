@@ -315,8 +315,11 @@ public class GameLauncher {
         // including SDL2 — our my2_SDL_DYNAPI_entry never fires.
         // glibc/libm/libpthread are essential and stay wrapped regardless.
 
-        // box64 log
-        Os.setenv("BOX64_LOG_FILE", gameInstance.getGamePath() + "/box64.log", true);
+        // box64 log. BOX64_TRACE_FILE is the variable box64 actually reads (it becomes box64's own
+        // `ftrace` stream, i.e. where printf_log writes); BOX64_LOG_FILE was never a box64 variable, so
+        // this used to be a no-op and every bug report came back without box64.log. Writing straight to
+        // a file also means the log survives a hard crash, unlike the stdout pipe we otherwise capture.
+        Os.setenv("BOX64_TRACE_FILE", gameInstance.getGamePath() + "/box64.log", true);
         
         // Unity writes Player.log here
         Os.setenv("HOME", gameInstance.getGamePath(), true);

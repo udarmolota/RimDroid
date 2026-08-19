@@ -53,6 +53,11 @@ public final class LogExporter {
                 new File(userDir, "Player-prev.log"),
                 new File(gamePath, "box64.log"),
                 new File(gamePath, "rimdroid.log"),
+                // box64 appends one line per SIGSEGV here (raw write(), so it survives a hard crash and
+                // keeps the history of every run) with the guest RIP/RSP, the native pc and the tid —
+                // often the only crash locator we get, since rimdroid.log can lose its tail and a
+                // non-root app cannot read the system tombstone. Written to $HOME = the instance dir.
+                new File(gamePath, "sigsegv_fault.log"),
                 new File(configDir, "Prefs.xml"),
                 new File(configDir, "ModsConfig.xml"),   // active mods + load order — vital for mod/Harmony issues
                 crashLog,

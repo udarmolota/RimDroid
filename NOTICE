@@ -65,12 +65,9 @@ Used by RimDroid's on-device audio decoding path.
 Audio engine: FMOD by Firelight Technologies Pty Ltd.
 https://www.fmod.com/legal
 
-Steamworks API runtime Proprietary software Copyright (c) Valve Corporation
-(libsteam_api.so)
-Currently bundled as a compatibility component for affected RimWorld 1.6
-installations. It is not covered by RimDroid's GPL-3.0 license and remains subject
-to the applicable Valve and Steamworks terms.
-https://partner.steamgames.com/doc/sdk/api
+Steamworks API runtime (libsteam_api.so)
+Copyright (c) Valve Corporation.
+Valve proprietary software; not covered by RimDroid's GPL-3.0 license.
 
 --- Java / Gradle dependencies ---
 

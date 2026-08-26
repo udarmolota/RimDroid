@@ -136,6 +136,7 @@ data we're missing, and they're how the device recommendations here will get mor
   — the second renderer (OpenGL→OpenGL ES)
 - [Mesa / Zink](https://gitlab.freedesktop.org/mesa/mesa) — GPU rendering (OpenGL→Vulkan)
 - [Turnip / libvulkan_freedreno](https://gitlab.freedesktop.org/mesa/mesa) — Adreno Vulkan driver
+- [FMOD](https://www.fmod.com/) (proprietary, Firelight Technologies Pty Ltd.) — used for on-device decoding of audio from the user's RimWorld installation
 - [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access
 - [Harmony](https://github.com/pardeike/Harmony) — required by mods
 - [Zomdroid](https://github.com/udarmolota/zomdroid) — architecture reference and inspiration

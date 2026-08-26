@@ -10,19 +10,27 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-RimDroid does NOT include or distribute RimWorld, Unity, or any of their assets.
-RimWorld is a proprietary game by Ludeon Studios; users must supply their own
-legally obtained copy. RimDroid only launches/translates an x86_64 build the user
-already owns.
+RimDroid is an unofficial, community-developed compatibility launcher for running
+the Linux x86_64 version of RimWorld on ARM64 Android devices.
+
+Using RimDroid requires a complete Linux installation of RimWorld and any DLC the
+user chooses to enable. RimWorld and its related names and trademarks belong to
+Ludeon Studios Inc.
+
+"Portions of the materials used to create this content/mod are trademarks and/or
+copyrighted works of Ludeon Studios Inc. All rights reserved by Ludeon. This
+content/mod is not official and is not endorsed by Ludeon."
 
 ================================================================================
 THIRD-PARTY COMPONENTS
 ================================================================================
 
-RimDroid's own source code is licensed under GPL-3.0 (see LICENSE). It bundles
-and/or links the third-party components below, each of which remains under its
-own (permissive, GPL-compatible) license. Their copyright notices are retained
-here as required; the GPL-3.0 of RimDroid does not relicense them.
+RimDroid's own source code is licensed under GPL-3.0 unless a source file states
+otherwise. RimDroid also bundles and/or uses third-party components under their
+respective open-source or proprietary licenses.
+
+Third-party components remain the property of their respective copyright holders
+and are not relicensed under GPL-3.0 by their inclusion in RimDroid.
 
 Per-file exception (MIT, not GPL-3.0): the anonymous Steam Workshop mod-download
 mechanism — app/src/main/java/com/rimdroid/SteamAnonModDownloader.java and
@@ -46,7 +54,23 @@ softpipe, freedreno)
 SDL2                   zlib License         Copyright (c) 1997-2024 Sam Lantinga
                        (statically linked inside the user-supplied game)
 
-GL4ES                  MIT License          Copyright (c) 2016-2024 Sebastien Chevalier
+MobileGlues            LGPL-2.1             Copyright (c) MobileGL-Dev contributors
+                       https://github.com/MobileGL-Dev/MobileGlues
+
+--- Proprietary runtime components ---
+
+FMOD Engine runtimes   FMOD EULA            Copyright (c) Firelight Technologies Pty Ltd.
+Versions: 2.02.06, 2.02.24, and 2.03.09
+Used by RimDroid's on-device audio decoding path.
+Audio engine: FMOD by Firelight Technologies Pty Ltd.
+https://www.fmod.com/legal
+
+Steamworks API runtime Proprietary software Copyright (c) Valve Corporation
+(libsteam_api.so)
+Currently bundled as a compatibility component for affected RimWorld 1.6
+installations. It is not covered by RimDroid's GPL-3.0 license and remains subject
+to the applicable Valve and Steamworks terms.
+https://partner.steamgames.com/doc/sdk/api
 
 --- Java / Gradle dependencies ---
 
@@ -71,8 +95,11 @@ from the Noun Project, licensed under CC BY 3.0.
 https://thenounproject.com/icon/donate-285/
 
 ================================================================================
-Full license texts for the above are available from each project's repository.
-All are permissive licenses compatible with GPL-3.0; AndroidX/Material/Commons/
-Gson are Apache-2.0, which is why RimDroid uses GPL version 3 (Apache-2.0 is
-compatible with GPLv3, not GPLv2).
+Each third-party component remains subject to its own license terms. The links
+above identify the applicable upstream projects and terms; components distributed
+in binary form remain subject to any notice and redistribution requirements of
+their respective licenses.
+
+The presence of a component in this list does not imply endorsement of RimDroid
+by its copyright holder.
 ================================================================================

@@ -1,11 +1,13 @@
 # RimDroid
 
-**RimDroid** is a launcher that runs [RimWorld](https://rimworldgame.com) — the native Linux build —
-on Android phones, with real GPU rendering, touch controls, gamepad support, and mods.
+**RimDroid** is an unofficial, community-developed compatibility launcher that runs the native
+Linux x86_64 build of [RimWorld](https://rimworldgame.com) on ARM64 Android devices, with GPU
+rendering, touch controls, gamepad support, and mods.
 
 > [!NOTE]
-> This application is **not developed by or affiliated with Ludeon Studios** in any way.
-> You must own RimWorld — RimDroid does **not** include or distribute any game files.
+> RimDroid requires the Linux version of RimWorld and any DLC you want to use.
+> Steam users can install content available to their account through RimDroid's authenticated installer;
+> GOG users import their own game files.
 
 > [!WARNING]
 > **The app is still in beta.** All tested devices launch the game, but some need **Compatibility
@@ -113,8 +115,6 @@ turns it into OpenGL ES instead and needs no Vulkan at all.
   `libzfa.so` (Mesa + Zink) is built via GitHub Actions
 - `libmobileglues.so` ships unmodified from [MobileGlues](https://github.com/MobileGL-Dev/MobileGlues)
   in the bundled libraries
-- An instance holds the extracted Linux build of RimWorld (`RimWorldLinux` + `RimWorldLinux_Data`)
-
 ## Supporting development
 
 This is an independent project. To help keep it going, contributions are welcome via
@@ -139,5 +139,3 @@ data we're missing, and they're how the device recommendations here will get mor
 - [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access
 - [Harmony](https://github.com/pardeike/Harmony) — required by mods
 - [Zomdroid](https://github.com/udarmolota/zomdroid) — architecture reference and inspiration
-
-> RimDroid is not affiliated with Ludeon Studios. RimWorld must be purchased separately.

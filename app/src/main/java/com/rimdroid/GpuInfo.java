@@ -23,8 +23,14 @@ import java.util.regex.Pattern;
  */
 public final class GpuInfo {
 
+    // The model number must not be followed by another digit, but it may well be followed by a letter:
+    // Qualcomm ships "Adreno (TM) 642L" and "643L" (Snapdragon 778G/780G/782G/750G). A trailing word
+    // boundary rejected exactly those, because a digit and a letter are both word characters, so parsing
+    // returned 0 and the GPU was taken for a non-Adreno one. The driver policy then replaced the user's
+    // explicit Turnip pick with the phone's stock driver -- silently, since the settings still showed
+    // Turnip -- and on a 642L that driver lacks base Zink features, so the game rendered garbage and died.
     private static final Pattern ADRENO_MODEL_PATTERN = Pattern.compile(
-            "(?i)\\badreno(?:\\s*\\(tm\\))?[^0-9]{0,24}(\\d{3,4})\\b");
+            "(?i)\\badreno(?:\\s*\\(tm\\))?[^0-9]{0,24}(\\d{3,4})(?!\\d)");
     private static volatile GpuInfo cached;
 
     /** Raw GL_RENDERER from the phone's GLES driver (e.g. "Adreno (TM) 830"); null if unavailable. */

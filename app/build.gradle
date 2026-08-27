@@ -64,7 +64,8 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all {
-            outputFileName = "rimdroid-${variant.buildType.name}.apk"
+            // versionName above is the single source of truth for local and CI filenames.
+            outputFileName = "rimdroid-${variant.buildType.name}-${variant.versionName}.apk"
         }
     }
 }

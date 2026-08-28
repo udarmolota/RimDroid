@@ -181,11 +181,9 @@ public class InstallerService extends Service {
         if (RimWorldInstanceSetup.configureDetected(instanceDir))
             broadcastProgress("Configured RimWorld 1.6 renderer and texture compression.");
 
-        // Install-time save fix (Assembly-CSharp bspatch) DISABLED 2026-07-14: the save-bug root
-        // (box64's broken Android qsort mis-building Mono IMT tables) is fixed at the root in
-        // box64/wrappedlibc.c, so the IL bypass is redundant. Code + assets kept for rollback.
-        // broadcastProgress("Applying save fix...");
-        // SaveFixInstaller.applyTo(getApplicationContext(), instanceDir);
+        // The install-time save fix (Assembly-CSharp bspatch) used to run here. Removed entirely
+        // 2026-08-28: the save-bug root (box64's broken Android qsort mis-building Mono IMT
+        // tables) is fixed at the root in box64/wrappedlibc.c. Rollback lives in git history.
 
         prefs.setLastInstanceName(instanceName);
         prefs.setDependenciesInstalled(true);

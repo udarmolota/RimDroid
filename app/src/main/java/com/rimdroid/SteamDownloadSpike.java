@@ -810,12 +810,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
                 RimWorldInstanceSetup.configure(new File(installDir), true);
                 progress("Configured RimWorld 1.6 renderer (X11 + ZFA/Zink + texture compression).");
             }
-            // Install-time save fix (Assembly-CSharp bspatch) DISABLED 2026-08-28: the save-bug root
-            // (box64's broken Android qsort mis-building Mono IMT tables) is fixed at the root in
-            // box64/wrappedlibc.c, so patching the user's game dll is redundant. This was the last
-            // live caller (InstallerService's was disabled 2026-07-14). Class + assets kept for rollback.
-            // if (RimDroidApplication.APP != null)
-            //     SaveFixInstaller.applyTo(RimDroidApplication.APP, new File(installDir));
+            // The install-time save fix (Assembly-CSharp bspatch) used to run here. Removed
+            // entirely 2026-08-28 — root-fixed in box64 (see InstallerService for the history).
             LauncherPreferences.requireSingleton().setLastInstanceName(instanceName);
             GameInstanceManager.requireSingleton().reload();
             progress("Instance '" + instanceName + "' is now installed (" + RIMWORLD_APP_ID + ").");

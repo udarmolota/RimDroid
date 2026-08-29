@@ -252,7 +252,12 @@ public class GameLauncher {
             // "rd_texcompress" marker flips it ON to TEST the box64 CompressBC loop-bounding shim
             // (see rd_bc_bound_loops in wrappedsdl2.c) — if that shim tames the hang, compression
             // comes back and DLC fits in memory on 8GB devices.
-            boolean testCompress = new java.io.File(gameInstance.getGamePath(), "rd_texcompress").exists();
+            // Game-side BC texture compression stays Zink-only. On MobileGlues the encode chain
+            // (imageStore shader + BC storage) is not real on GLES — Mali has no BC formats at
+            // all — and with MG now reporting GL 4.2 (config.json below) Unity would start trying
+            // it. The box64 mip tiers carry the memory win on MG instead.
+            boolean testCompress = new java.io.File(gameInstance.getGamePath(), "rd_texcompress").exists()
+                    && gameInstance.settings().getRenderer() != LauncherPreferences.Renderer.MOBILEGLUES;
             PrefsXml.pinTextureCompression(new java.io.File(gameInstance.getGamePath(),
                     "unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Config"), testCompress);
             if (testCompress)
@@ -490,7 +495,12 @@ public class GameLauncher {
                             + "  \"enableExtDirectStateAccess\": 0,\n"
                             + "  \"maxGlslCacheSize\": 64,\n"
                             + "  \"angleDepthClearFixMode\": 0,\n"
-                            + "  \"customGLVersion\": 0,\n"
+                            // 42 = report GL 4.2 (MG accepts 0=default(4.0), 32-33, 40-46). At 4.0
+                            // Unity picks the legacy glTexImage2D upload path, which bypasses the
+                            // box64 texture-tier shim entirely — a player's Low tier did nothing on
+                            // MG (Tecno Mali-G615 report, 2026-08-29). 4.2 flips Unity onto
+                            // glTexStorage2D/glTexSubImage2D, the path the shim instruments.
+                            + "  \"customGLVersion\": 42,\n"
                             + "  \"hideMGEnvLevel\": 0,\n"
                             + "  \"fsr1Setting\": " + fsr + "\n"
                             + "}\n");

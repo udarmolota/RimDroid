@@ -26,6 +26,9 @@ import java.util.zip.ZipOutputStream;
  */
 public final class LogExporter {
 
+    /** Ship only this much of the end of a sigsegv_fault log (a fault storm can grow it to tens of MB). */
+    private static final long SIGSEGV_TAIL_BYTES = 256 * 1024;
+
     private LogExporter() {}
 
     public static final class Result {
@@ -53,11 +56,15 @@ public final class LogExporter {
                 new File(userDir, "Player-prev.log"),
                 new File(gamePath, "box64.log"),
                 new File(gamePath, "rimdroid.log"),
-                // box64 appends one line per SIGSEGV here (raw write(), so it survives a hard crash and
-                // keeps the history of every run) with the guest RIP/RSP, the native pc and the tid —
-                // often the only crash locator we get, since rimdroid.log can lose its tail and a
-                // non-root app cannot read the system tombstone. Written to $HOME = the instance dir.
+                // box64 appends one line per SIGSEGV here (raw write(), so it survives a hard crash)
+                // with the guest RIP/RSP, the native pc and the tid — often the only crash locator we
+                // get, since rimdroid.log can lose its tail and a non-root app cannot read the system
+                // tombstone. Written to $HOME = the instance dir. GameLauncher rotates it per launch
+                // (.prev = the run before), and the copy below ships only the tail: the GC/dynarec
+                // hotpage dance can repeat one fault endlessly (91 MB in a field report), and for a
+                // crash locator only the end of the file matters.
                 new File(gamePath, "sigsegv_fault.log"),
+                new File(gamePath, "sigsegv_fault.prev.log"),
                 new File(configDir, "Prefs.xml"),
                 new File(configDir, "ModsConfig.xml"),   // active mods + load order — vital for mod/Harmony issues
                 crashLog,
@@ -69,6 +76,15 @@ public final class LogExporter {
                 if (f == null || !f.isFile()) continue;
                 zos.putNextEntry(new ZipEntry(f.getName()));
                 try (FileInputStream in = new FileInputStream(f)) {
+                    // Tail cap for the per-fault SIGSEGV logs (see the candidates note above).
+                    if (f.getName().startsWith("sigsegv_fault") && f.length() > SIGSEGV_TAIL_BYTES) {
+                        long skip = f.length() - SIGSEGV_TAIL_BYTES;
+                        while (skip > 0) {
+                            long s = in.skip(skip);
+                            if (s <= 0) break;
+                            skip -= s;
+                        }
+                    }
                     int n;
                     while ((n = in.read(buf)) > 0) {
                         zos.write(buf, 0, n);

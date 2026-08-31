@@ -180,6 +180,19 @@ public class GameLauncher {
         BuiltinControllerUiMod.install(RimDroidApplication.APP,
                 new java.io.File(gameInstance.getGamePath()));
 
+        // Rotate box64's per-fault SIGSEGV log. box64 opens it O_APPEND and never truncates, and a
+        // GC-heavy modded game repeats the same protected-page fault forever — one field device had
+        // grown it to 91 MB / 704k lines (Tecno, 2026-08-30). One .prev generation keeps the
+        // previous run's tail available to Export logs after a relaunch.
+        {
+            java.io.File segv = new java.io.File(gameInstance.getGamePath(), "sigsegv_fault.log");
+            if (segv.isFile()) {
+                java.io.File prev = new java.io.File(gameInstance.getGamePath(), "sigsegv_fault.prev.log");
+                prev.delete();
+                if (!segv.renameTo(prev)) segv.delete();
+            }
+        }
+
         // --- Audio (always on) ---
         // Load the libasound→AAudio output shim on every launch. Its DT_SONAME is "libasound.so.2", so
         // loading it here registers it under that soname before the guest FMOD's dlopen("libasound.so.2")

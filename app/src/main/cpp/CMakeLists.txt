@@ -34,6 +34,7 @@ target_link_libraries(rimdroid
 # com_rimdroid. Used by the RimWorld 1.6 X11/Vulkan path (memory rimworld_16_port).
 # ---------------------------------------------------------------------------
 add_library(rimdroidxserver SHARED
+    xserver/jni_onload.c
     xserver/xconnector_epoll.c
     xserver/xinput_stream.c
     xserver/xoutput_stream.c

@@ -35,6 +35,7 @@ public final class RimWorldInstanceSetup {
     }
 
     public static boolean configure(File instanceDir, boolean rimWorld16) throws IOException {
+        BuiltinControllerUiMod.install(RimDroidApplication.APP, instanceDir);
         if (!rimWorld16) return false;
         createMarker(instanceDir, "rd_x11");
         createMarker(instanceDir, "rd_force_gles");
@@ -67,6 +68,7 @@ public final class RimWorldInstanceSetup {
         if (dirs == null) return;
         for (File dir : dirs) {
             try {
+                BuiltinControllerUiMod.install(RimDroidApplication.APP, dir);
                 if (isVersion16(dir)) {
                     fixupUnityPlayer(dir);
                     fixupSteamApi(dir);

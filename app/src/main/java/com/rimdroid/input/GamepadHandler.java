@@ -16,11 +16,11 @@ import java.util.EnumSet;
  *
  * Default LOGICAL→action mapping (the physical→logical remap lives in GamepadMapping / the mapper UI):
  *   - Right stick    -> move the cursor (analog, per-frame)        [matches the on-screen layout]
- *   - Left stick     -> camera pan (held arrow keys)
+ *   - Left stick     -> camera pan (held W/A/S/D)
  *   - RB / LB        -> zoom in / out (mouse wheel, pulsed while held)
  *   - RT             -> left click      LT -> right click  (analog triggers as buttons)
- *   - A -> F1         X -> F2           Y  -> Q (rotate)
- *   - B -> Escape     Start -> "." (next colonist)         Select -> Tab
+ *   - A -> Enter      B -> Escape        X -> Tab (Architect)      Y -> Space (pause)
+ *   - Start/Select -> Escape             L3 -> Q (rotate)          R3 -> Shift
  *   - D-pad          -> time controls: Left=speed1, Up=speed2, Right=speed3, Down=pause (Space)
  *
  * RimWorld's speed keys 1/2/3 may be unbound by default — set them in Options -> Keyboard if needed.
@@ -51,13 +51,13 @@ public class GamepadHandler {
     private float hatX, hatY;   // D-pad as HAT axes
 
     // raw button state (written by onKey)
-    private boolean bA, bB, bX, bY, bL1, bR1, bL2, bR2, bStart, bSelect, bL3;
+    private boolean bA, bB, bX, bY, bL1, bR1, bL2, bR2, bStart, bSelect, bL3, bR3;
     private boolean dUp, dDown, dLeft, dRight;   // D-pad as keycodes
 
     private final EnumSet<Binding> held = EnumSet.noneOf(Binding.class);
     private float zoomAccum;
     // rising-edge memory for tap actions (pause / speeds / tab)
-    private boolean ePause, eSpeed1, eSpeed2, eSpeed3, eTab;
+    private boolean ePause, eSpeed1, eSpeed2, eSpeed3;
 
     private boolean running;
     private long lastFrameNs;
@@ -85,9 +85,9 @@ public class GamepadHandler {
         Choreographer.getInstance().removeFrameCallback(frameCallback);
         for (Binding b : EnumSet.copyOf(held)) setHeld(b, false);   // unstick everything
         rsX = rsY = lsX = lsY = lt = rt = hatX = hatY = 0;
-        bA = bB = bX = bY = bL1 = bR1 = bL2 = bR2 = bStart = bSelect = bL3 = false;
+        bA = bB = bX = bY = bL1 = bR1 = bL2 = bR2 = bStart = bSelect = bL3 = bR3 = false;
         dUp = dDown = dLeft = dRight = false;
-        ePause = eSpeed1 = eSpeed2 = eSpeed3 = eTab = false;
+        ePause = eSpeed1 = eSpeed2 = eSpeed3 = false;
     }
 
     // ============================= input events =============================
@@ -112,16 +112,16 @@ public class GamepadHandler {
         // Face / shoulder / menu / thumb buttons go through the user's physical→logical remap
         // (GamepadMapping), so swapped/“inverted” controllers can be fixed in the mapper UI.
         switch (GamepadMapping.toLogical(kc)) {
-            case GamepadMapping.L_A:      bA = down;      return true;   // -> F1
+            case GamepadMapping.L_A:      bA = down;      return true;   // -> Enter / Accept
             case GamepadMapping.L_B:      bB = down;      return true;   // -> Escape
-            case GamepadMapping.L_X:      bX = down;      return true;   // -> F2
-            case GamepadMapping.L_Y:      bY = down;      return true;   // -> Q (rotate)
+            case GamepadMapping.L_X:      bX = down;      return true;   // -> Tab / Architect
+            case GamepadMapping.L_Y:      bY = down;      return true;   // -> Space / Pause
             case GamepadMapping.L_LB:     bL1 = down;     return true;   // -> zoom out
             case GamepadMapping.L_RB:     bR1 = down;     return true;   // -> zoom in
-            case GamepadMapping.L_SELECT: bSelect = down; return true;   // -> Tab
-            case GamepadMapping.L_START:  bStart = down;  return true;   // -> "." (next colonist)
-            case GamepadMapping.L_L3:     bL3 = down;     return true;   // -> Shift (queue/multi-select)
-            case GamepadMapping.L_R3:     return true;    // unused for now (mapped for completeness)
+            case GamepadMapping.L_SELECT: bSelect = down; return true;   // -> Escape
+            case GamepadMapping.L_START:  bStart = down;  return true;   // -> Escape
+            case GamepadMapping.L_L3:     bL3 = down;     return true;   // -> Q (rotate)
+            case GamepadMapping.L_R3:     bR3 = down;     return true;   // -> Shift
             default:
                 return true;   // swallow other gamepad buttons so they don't trigger focus/back nav
         }
@@ -180,23 +180,23 @@ public class GamepadHandler {
         if (cx != 0f || cy != 0f)
             controls.moveCursorBy(cx * CURSOR_PX_PER_SEC * dt, cy * CURSOR_PX_PER_SEC * dt);
 
-        // left stick -> camera pan (held arrow keys)
-        setHeld(Binding.KEY_RIGHT, lsX >  CAM_THRESHOLD);
-        setHeld(Binding.KEY_LEFT,  lsX < -CAM_THRESHOLD);
-        setHeld(Binding.KEY_DOWN,  lsY >  CAM_THRESHOLD);
-        setHeld(Binding.KEY_UP,    lsY < -CAM_THRESHOLD);
+        // left stick -> camera pan, matching RimWorld's controller profile
+        setHeld(Binding.KEY_D, lsX >  CAM_THRESHOLD);
+        setHeld(Binding.KEY_A, lsX < -CAM_THRESHOLD);
+        setHeld(Binding.KEY_S, lsY >  CAM_THRESHOLD);
+        setHeld(Binding.KEY_W, lsY < -CAM_THRESHOLD);
 
-        // clicks live on the triggers only (RT=left, LT=right); A/X are freed for F1/F2 below.
+        // clicks live on the triggers only (RT=left, LT=right).
         setHeld(Binding.MOUSE_LEFT,  rt > TRIG_THRESH || bR2);
         setHeld(Binding.MOUSE_RIGHT, lt > TRIG_THRESH || bL2);
 
-        // face / menu buttons -> held keys (one down on press, one up on release; no auto-repeat)
-        setHeld(Binding.KEY_ESCAPE, bB);             // B     -> Escape (RimWorld menu)
-        setHeld(Binding.KEY_F1, bA);                 // A     -> F1
-        setHeld(Binding.KEY_F2, bX);                 // X     -> F2
-        setHeld(Binding.KEY_Q,  bY);                 // Y     -> Q (rotate blueprint)
-        setHeld(Binding.KEY_PERIOD, bStart);         // Start -> "." (next colonist)
-        setHeld(Binding.KEY_LSHIFT, bL3);            // L3    -> Shift (held: queue orders / multi-select)
+        // Face buttons follow the labels drawn by RimWorld's controller UI.
+        setHeld(Binding.KEY_ENTER, bA);                        // A -> Accept / first command
+        setHeld(Binding.KEY_ESCAPE, bB || bStart || bSelect); // B/Menu -> Back
+        setHeld(Binding.KEY_TAB, bX);                          // X -> Architect
+        setHeld(Binding.KEY_SPACE, bY);                        // Y -> Pause/resume
+        setHeld(Binding.KEY_Q, bL3);                           // L3 -> rotate blueprint
+        setHeld(Binding.KEY_LSHIFT, bR3);                      // R3 -> queue/multi-select modifier
 
         // bumpers -> pulsed zoom (mouse wheel). SCROLL bindings act once per inject.
         zoomAccum += dt;
@@ -206,7 +206,7 @@ public class GamepadHandler {
             else            zoomAccum = ZOOM_INTERVAL;   // cap so the next press fires promptly
         }
 
-        // D-pad -> time controls (tap on rising edge). Via keycodes OR HAT axes. Select -> Tab.
+        // D-pad -> time controls (tap on rising edge), via keycodes OR HAT axes.
         boolean dpUp    = dUp    || hatY < -0.5f;
         boolean dpDown  = dDown  || hatY >  0.5f;
         boolean dpLeft  = dLeft  || hatX < -0.5f;
@@ -215,7 +215,6 @@ public class GamepadHandler {
         eSpeed2 = edgeTap(Binding.KEY_2, dpUp,    eSpeed2);          // D-pad Up    -> speed 2
         eSpeed3 = edgeTap(Binding.KEY_3, dpRight, eSpeed3);          // D-pad Right -> speed 3
         ePause  = edgeTap(Binding.KEY_SPACE, dpDown, ePause);       // D-pad Down  -> pause
-        eTab    = edgeTap(Binding.KEY_TAB, bSelect, eTab);          // Select      -> Tab
     }
 
     // ============================= helpers =============================
@@ -245,5 +244,24 @@ public class GamepadHandler {
         return (source & InputDevice.SOURCE_GAMEPAD)  == InputDevice.SOURCE_GAMEPAD
             || (source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
             || (source & InputDevice.SOURCE_DPAD)     == InputDevice.SOURCE_DPAD;
+    }
+
+    /** Shared launch/activity probe. Require a real analog-capable device so keyboards and
+     *  Android TV remotes that merely advertise DPAD do not enable controller UI. */
+    public static boolean hasConnectedGamepad() {
+        for (int id : InputDevice.getDeviceIds()) {
+            try {
+                InputDevice device = InputDevice.getDevice(id);
+                if (device == null || device.isVirtual()) continue;
+                int sources = device.getSources();
+                boolean gamepad =
+                       (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                    || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+                boolean hasMotion = device.getMotionRanges() != null
+                        && !device.getMotionRanges().isEmpty();
+                if (gamepad && hasMotion) return true;
+            } catch (Throwable ignored) {}
+        }
+        return false;
     }
 }

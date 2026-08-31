@@ -20,6 +20,7 @@ public class GameLauncher {
 
     private static LogCallback logCallback;
     private static LogcatReader logcatReader;
+    private static volatile boolean gamepadPresentAtLaunch;
 
     public static void setLogCallback(LogCallback callback) {
         logCallback = callback;
@@ -109,6 +110,8 @@ public class GameLauncher {
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
+            + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
+                + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
                 + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=" + (s.isCompatibilityMode() ? "2 X87DOUBLE=1 MAXCPU=1" : "1") + "\n"
             + "extra env     : " + envFieldReport(s) + "\n"
@@ -172,6 +175,11 @@ public class GameLauncher {
 
     public static void launch(GameInstance gameInstance) throws ErrnoException {
 
+        // Reconcile immediately before every launch too: this covers a freshly downloaded 1.5
+        // instance and repairs a controller mod/config removed after Application startup.
+        BuiltinControllerUiMod.install(RimDroidApplication.APP,
+                new java.io.File(gameInstance.getGamePath()));
+
         // --- Audio (always on) ---
         // Load the libasound→AAudio output shim on every launch. Its DT_SONAME is "libasound.so.2", so
         // loading it here registers it under that soname before the guest FMOD's dlopen("libasound.so.2")
@@ -208,6 +216,10 @@ public class GameLauncher {
         // AI told them to set these to 1). Precise FP costs a little speed, safety wins.
         Os.setenv("BOX64_DYNAREC_FASTNAN", "0", true);
         Os.setenv("BOX64_DYNAREC_FASTROUND", "0", true);
+        // The built-in RimDroid mod reads this on RimWorld's managed loading thread. Extra env
+        // vars are applied later, so RIMDROID_CONTROLLER_UI=0/1 remains an explicit A/B override.
+        gamepadPresentAtLaunch = com.rimdroid.input.GamepadHandler.hasConnectedGamepad();
+        Os.setenv("RIMDROID_CONTROLLER_UI", gamepadPresentAtLaunch ? "1" : "0", true);
         // TEMPORARY tester experiment (DEBUG builds only): force box64's aligned-atomics CAS path to
         // test the Mali/Cortex save-corruption hypothesis — Mono's GC CMPXCHG may be hitting box64's
         // "unaligned atomic" fallback (marked "not enough" in box64 source) → corrupting Pawn objects →
@@ -727,6 +739,12 @@ public class GameLauncher {
                 }
             }
         }
+
+        // Keep the built-in mod out of ordinary keyboard/touch save metadata. It is activated
+        // only for launches where the final env value (including a user override) requests the
+        // game's controller-oriented UI.
+        BuiltinControllerUiMod.setActive(new java.io.File(gameInstance.getGamePath()),
+                "1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")));
 
         // Safety clamp: several "save corruption" reports trace to cargo-cult env vars (copied from a
         // third-party AI) that widen the box64 JIT race — BOX64_DYNAREC_BIGBLOCK>1, FASTNAN=1,

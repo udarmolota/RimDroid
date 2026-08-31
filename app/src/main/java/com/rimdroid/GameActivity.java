@@ -684,22 +684,7 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     }
 
     private boolean isGamepadConnected() {
-        for (int id : android.view.InputDevice.getDeviceIds()) {
-            // A transient/virtual device (e.g. a screen recorder) can throw while being queried.
-            try {
-                android.view.InputDevice d = android.view.InputDevice.getDevice(id);
-                if (d == null || d.isVirtual()) continue;
-                int s = d.getSources();
-                boolean gamepadSource =
-                       (s & android.view.InputDevice.SOURCE_GAMEPAD)  == android.view.InputDevice.SOURCE_GAMEPAD
-                    || (s & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK;
-                // Require analog motion ranges too (like Zomdroid) so a keyboard/remote that merely
-                // reports a DPAD source isn't mistaken for a gamepad.
-                boolean hasMotion = d.getMotionRanges() != null && !d.getMotionRanges().isEmpty();
-                if (gamepadSource && hasMotion) return true;
-            } catch (Throwable ignored) {}
-        }
-        return false;
+        return com.rimdroid.input.GamepadHandler.hasConnectedGamepad();
     }
 
     // Physical gamepad: buttons/D-pad arrive as key events, analog sticks/triggers as generic

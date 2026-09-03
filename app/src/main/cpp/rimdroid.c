@@ -84,6 +84,10 @@ void* g_egl_display = NULL;   // EGLDisplay
 void* g_egl_surface = NULL;   // EGLSurface
 void* g_egl_context = NULL;   // EGLContext (the PRIMARY; workers share with it — see eglt_create_shared)
 static void* g_egl_config = NULL;   // EGLConfig the surface/contexts were created with
+// Android can replace a SurfaceView's BufferQueue while the game process and GL context survive
+// (Home, screen lock, calls, display changes). An EGLSurface belongs to exactly one generation.
+static uint64_t g_native_window_generation = 0; // protected by g_rimdroid_surface.mutex
+static uint64_t g_egl_surface_generation = 0;   // updated by the render/present thread
 
 // ZFA (Zink-for-Android) state for the ZINK_ZFA renderer.  ZFA presents a real
 // desktop OpenGL CORE profile (Mesa Zink over Vulkan/Turnip), which is what
@@ -639,6 +643,77 @@ static EGLBoolean rd_eglSwapBuffers(EGLDisplay d, EGLSurface s) {
     return g_glt_egl.swap ? g_glt_egl.swap(d, s) : eglSwapBuffers(d, s);
 }
 
+// Replace only the disposable EGL window surface after Android recreates the SurfaceView. All EGL
+// work stays on the game's render thread; doing it in SurfaceHolder.Callback would race the current
+// context. The caller supplies the context that must remain current, which matters in MULTICTX mode.
+static bool rd_eglt_sync_window_surface(EGLContext context) {
+    ANativeWindow* window = NULL;
+    int width = 0, height = 0;
+    uint64_t generation = 0;
+
+    pthread_mutex_lock(&g_rimdroid_surface.mutex);
+    generation = g_native_window_generation;
+    if (generation == g_egl_surface_generation) {
+        pthread_mutex_unlock(&g_rimdroid_surface.mutex);
+        return g_egl_surface != EGL_NO_SURFACE;
+    }
+    window = g_rimdroid_surface.native_window;
+    width = g_rimdroid_surface.width;
+    height = g_rimdroid_surface.height;
+    if (window) ANativeWindow_acquire(window);
+    pthread_mutex_unlock(&g_rimdroid_surface.mutex);
+
+    if (!window) {
+        static uint64_t last_missing_generation = UINT64_MAX;
+        if (last_missing_generation != generation) {
+            LOGI("EGLT: Android surface unavailable at generation %llu; present paused until resume",
+                 (unsigned long long)generation);
+            last_missing_generation = generation;
+        }
+        return false;
+    }
+
+    EGLint format = 0;
+    eglGetConfigAttrib(g_egl_display, g_egl_config, EGL_NATIVE_VISUAL_ID, &format);
+    ANativeWindow_setBuffersGeometry(window, 0, 0, format);
+
+    EGLSurface replacement = eglCreateWindowSurface(g_egl_display, g_egl_config, window, NULL);
+    if (replacement == EGL_NO_SURFACE) {
+        LOGE("EGLT: replacement eglCreateWindowSurface failed at generation %llu: 0x%x",
+             (unsigned long long)generation, eglGetError());
+        ANativeWindow_release(window);
+        return false;
+    }
+
+    if (context == EGL_NO_CONTEXT) context = g_egl_context;
+    if (!rd_eglMakeCurrent(g_egl_display, replacement, replacement, context)) {
+        LOGE("EGLT: replacement eglMakeCurrent failed at generation %llu: 0x%x",
+             (unsigned long long)generation, eglGetError());
+        eglDestroySurface(g_egl_display, replacement);
+        ANativeWindow_release(window);
+        return false;
+    }
+
+    EGLSurface previous = g_egl_surface;
+    g_egl_surface = replacement;
+    g_egl_surface_generation = generation;
+    if (previous != EGL_NO_SURFACE && previous != replacement)
+        eglDestroySurface(g_egl_display, previous);
+
+    const char* no_vsync = getenv("RIMDROID_GLT_NOVSYNC");
+    if (no_vsync && no_vsync[0] == '1') eglSwapInterval(g_egl_display, 0);
+
+    pthread_mutex_lock(&g_rimdroid_surface.mutex);
+    if (g_native_window_generation == generation)
+        g_rimdroid_surface.is_dirty = false;
+    pthread_mutex_unlock(&g_rimdroid_surface.mutex);
+
+    LOGI("EGLT: rebound context %p to surface %p generation %llu (%dx%d), old surface %p",
+         context, replacement, (unsigned long long)generation, width, height, previous);
+    ANativeWindow_release(window);
+    return true;
+}
+
 // ---- GLX -> EGL-translator bridge helpers (RimWorld 1.6 on MobileGlues/NG) --------
 // wrappedlibgl.c weak-imports these for its rd_bridge_* dispatch: when the renderer is
 // a GL->GLES translator (g_egl_context set, no ZFA), Unity's glX calls land on the one
@@ -646,7 +721,8 @@ static EGLBoolean rd_eglSwapBuffers(EGLDisplay d, EGLSurface s) {
 // context: bind/release happen on the CALLING thread (single-threaded render enforced
 // by getArgs while the translator is active).
 int rimdroid_eglt_make_current(void) {
-    if (!g_egl_display || !g_egl_surface || !g_egl_context) return 0;
+    if (!g_egl_display || !g_egl_context) return 0;
+    if (!rd_eglt_sync_window_surface(g_egl_context)) return 0;
     if (!rd_eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, g_egl_context)) {
         LOGE("EGLT: eglMakeCurrent failed: 0x%x", eglGetError());
         return 0;
@@ -658,7 +734,18 @@ int rimdroid_eglt_release_current(void) {
     return rd_eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) ? 1 : 0;
 }
 void rimdroid_eglt_swap(void) {
-    if (g_egl_display && g_egl_surface) rd_eglSwapBuffers(g_egl_display, g_egl_surface);
+    if (!g_egl_display || !g_egl_context) return;
+    EGLContext current = eglGetCurrentContext();
+    if (!rd_eglt_sync_window_surface(current)) return;
+    if (!rd_eglSwapBuffers(g_egl_display, g_egl_surface)) {
+        EGLint error = eglGetError();
+        static uint64_t last_failed_generation = UINT64_MAX;
+        if (last_failed_generation != g_egl_surface_generation) {
+            LOGE("EGLT: eglSwapBuffers failed at generation %llu: 0x%x",
+                 (unsigned long long)g_egl_surface_generation, error);
+            last_failed_generation = g_egl_surface_generation;
+        }
+    }
 }
 
 // ---- Multi-context factory (bridge Level 3, 2026-08-13) --------------------------------------
@@ -689,8 +776,10 @@ void* rimdroid_eglt_create_shared(void) {
 // otherwise surfaceless, falling back to a per-context 1x1 pbuffer.
 int rimdroid_eglt_make_current_on(void* ctx, int with_window) {
     if (!g_egl_display || !ctx) return 0;
-    if (with_window)
+    if (with_window) {
+        if (!rd_eglt_sync_window_surface((EGLContext)ctx)) return 0;
         return rd_eglMakeCurrent(g_egl_display, g_egl_surface, g_egl_surface, ctx) ? 1 : 0;
+    }
     if (rd_eglMakeCurrent(g_egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx)) return 1;
     // No surfaceless support: use (and lazily create) this context's own pbuffer.
     void** pb = NULL;
@@ -1186,6 +1275,11 @@ static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
     eglGetConfigAttrib(g_egl_display, config, EGL_NATIVE_VISUAL_ID, &format);
     ANativeWindow_setBuffersGeometry(nativeWindow, 0, 0, format);
 
+    uint64_t initial_surface_generation = 0;
+    pthread_mutex_lock(&g_rimdroid_surface.mutex);
+    initial_surface_generation = g_native_window_generation;
+    pthread_mutex_unlock(&g_rimdroid_surface.mutex);
+
     g_egl_surface = eglCreateWindowSurface(g_egl_display, config, nativeWindow, NULL);
     if (g_egl_surface == EGL_NO_SURFACE) {
         LOGE("EGL: eglCreateWindowSurface failed: 0x%x", eglGetError());
@@ -1211,6 +1305,11 @@ static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
         LOGE("EGL: eglMakeCurrent failed: 0x%x", eglGetError());
         return -1;
     }
+    g_egl_surface_generation = initial_surface_generation;
+    pthread_mutex_lock(&g_rimdroid_surface.mutex);
+    if (g_native_window_generation == initial_surface_generation)
+        g_rimdroid_surface.is_dirty = false;
+    pthread_mutex_unlock(&g_rimdroid_surface.mutex);
     // RIMDROID_GLT_NOVSYNC=1: present without waiting for the display tick. Diagnostic first
     // (the menu FPS ceiling on MobileGlues read exactly 120 = the S25's refresh rate, masking
     // the path's true throughput vs zink's unthrottled 500-600), possibly a small in-game win
@@ -2088,16 +2187,25 @@ void rimdroid_deinit() {
 
 void rimdroid_surface_init(ANativeWindow* wnd, int width, int height) {
     pthread_mutex_lock(&g_rimdroid_surface.mutex);
-    // Release the previously acquired window before replacing it — repeated surfaceChanged
-    // leaked one ANativeWindow reference per call (kept the old BufferQueue pinned).
-    if (g_rimdroid_surface.native_window && g_rimdroid_surface.native_window != wnd)
-        ANativeWindow_release(g_rimdroid_surface.native_window);
-    g_rimdroid_surface.native_window = wnd;
+    // ANativeWindow_fromSurface acquires on every callback. If this is the same native object,
+    // retain our old owned reference and release the duplicate callback reference. A size-only
+    // surfaceChanged does not replace the BufferQueue, so it must not force a second EGLSurface.
+    bool window_changed = g_rimdroid_surface.native_window != wnd;
+    if (g_rimdroid_surface.native_window == wnd && wnd) {
+        ANativeWindow_release(wnd);
+    } else {
+        if (g_rimdroid_surface.native_window)
+            ANativeWindow_release(g_rimdroid_surface.native_window);
+        g_rimdroid_surface.native_window = wnd;
+    }
     g_rimdroid_surface.width  = width;
     g_rimdroid_surface.height = height;
     g_rimdroid_surface.is_dirty = true;
+    if (window_changed) ++g_native_window_generation;
+    uint64_t generation = g_native_window_generation;
     pthread_mutex_unlock(&g_rimdroid_surface.mutex);
-    LOGI("Surface init: %dx%d", width, height);
+    LOGI("Surface init: %dx%d window=%p generation=%llu", width, height, wnd,
+         (unsigned long long)generation);
 }
 
 void rimdroid_surface_deinit() {
@@ -2110,5 +2218,10 @@ void rimdroid_surface_deinit() {
         ANativeWindow_release(g_rimdroid_surface.native_window);
         g_rimdroid_surface.native_window = NULL;
     }
+    g_rimdroid_surface.width = 0;
+    g_rimdroid_surface.height = 0;
+    g_rimdroid_surface.is_dirty = true;
+    uint64_t generation = ++g_native_window_generation;
     pthread_mutex_unlock(&g_rimdroid_surface.mutex);
+    LOGI("Surface deinit: generation=%llu", (unsigned long long)generation);
 }

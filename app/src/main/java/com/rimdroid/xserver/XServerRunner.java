@@ -41,6 +41,7 @@ public final class XServerRunner {
     }
 
     public static synchronized void stop() {
+        if (xServer != null) xServer.shutdownInputDispatcher();
         if (connector != null) {
             connector.destroy();
             connector = null;

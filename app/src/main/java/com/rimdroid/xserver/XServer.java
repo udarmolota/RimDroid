@@ -9,6 +9,7 @@ import com.rimdroid.xserver.extensions.SyncExtension;
 import com.rimdroid.xserver.extensions.XComposite;
 
 import java.nio.charset.Charset;
+import java.util.ArrayDeque;
 import java.util.EnumMap;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -33,7 +34,39 @@ public class XServer {
     public final CursorLocker cursorLocker;
     private SHMSegmentManager shmSegmentManager;
     private final EnumMap<Lockable, ReentrantLock> locks = new EnumMap<>(Lockable.class);
+    private final Object inputQueueLock = new Object();
+    private final ArrayDeque<PendingInput> inputQueue = new ArrayDeque<>();
+    private final Thread inputThread;
+    private boolean inputDispatcherRunning = true;
     private boolean relativeMouseMovement = false;
+
+    private static final int INPUT_POINTER_MOVE = 1;
+    private static final int INPUT_POINTER_DELTA = 2;
+    private static final int INPUT_BUTTON_PRESS = 3;
+    private static final int INPUT_BUTTON_RELEASE = 4;
+    private static final int INPUT_KEY_PRESS = 5;
+    private static final int INPUT_KEY_RELEASE = 6;
+    private static final int INPUT_KEY_PRESS_RAW = 7;
+    private static final int INPUT_KEY_RELEASE_RAW = 8;
+    private static final int MAX_QUEUED_INPUTS = 256;
+
+    private static final class PendingInput {
+        final int type;
+        int first;
+        int second;
+        final Object value;
+
+        PendingInput(int type, int first, int second, Object value) {
+            this.type = type;
+            this.first = first;
+            this.second = second;
+            this.value = value;
+        }
+
+        boolean isMotion() {
+            return type == INPUT_POINTER_MOVE || type == INPUT_POINTER_DELTA;
+        }
+    }
 
     public XServer(ScreenInfo screenInfo) {
         this.screenInfo = screenInfo;
@@ -49,6 +82,10 @@ public class XServer {
         grabManager = new GrabManager(this);
 
         extensions = setupExtensions();
+
+        inputThread = new Thread(this::runInputDispatcher, "RimDroid-XInput");
+        inputThread.setDaemon(true);
+        inputThread.start();
     }
 
     public boolean isRelativeMouseMovement() {
@@ -121,24 +158,40 @@ public class XServer {
     }
 
     public void injectPointerMove(int x, int y) {
+        enqueueInput(new PendingInput(INPUT_POINTER_MOVE, x, y, null));
+    }
+
+    private void injectPointerMoveNow(int x, int y) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             pointer.setPosition(x, y);
         }
     }
 
     public void injectPointerMoveDelta(int dx, int dy) {
+        enqueueInput(new PendingInput(INPUT_POINTER_DELTA, dx, dy, null));
+    }
+
+    private void injectPointerMoveDeltaNow(int dx, int dy) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             pointer.setPosition(pointer.getX() + dx, pointer.getY() + dy);
         }
     }
 
     public void injectPointerButtonPress(Pointer.Button buttonCode) {
+        enqueueInput(new PendingInput(INPUT_BUTTON_PRESS, 0, 0, buttonCode));
+    }
+
+    private void injectPointerButtonPressNow(Pointer.Button buttonCode) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             pointer.setButton(buttonCode, true);
         }
     }
 
     public void injectPointerButtonRelease(Pointer.Button buttonCode) {
+        enqueueInput(new PendingInput(INPUT_BUTTON_RELEASE, 0, 0, buttonCode));
+    }
+
+    private void injectPointerButtonReleaseNow(Pointer.Button buttonCode) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             pointer.setButton(buttonCode, false);
         }
@@ -149,12 +202,20 @@ public class XServer {
     }
 
     public void injectKeyPress(XKeycode xKeycode, int keysym) {
+        enqueueInput(new PendingInput(INPUT_KEY_PRESS, keysym, 0, xKeycode));
+    }
+
+    private void injectKeyPressNow(XKeycode xKeycode, int keysym) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             keyboard.setKeyPress(xKeycode.id, keysym);
         }
     }
 
     public void injectKeyRelease(XKeycode xKeycode) {
+        enqueueInput(new PendingInput(INPUT_KEY_RELEASE, 0, 0, xKeycode));
+    }
+
+    private void injectKeyReleaseNow(XKeycode xKeycode) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             keyboard.setKeyRelease(xKeycode.id);
         }
@@ -164,15 +225,108 @@ public class XServer {
             new android.os.Handler(android.os.Looper.getMainLooper());
 
     private void injectKeyPressRaw(byte keycode, int keysym) {
+        enqueueInput(new PendingInput(INPUT_KEY_PRESS_RAW, keycode, keysym, null));
+    }
+
+    private void injectKeyPressRawNow(byte keycode, int keysym) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             keyboard.setKeyPress(keycode, keysym);
         }
     }
 
     private void injectKeyReleaseRaw(byte keycode) {
+        enqueueInput(new PendingInput(INPUT_KEY_RELEASE_RAW, keycode, 0, null));
+    }
+
+    private void injectKeyReleaseRawNow(byte keycode) {
         try (XLock lock = lock(Lockable.WINDOW_MANAGER, Lockable.INPUT_DEVICE)) {
             keyboard.setKeyRelease(keycode);
         }
+    }
+
+    private void enqueueInput(PendingInput input) {
+        synchronized (inputQueueLock) {
+            if (!inputDispatcherRunning) return;
+
+            PendingInput last = inputQueue.peekLast();
+            if (last != null && input.isMotion() && last.type == input.type) {
+                if (input.type == INPUT_POINTER_DELTA) {
+                    last.first += input.first;
+                    last.second += input.second;
+                } else {
+                    last.first = input.first;
+                    last.second = input.second;
+                }
+                return;
+            }
+
+            if (inputQueue.size() >= MAX_QUEUED_INPUTS && input.isMotion()) return;
+            inputQueue.addLast(input);
+            inputQueueLock.notifyAll();
+        }
+    }
+
+    private void runInputDispatcher() {
+        while (true) {
+            PendingInput input;
+            synchronized (inputQueueLock) {
+                while (inputDispatcherRunning && inputQueue.isEmpty()) {
+                    try {
+                        inputQueueLock.wait();
+                    } catch (InterruptedException ignored) {
+                        // Re-check the running flag below.
+                    }
+                }
+                if (!inputDispatcherRunning) return;
+                input = inputQueue.removeFirst();
+            }
+
+            try {
+                dispatchInput(input);
+            } catch (RuntimeException e) {
+                android.util.Log.e("RimDroid/XServer", "Failed to dispatch input", e);
+            }
+        }
+    }
+
+    private void dispatchInput(PendingInput input) {
+        switch (input.type) {
+            case INPUT_POINTER_MOVE:
+                injectPointerMoveNow(input.first, input.second);
+                break;
+            case INPUT_POINTER_DELTA:
+                injectPointerMoveDeltaNow(input.first, input.second);
+                break;
+            case INPUT_BUTTON_PRESS:
+                injectPointerButtonPressNow((Pointer.Button)input.value);
+                break;
+            case INPUT_BUTTON_RELEASE:
+                injectPointerButtonReleaseNow((Pointer.Button)input.value);
+                break;
+            case INPUT_KEY_PRESS:
+                injectKeyPressNow((XKeycode)input.value, input.first);
+                break;
+            case INPUT_KEY_RELEASE:
+                injectKeyReleaseNow((XKeycode)input.value);
+                break;
+            case INPUT_KEY_PRESS_RAW:
+                injectKeyPressRawNow((byte)input.first, input.second);
+                break;
+            case INPUT_KEY_RELEASE_RAW:
+                injectKeyReleaseRawNow((byte)input.first);
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown input type " + input.type);
+        }
+    }
+
+    public void shutdownInputDispatcher() {
+        synchronized (inputQueueLock) {
+            inputDispatcherRunning = false;
+            inputQueue.clear();
+            inputQueueLock.notifyAll();
+        }
+        inputThread.interrupt();
     }
 
     /**

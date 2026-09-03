@@ -173,6 +173,9 @@ static void XConnectorEpoll_killConnection(XConnectorEpoll* connector, Connected
     }
     else removeFdFromEpoll(connector->epollFd, client->fd);
 
+    // Wake any server-side writer blocked because the guest stopped draining its X socket.
+    // close() alone does not reliably interrupt an I/O call already running on another thread.
+    shutdown(client->fd, SHUT_RDWR);
     CLOSEFD(client->fd);
 
     if (client->tag) {

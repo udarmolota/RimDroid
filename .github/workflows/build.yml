@@ -26,6 +26,11 @@ jobs:
           test -n "$VERSION_NAME"
           echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
+      - name: Test MobileGlues capability filter
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror app/src/test/native/mg_caps_test.c -o "$RUNNER_TEMP/mg_caps_test"
+          "$RUNNER_TEMP/mg_caps_test"
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

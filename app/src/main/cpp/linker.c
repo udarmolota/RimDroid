@@ -7,6 +7,7 @@
 #include "logger.h"
 #include "emulation.h"
 #include "rimdroid_globals.h"
+#include "mg_caps.h"
 #include "liblinkernsbypass/android_linker_ns.h"
 
 #define LOG_TAG "rimdroid-linker"
@@ -64,7 +65,8 @@ void* dlopen(const char* filename, int flags) {
 
 __attribute__((visibility("default"), used))
 void* dlsym(void* handle, const char* sym_name) {
-    return loader_dlsym(handle, sym_name, __builtin_return_address(0));
+    void* address = loader_dlsym(handle, sym_name, __builtin_return_address(0));
+    return rimdroid_mg_caps_override(sym_name, address);
 }
 
 __attribute__((visibility("default"), used))

@@ -18,6 +18,7 @@ add_subdirectory(liblinkernsbypass)
 add_library(rimdroid SHARED
     rimdroid.c
     rimdroid_jni.c
+    mg_caps.c
 )
 target_link_libraries(rimdroid
     log

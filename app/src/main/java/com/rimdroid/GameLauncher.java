@@ -467,6 +467,7 @@ public class GameLauncher {
         // (GL4ES / ZINK_ZFA / ZINK_OSMESA / SOFTPIPE).
         Os.setenv("RIMDROID_RENDERER", renderer.name(), true);  // read by rimdroid.c on init
         Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
+        Os.unsetenv("RIMDROID_MG_STORAGE_EXT");
 
         GpuInfo launchGpu = null;
         VulkanDriverPolicy.Decision driverDecision = null;
@@ -494,6 +495,7 @@ public class GameLauncher {
                     // MobileGlues: no LIBGL_* knobs — its config lives in MG_DIR_PATH/config.json and
                     // it writes its own log there too; point it at our cache dir so both are reachable.
                     Os.setenv("MG_DIR_PATH", AppStorage.requireSingleton().getCachePath(), true);
+                    Os.setenv("RIMDROID_MG_STORAGE_EXT", "1", true);
                     // Write MG's config.json ourselves (2026-08-13). Two knobs matter: the FSR1
                     // upscaler (RIMDROID_GLT_FSR=1..4 in the extra-env field; render smaller,
                     // upscale sharper — the blurry-fonts experiment) and the GLSL shader cache
@@ -502,12 +504,16 @@ public class GameLauncher {
                     // default: MG reads a MISSING key as -1, and -1 lands as "true" in some
                     // boolean knobs — a partial file would silently enable compute shaders etc.
                     int fsr = 0;
+                    int glVersion = 40;
                     String rawFsr = gameInstance.settings().getEnvVars();
                     if (rawFsr != null) {
-                        for (String tok : rawFsr.trim().split("\\s+"))
+                        for (String tok : rawFsr.trim().split("\\s+")) {
                             if (tok.startsWith("RIMDROID_GLT_FSR="))
                                 try { fsr = Integer.parseInt(tok.substring("RIMDROID_GLT_FSR=".length()).trim()); }
                                 catch (NumberFormatException ignored) {}
+                            if (tok.equals("RIMDROID_MG_GL_VERSION=42")) glVersion = 42;
+                            else if (tok.equals("RIMDROID_MG_GL_VERSION=40")) glVersion = 40;
+                        }
                     }
                     if (fsr < 0 || fsr > 4) fsr = 0;   // 0=off, 1=UltraQuality .. 4=Performance
                     java.io.File mgCfg = new java.io.File(AppStorage.requireSingleton().getCachePath(), "config.json");
@@ -520,17 +526,17 @@ public class GameLauncher {
                             + "  \"enableExtDirectStateAccess\": 0,\n"
                             + "  \"maxGlslCacheSize\": 64,\n"
                             + "  \"angleDepthClearFixMode\": 0,\n"
-                            // 42 = report GL 4.2 (MG accepts 0=default(4.0), 32-33, 40-46). At 4.0
-                            // Unity picks the legacy glTexImage2D upload path, which bypasses the
-                            // box64 texture-tier shim entirely — a player's Low tier did nothing on
-                            // MG (Tecno Mali-G615 report, 2026-08-29). 4.2 flips Unity onto
-                            // glTexStorage2D/glTexSubImage2D, the path the shim instruments.
-                            + "  \"customGLVersion\": 42,\n"
+                            // Test GL 4.0 + ARB_texture_storage (native MG caps filter). Unlike
+                            // claiming all of 4.2, this does not promise BC7 support. Verify Unity
+                            // still uses TexStorage2D and TEXSHRINK appears in the TECNO report.
+                            // RIMDROID_MG_GL_VERSION=42 restores the previous profile for A/B.
+                            + "  \"customGLVersion\": " + glVersion + ",\n"
                             + "  \"hideMGEnvLevel\": 0,\n"
                             + "  \"fsr1Setting\": " + fsr + "\n"
                             + "}\n");
                         android.util.Log.i("RimDroid", "GameLauncher: MobileGlues config.json written (fsr1Setting=" + fsr
-                            + ", glslCache=64MB)");
+                            + ", glslCache=64MB, customGLVersion=" + glVersion
+                            + ", storage-extension test; confirm MG CAPS/TEXSHRINK in native log)");
                     } catch (java.io.IOException e) {
                         android.util.Log.w("RimDroid", "GameLauncher: MobileGlues config.json write failed: " + e);
                     }

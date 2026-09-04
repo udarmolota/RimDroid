@@ -142,17 +142,22 @@ public final class PrefsXml {
     public static void pinTextureCompression(File configDir, boolean on) {
         if (configDir == null) return;
         File f = new File(configDir, "Prefs.xml");
-        if (!f.isFile()) return;   // first launch — RimWorld defaults are fine until the user flips it
-        String want = on ? "True" : "False";
         try {
-            String xml = new String(readAll(f), StandardCharsets.UTF_8);
-            if (xml.contains("<textureCompression>" + want + "</textureCompression>")) return;
-            xml = setTag(xml, "textureCompression", want);
-            writeAll(f, xml.getBytes(StandardCharsets.UTF_8));
-            Log.i(TAG, "Prefs pinned: textureCompression=" + want + " (" + f + ")");
+            if (updateTextureCompression(f, on))
+                Log.i(TAG, "Prefs pinned: textureCompression=" + (on ? "True" : "False") + " (" + f + ")");
         } catch (Exception e) {
             Log.w(TAG, "pinTextureCompression failed for " + f + ": " + e.getMessage());
         }
+    }
+
+    static boolean updateTextureCompression(File file, boolean on) throws IOException {
+        String want = on ? "True" : "False";
+        String xml = file.isFile() ? new String(readAll(file), StandardCharsets.UTF_8)
+                : "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<prefs>\n</prefs>\n";
+        if (xml.contains("<textureCompression>" + want + "</textureCompression>")) return false;
+        xml = setTag(xml, "textureCompression", want);
+        writeAll(file, xml.getBytes(StandardCharsets.UTF_8));
+        return true;
     }
 
     /** Replace {@code <key>...</key>} with the new value, or insert before {@code </prefs>}. */

@@ -26,6 +26,7 @@
 
 #include "rimdroid_globals.h"
 #include "rimdroid.h"
+#include "mg_caps.h"
 #include "android_linker_ns.h"
 #include "logger.h"
 
@@ -1342,6 +1343,11 @@ static int rimdroid_init_gl4es_egl(ANativeWindow* nativeWindow) {
                     // and NG-GL4ES resolve the GLES driver themselves, so its absence is expected there.
                     LOGI("GLT: no set_getprocaddress export in %s (expected for MobileGlues / NG-GL4ES)",
                          gl4es_path);
+                }
+                const char* storage_ext = getenv("RIMDROID_MG_STORAGE_EXT");
+                if (strstr(gl4es_path, "mobileglues") && storage_ext && !strcmp(storage_ext, "1")) {
+                    if (!rimdroid_mg_caps_init(h, dlsym))
+                        LOGW("MG CAPS: profile not installed; inspect version/probe before judging shrink");
                 }
             } else {
                 LOGE("GL4ES: dlopen(%s) failed: %s", gl4es_path, dlerror());

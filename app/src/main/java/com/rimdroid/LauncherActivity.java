@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 public class LauncherActivity extends AppCompatActivity {
@@ -41,6 +42,8 @@ public class LauncherActivity extends AppCompatActivity {
     private NavController navController;
     private AppBarConfiguration appBarConfiguration;
     private final Handler ui = new Handler(Looper.getMainLooper());
+    private static final String STATE_LOG_INSTANCE = "logExportInstance";
+    private String pendingLogInstanceName;
 
     private final ActivityResultLauncher<String[]> modZipPicker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(),
@@ -56,7 +59,10 @@ public class LauncherActivity extends AppCompatActivity {
 
     private final ActivityResultLauncher<String> exportLogsLauncher =
             registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),
-                    uri -> { if (uri != null) exportLogs(uri); });
+                    uri -> {
+                        if (uri != null) exportLogs(uri);
+                        else pendingLogInstanceName = null;
+                    });
 
     private final ActivityResultLauncher<String> exportLayoutLauncher =
             registerForActivityResult(new ActivityResultContracts.CreateDocument("application/json"),
@@ -75,6 +81,8 @@ public class LauncherActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null)
+            pendingLogInstanceName = savedInstanceState.getString(STATE_LOG_INSTANCE);
 
         binding = ActivityLauncherBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -138,7 +146,7 @@ public class LauncherActivity extends AppCompatActivity {
                         importDataLauncher.launch(ZIP_MIME); });
                 return true;
             } else if (id == R.id.action_export_logs) {
-                chooseInstanceThen(gi -> { pendingInstance = gi;
+                chooseInstanceThen(gi -> { pendingLogInstanceName = gi.getName();
                         exportLogsLauncher.launch("rimdroid_logs_" + timestamp() + ".zip"); });
                 return true;
             } else if (id == R.id.action_export_layout) {
@@ -164,6 +172,12 @@ public class LauncherActivity extends AppCompatActivity {
 
         wireHeaderLinks();
         maybeDailyUpdateCheck();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putString(STATE_LOG_INSTANCE, pendingLogInstanceName);
+        super.onSaveInstanceState(outState);
     }
 
     /** The four external links pinned at the bottom of the drawer (icon row, not menu rows). */
@@ -225,6 +239,10 @@ public class LauncherActivity extends AppCompatActivity {
      * If there's no instance (nothing to log) it falls back to a text-only mailto.
      */
     private void sendBugReport() {
+        chooseInstanceThen(this::sendBugReport, () -> sendBugReport(null));
+    }
+
+    private void sendBugReport(GameInstance instance) {
         final java.util.Date now = new java.util.Date();
         final String date = new java.text.SimpleDateFormat("ddMMyyyy", java.util.Locale.US)
                 .format(now);
@@ -233,8 +251,8 @@ public class LauncherActivity extends AppCompatActivity {
                 + ".zip";
         final String device = "Device: " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
                 + "\nAndroid: " + android.os.Build.VERSION.RELEASE
-                + "\nRimDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")";
-        final GameInstance instance = currentInstance();
+                + "\nRimDroid: " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")"
+                + (instance != null ? "\nInstance: " + instance.getName() : "");
         if (instance == null) { startBugReportEmail(date, device, null); return; }
 
         toast("Preparing bug report…");
@@ -376,10 +394,15 @@ public class LauncherActivity extends AppCompatActivity {
 
     /** Ask which instance to act on (skips the dialog when there's only one), then continue. */
     private void chooseInstanceThen(java.util.function.Consumer<GameInstance> cont) {
+        chooseInstanceThen(cont, () -> toast("Create a game instance first."));
+    }
+
+    private void chooseInstanceThen(java.util.function.Consumer<GameInstance> cont, Runnable onEmpty) {
         GameInstanceManager mgr = GameInstanceManager.requireSingleton();
         mgr.reload();
-        List<GameInstance> all = mgr.getInstances();
-        if (all.isEmpty()) { toast("Create a game instance first."); return; }
+        // Keep the displayed names and targets paired even if another screen reloads the manager.
+        List<GameInstance> all = new ArrayList<>(mgr.getInstances());
+        if (all.isEmpty()) { onEmpty.run(); return; }
         if (all.size() == 1) { cont.accept(all.get(0)); return; }
         String[] names = new String[all.size()];
         for (int i = 0; i < all.size(); i++) names[i] = all.get(i).getName();
@@ -578,8 +601,20 @@ public class LauncherActivity extends AppCompatActivity {
 
     /** Export the selected instance's diagnostic logs into a picked, date-stamped .zip. */
     private void exportLogs(Uri uri) {
-        final GameInstance instance = pendingInstance != null ? pendingInstance : currentInstance();
-        if (instance == null) { toast("Create a game instance first."); return; }
+        final String name = pendingLogInstanceName;
+        pendingLogInstanceName = null;
+        if (name == null) {
+            chooseInstanceThen(instance -> exportLogs(uri, instance));
+            return;
+        }
+        GameInstanceManager mgr = GameInstanceManager.requireSingleton();
+        mgr.reload();
+        final GameInstance instance = mgr.getByName(name);
+        if (instance == null) { toast("The selected instance is no longer available."); return; }
+        exportLogs(uri, instance);
+    }
+
+    private void exportLogs(Uri uri, GameInstance instance) {
         toast("Exporting logs…");
 
         new Thread(() -> {

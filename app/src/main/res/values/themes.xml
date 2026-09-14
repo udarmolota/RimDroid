@@ -45,6 +45,13 @@
         <item name="android:windowBackground">@drawable/rd_page_bg</item>
         <!-- windowLightStatusBar/NavigationBar inherited from the DayNight parent (correct per mode). -->
 
+        <!-- Drawer rows are floored by this: Material's design_navigation_item.xml sets
+             android:minHeight="?attr/listPreferredItemHeightSmall" (48dp by default), so trimming
+             itemVerticalPadding alone changes nothing — the content (24dp icon + padding) never
+             reaches the floor. Lowered so the menu fits without scrolling now that it has a GOG
+             row. Raise it back if rows start feeling cramped to tap. -->
+        <item name="listPreferredItemHeightSmall">40dp</item>
+
         <item name="materialButtonStyle">@style/AppTheme.Button</item>
         <item name="navigationViewStyle">@style/AppTheme.NavigationView</item>
         <!-- Rounded, brand-title dialogs (instance picker, confirmations) for every Material dialog. -->

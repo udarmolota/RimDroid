@@ -9,9 +9,20 @@
         <item name="android:textAllCaps">false</item>
     </style>
 
-    <!-- Drawer: brand-coloured dividers between menu groups. -->
+    <!-- Drawer: brand-coloured dividers between menu groups, and a slightly tighter row than
+         Material3's default so the longer entries (Steam / GOG / import-export) fit on one line.
+         Size and padding are declared EXPLICITLY rather than left to inherit: they are tuned
+         values now, and an inherited default would silently drift on the next Material update.
+         Baseline they were tuned from: Widget.Material3.NavigationView = 14sp text, 28dp
+         horizontal padding. -->
     <style name="AppTheme.NavigationView" parent="Widget.Material3.NavigationView">
         <item name="dividerColor">@color/rd_primary</item>
+        <item name="itemTextAppearance">@style/AppTheme.NavigationView.Item</item>
+        <item name="itemHorizontalPadding">23dp</item>
+    </style>
+
+    <style name="AppTheme.NavigationView.Item" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textSize">13sp</item>
     </style>
 
     <!-- Borderless, tinted 48dp icon button (e.g. the instance-card gear). -->

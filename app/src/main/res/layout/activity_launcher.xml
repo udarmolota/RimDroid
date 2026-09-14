@@ -36,9 +36,10 @@
          (GitHub / X / Reddit / Support), so the four external links don't eat four menu rows.
          Fixed width (not wrap_content): otherwise the full-width icon row / dividers and the
          NavigationView's own default width fight during measure and stretch the panel wider than
-         the menu needs. 300dp is the standard drawer width Zomdroid uses too. -->
+         the menu needs. Was 300dp (the standard drawer width, which Zomdroid also uses); widened
+         to 320dp so the longer menu entries keep to one line. -->
     <LinearLayout
-        android:layout_width="300dp"
+        android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:orientation="vertical"

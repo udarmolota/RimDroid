@@ -163,6 +163,21 @@ Na nuvem: %2$s
     <string name="download_user_hint">Usuário Steam</string>
     <string name="download_pass_hint">Senha da Steam</string>
     <string name="download_login_note">Seus dados vão para a Steam (igual ao que o DepotDownloader faz) e NÃO são guardados. Aprove o login no seu app Steam Mobile, ou digite o código do Steam Guard quando for pedido.</string>
+
+    <string name="nav_gog_login">Entrar na GOG</string>
+    <string name="gog_login_note">Entre com seu e-mail e senha da GOG. O login por conta vinculada não se conclui dentro de um app: se você costuma entrar assim, defina primeiro uma senha da GOG em gog.com → Sign in → Password reset.\n\nO RimDroid nunca vê sua senha — você a digita na página da própria GOG. O token de acesso fica apenas na memória e some quando o app fecha; os cookies do login permanecem no armazenamento privado deste app para não perguntar toda vez, e sair da conta apaga os dois.</string>
+    <string name="gog_login_finishing">Concluindo o login…</string>
+    <string name="gog_login_ok">Login na GOG concluído</string>
+    <string name="gog_login_failed">Não foi possível entrar: %1$s</string>
+    <string name="gog_signed_in_as">Login na GOG feito (usuário %1$s)</string>
+    <string name="gog_check_library">Verificar biblioteca</string>
+    <string name="gog_sign_out">Sair</string>
+    <string name="gog_checking">Lendo a biblioteca…</string>
+    <string name="gog_probe_owned">%1$d produtos na conta</string>
+    <string name="gog_probe_failed">Não foi possível ler a biblioteca: %1$s</string>
+
+    <string name="nav_label_donate">Doar</string>
+    <string name="zomdroid_dialog_message">O Zomdroid roda o Project Zomboid no Android, do mesmo jeito que este launcher roda o RimWorld. Mesmo autor, mesma abordagem.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
     <string name="download_manifest_hint">Avançado: ID do manifesto — vazio = 1.5 recomendada</string>
     <string name="download_start">Baixar</string>
     <string name="download_tab_game">Jogo</string>

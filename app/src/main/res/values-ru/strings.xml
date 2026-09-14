@@ -158,6 +158,18 @@
     <string name="download_user_hint">Логин Steam</string>
     <string name="download_pass_hint">Пароль Steam</string>
     <string name="download_login_note">Логин отправляется в Steam (так же, как это делает DepotDownloader) и НЕ сохраняется. Подтвердите вход в приложении Steam Mobile или введите код Steam Guard, когда попросят.</string>
+
+    <string name="nav_gog_login">Вход в GOG</string>
+    <string name="gog_login_note">Входите по почте и паролю GOG. Вход через привязанный аккаунт внутри приложения не доходит до конца — если вы обычно заходите так, сначала задайте пароль GOG: gog.com → Sign in → Password reset.\n\nПароль RimDroid не видит — вы вводите его на странице самого GOG. Токен доступа хранится только в памяти и исчезает при закрытии приложения; куки входа остаются в личном хранилище приложения, чтобы не спрашивать каждый раз, а выход из аккаунта удаляет и то, и другое.</string>
+    <string name="gog_login_finishing">Завершаем вход…</string>
+    <string name="gog_login_ok">Вход в GOG выполнен</string>
+    <string name="gog_login_failed">Не удалось войти: %1$s</string>
+    <string name="gog_signed_in_as">Вход в GOG выполнен (пользователь %1$s)</string>
+    <string name="gog_check_library">Проверить библиотеку</string>
+    <string name="gog_sign_out">Выйти</string>
+    <string name="gog_checking">Читаем библиотеку…</string>
+    <string name="gog_probe_owned">Игр в аккаунте: %1$d</string>
+    <string name="gog_probe_failed">Не удалось прочитать библиотеку: %1$s</string>
     <string name="download_manifest_hint">Дополнительно: Manifest ID — пусто = рекомендуемая 1.5</string>
     <string name="download_start">Загрузить</string>
     <string name="download_tab_game">Игра</string>

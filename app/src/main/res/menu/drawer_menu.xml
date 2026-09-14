@@ -17,8 +17,8 @@
             android:title="@string/nav_install_content" />
     </group>
 
-    <!-- 2) Get the game from Steam -->
-    <group android:id="@+id/group_steam" android:checkableBehavior="none">
+    <!-- 2) Get the game from a store you own it on (Steam, GOG) -->
+    <group android:id="@+id/group_store" android:checkableBehavior="none">
         <item
             android:id="@+id/action_download_game"
             android:icon="@drawable/ic_steam"
@@ -27,6 +27,10 @@
             android:id="@+id/action_cloud_saves"
             android:icon="@drawable/mt_icon_save"
             android:title="@string/nav_cloud_saves" />
+        <item
+            android:id="@+id/action_gog_login"
+            android:icon="@drawable/ic_gog"
+            android:title="@string/nav_gog_login" />
     </group>
 
     <!-- 3) Settings + data transfer (saves / settings / controls layout) -->

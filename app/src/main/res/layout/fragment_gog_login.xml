@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tv_gog_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:text="@string/gog_login_note"
+        android:textAppearance="?attr/textAppearanceBodySmall" />
+
+    <!-- Shown instead of the WebView when a session already exists: no point making the user sign
+         in again just to look at the library. The "check" button is a temporary probe — it proves
+         GogLibrary works against a real account before the downloader is built on top of it. -->
+    <LinearLayout
+        android:id="@+id/block_gog_signed_in"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btn_gog_check"
+            style="@style/AppTheme.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/gog_check_library" />
+
+        <Button
+            android:id="@+id/btn_gog_sign_out"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/gog_sign_out" />
+
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progress_gog"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="24dp"
+        android:visibility="gone" />
+
+    <ScrollView
+        android:id="@+id/scroll_gog_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0">
+
+        <TextView
+            android:id="@+id/tv_gog_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:typeface="monospace" />
+
+    </ScrollView>
+
+    <WebView
+        android:id="@+id/web_gog"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+</LinearLayout>

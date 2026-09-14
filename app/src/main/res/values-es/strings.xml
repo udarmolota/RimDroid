@@ -161,6 +161,21 @@ En la nube: %2$s
     <string name="download_user_hint">Usuario de Steam</string>
     <string name="download_pass_hint">Contraseña de Steam</string>
     <string name="download_login_note">Tus datos se envían a Steam (igual que hace DepotDownloader) y NO se guardan. Aprueba el inicio de sesión en tu app Steam Mobile, o escribe el código de Steam Guard cuando se te pida.</string>
+
+    <string name="nav_gog_login">Iniciar sesión en GOG</string>
+    <string name="gog_login_note">Inicia sesión con tu correo y contraseña de GOG. El inicio de sesión mediante una cuenta vinculada no se completa dentro de una app: si sueles entrar así, primero establece una contraseña de GOG en gog.com → Sign in → Password reset.\n\nRimDroid nunca ve tu contraseña: la escribes en la página de GOG. El token de acceso se guarda solo en memoria y desaparece al cerrar la app; las cookies de la sesión se quedan en el almacenamiento privado de esta app para no preguntarte cada vez, y cerrar sesión borra ambos.</string>
+    <string name="gog_login_finishing">Completando el inicio de sesión…</string>
+    <string name="gog_login_ok">Sesión iniciada en GOG</string>
+    <string name="gog_login_failed">No se pudo iniciar sesión: %1$s</string>
+    <string name="gog_signed_in_as">Sesión iniciada en GOG (usuario %1$s)</string>
+    <string name="gog_check_library">Comprobar biblioteca</string>
+    <string name="gog_sign_out">Cerrar sesión</string>
+    <string name="gog_checking">Leyendo la biblioteca…</string>
+    <string name="gog_probe_owned">%1$d productos en la cuenta</string>
+    <string name="gog_probe_failed">No se pudo leer la biblioteca: %1$s</string>
+
+    <string name="nav_label_donate">Donar</string>
+    <string name="zomdroid_dialog_message">Zomdroid ejecuta Project Zomboid en Android, igual que este launcher ejecuta RimWorld. Mismo autor, mismo enfoque.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
     <string name="download_manifest_hint">Avanzado: ID de manifiesto — vacío = 1.5 recomendada</string>
     <string name="download_start">Descargar</string>
     <string name="download_tab_game">Juego</string>

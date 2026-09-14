@@ -116,6 +116,9 @@ public class LauncherActivity extends AppCompatActivity {
             } else if (id == R.id.action_cloud_saves) {
                 navController.navigate(R.id.action_cloud_saves);   // pull PC saves from Steam Cloud
                 return true;
+            } else if (id == R.id.action_gog_login) {
+                navController.navigate(R.id.action_gog_login);   // GOG sign-in (WebView) — see GogAuth
+                return true;
             } else if (id == R.id.action_install_instance) {
                 navController.navigate(R.id.action_install_instance);
                 return true;

@@ -39,7 +39,7 @@ public final class UnityShimInstaller {
     private static final String BIN    = C.files.RIMWORLD_BIN;      // "RimWorldLinux"
     private static final String ORIG   = BIN + ".rdorig";
     private static final String MARKER = ".rd_unity_shim";
-    private static final String ASSET  = "shim/rd_unity_shim";
+    private static final String ASSET  = "shim/rd_unity_shim.pack";
 
     private UnityShimInstaller() {}
 
@@ -65,7 +65,14 @@ public final class UnityShimInstaller {
             if (!bin.isFile()) return;   // nothing installed here yet
 
             File tmp = new File(instanceDir, BIN + ".rdtmp");
-            try (InputStream in = ctx.getAssets().open(ASSET)) {
+            // Shipped gzip-compressed (".pack") so the build's 16 KB page-alignment check cannot
+            // find an ELF header in it. That check reads the CONTENT of every file in the APK, so
+            // renaming does not fool it, and ".gz" is worse — AGP's asset merger decompresses that
+            // back into a bare ELF. The alignment rule does not apply to this file in the first
+            // place: it is a GUEST x86_64 binary that box64 loads inside the emulation, never
+            // something Android's linker sees. Same trick, same reasoning, as
+            // RimWorldInstanceSetup.ensureGameFixAssets.
+            try (InputStream in = new java.util.zip.GZIPInputStream(ctx.getAssets().open(ASSET))) {
                 copy(in, tmp);
             } catch (IOException e) {
                 Log.w(TAG, "no bundled stand-in (" + ASSET + "): " + e);

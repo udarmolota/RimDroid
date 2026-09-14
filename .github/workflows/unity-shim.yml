@@ -2,8 +2,13 @@
 # PIE x86_64 Linux executable — the thing box64 runs instead of the game's own non-PIE launcher on
 # devices where its fixed load address is already taken. No local Linux toolchain needed.
 #
-# Artifact: rd-unity-shim -> the `rd_unity_shim` ELF, to be deployed into an instance as
-# "RimWorldLinux" (original kept as RimWorldLinux.rdorig).
+# Artifact: rd-unity-shim -> `rd_unity_shim.pack`, the gzipped ELF. Drop it into
+# app/src/main/assets/shim/ AS IS — UnityShimInstaller opens it through a GZIPInputStream, and the
+# compression is what stops the build's 16 KB page-alignment check from finding an ELF header in an
+# asset. Putting a BARE ELF there brings the warning back and makes the installer fail silently
+# (it catches the IOException and skips the swap), so 1.6 stops launching on the devices that need
+# the stand-in. At runtime it is deployed into an instance as "RimWorldLinux" (original kept as
+# RimWorldLinux.rdorig).
 
 name: Build Unity launcher shim
 
@@ -38,8 +43,16 @@ jobs:
           # It must not need a fixed low load address like the binary it replaces.
           readelf -l rd_unity_shim | awk '/LOAD/ {print "  LOAD vaddr:", $3}'
 
+      # Compress AFTER the checks above — those read the bare ELF — and ship only the .pack, so the
+      # file that reaches assets/shim/ is already in the form the installer expects.
+      - name: Compress for shipping
+        run: |
+          set -euo pipefail
+          gzip -9 -c rd_unity_shim > rd_unity_shim.pack
+          ls -l rd_unity_shim.pack
+
       - uses: actions/upload-artifact@v4
         with:
           name: rd-unity-shim
-          path: rd_unity_shim
+          path: rd_unity_shim.pack
           if-no-files-found: error

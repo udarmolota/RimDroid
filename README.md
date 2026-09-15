@@ -22,10 +22,10 @@ rendering, touch controls, gamepad support, and mods.
 - ✔️ **Multiple instances** — each install is a card with its own settings (renderer, driver, controls)
 - ✔️ **Gamepad support** — version 1.0 with a button-remapping wizard for controllers with swapped buttons
 - ✔️ **Compatibility mode** — helps stubborn devices launch and lets mods load (Settings → Advanced)
-- ✔️ **On-screen FPS counter** (Settings → Video)
+- ✔️ **On-screen FPS counter** (Settings → Frame rate)
 - ✔️ **Save / Settings / layout import & export**
-- ✔️ Haptics, night mode, and a Russian translation
-- ⭕ **On-screen keyboard** for text fields not yet available
+- ✔️ Haptics, night mode, and Russian, Spanish and Portuguese translations
+- ✔️ **On-screen keyboard** for text fields — Latin letters, RimWorld 1.6 only
 
 ## Project status & what to expect
 
@@ -92,9 +92,9 @@ all speeds can look the same. That's expected: the simulation, not rendering, is
 ## Roadmap
 
 - [x] Expand GPU/device compatibility
-- [x] Fixed the "colonists missing after load" bug (built-in save fix)
+- [x] Fixed the "colonists missing after load" bug at its root (in box64)
 - [x] In-game audio
-- [ ] On-screen keyboard for text fields
+- [x] On-screen keyboard for text fields (Latin letters, RimWorld 1.6)
 - [x] Resolution / render-scale options for more FPS on weaker GPUs
 
 ## How it works

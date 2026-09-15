@@ -32,10 +32,20 @@
                 android:id="@+id/tv_no_instances"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/no_instances"
+                android:text="@string/launcher_empty_guide"
                 android:gravity="center"
                 android:padding="12dp"
                 android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone" />
+
+            <!-- Shown together with the empty-state guide above: the link to the wiki's quick start. -->
+            <Button
+                android:id="@+id/btn_quick_start"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/wiki_more"
                 android:visibility="gone" />
 
             <!-- Log header row (sits right under the instances list) -->

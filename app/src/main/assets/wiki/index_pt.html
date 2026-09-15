@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiki</title>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            body {
+                color: #E2E2E9;
+            }
+
+            a {
+                color: #8AB4F8;
+            }
+        }
+
+        details > summary {
+            font-style: italic;
+        }
+
+        p + details,
+        div + details,
+        body > details {
+            margin-top: 1em;
+        }
+
+        .details-content {
+            padding-top: 0.5em;
+        }
+
+        code {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        li {
+            margin-bottom: 0.3em;
+        }
+    </style>
+</head>
+<body>
+<ul>
+    <li><a href="#quick-start">Início rápido</a></li>
+    <li>
+        <a href="#get-game">Como obter o jogo</a>
+        <ol>
+            <li><a href="#steam-in-app">Pela Steam, dentro do app</a></li>
+            <li><a href="#gog">Pela GOG</a></li>
+            <li><a href="#zip-archive">A partir de um arquivo .zip</a></li>
+        </ol>
+    </li>
+    <li><a href="#dlc">DLC</a></li>
+    <li><a href="#mods">Mods</a></li>
+    <li><a href="#renderers">Renderizadores e drivers</a></li>
+    <li><a href="#picture">Imagem e fluidez</a></li>
+    <li><a href="#controls">Controles</a></li>
+    <li><a href="#saves">Jogos salvos e configurações</a></li>
+    <li><a href="#compat-mode">Modo de compatibilidade</a></li>
+    <li><a href="#performance">Como tirar o máximo de desempenho</a></li>
+    <li><a href="#known-issues">Problemas conhecidos</a></li>
+    <li><a href="#report">Como relatar um problema</a></li>
+</ul>
+
+<hr>
+
+<section id="quick-start">
+    <h2>Início rápido</h2>
+    <p>
+        O RimDroid é um launcher: ele roda <b>a sua própria cópia</b> do RimWorld no Android.
+        O jogo não vem incluído.
+    </p>
+    <ol>
+        <li>Você precisa ter o <b>RimWorld</b> na <b>Steam</b> ou na <b>GOG</b>. O RimDroid roda a
+            versão <b>Linux</b> do jogo, <b>RimWorld 1.5</b> ou <b>1.6</b>.</li>
+        <li>Coloque o jogo no app. Com a Steam, abra o menu lateral e toque em
+            <b>Downloads da Steam</b>: o jogo é baixado direto para uma instância pronta. Para a GOG
+            e as outras formas, veja <a href="#get-game">Como obter o jogo</a>.</li>
+        <li>Uma <b>instância</b> é uma cópia instalada do jogo. Cada uma tem o seu próprio cartão na
+            tela principal e as suas próprias configurações no <b>ícone de engrenagem</b>. Você pode
+            ter várias, por exemplo 1.5 e 1.6 lado a lado.</li>
+        <li>Ao criar uma instância, o RimDroid detecta a GPU do seu celular e escolhe sozinho um
+            driver gráfico adequado.</li>
+        <li>Toque no botão <b>▶</b> do cartão. A primeira inicialização demora mais enquanto o jogo
+            prepara os arquivos. Não aperte Voltar enquanto ele carrega.</li>
+    </ol>
+    <p>
+        Você precisa de Android 11 ou mais novo, um celular de 64 bits e pelo menos <b>6 GB de
+        RAM</b> (8 GB ou mais para jogar com conforto), além de 5–10 GB de espaço livre.
+    </p>
+    <p>O <b>?</b> no topo de cada tela abre esta página na parte sobre aquela tela.</p>
+    <p>Algo deu errado? Veja <a href="#report">Como relatar um problema</a>.</p>
+</section>
+
+<hr>
+
+<section id="get-game">
+    <h2>Como obter o jogo</h2>
+    <p>
+        O RimDroid precisa da <b>versão Linux</b> do RimWorld, de uma loja onde você tenha o jogo.
+        Escolha uma das formas abaixo.
+    </p>
+
+    <section id="steam-in-app">
+        <h3>1. Pela Steam, dentro do app</h3>
+        <ol>
+            <li>Abra o menu lateral e toque em <b>Downloads da Steam</b>, aba <b>Jogo</b>.</li>
+            <li>Escolha <b>RimWorld 1.5</b> ou <b>RimWorld 1.6</b> e digite um nome para a nova
+                instância.</li>
+            <li>Entre com a sua conta Steam. Seus dados vão só para a Steam e não são guardados.
+                Aprove o login no app Steam Mobile ou digite o código do Steam Guard.</li>
+            <li>Toque em <b>Baixar</b>. O jogo vai direto para uma nova instância: sem PC e sem
+                arquivos compactados.</li>
+            <li>Se o download parar, comece de novo com o <b>mesmo nome de instância</b> e ele
+                continua de onde parou.</li>
+        </ol>
+        <p>
+            Para baixar uma versão mais antiga em vez da recomendada, digite o <b>ID do
+            manifesto</b> dela no campo avançado (os IDs estão no SteamDB). Caso contrário, deixe
+            vazio.
+        </p>
+    </section>
+
+    <section id="gog">
+        <h3>2. Pela GOG</h3>
+        <ol>
+            <li>Abra o menu lateral e toque em <b>Entrar na GOG</b>. Entre com o seu e-mail e senha
+                da GOG na própria página da GOG: o RimDroid nunca vê a sua senha.</li>
+            <li>O login por uma conta vinculada, como a do Google, não funciona dentro de um app. Se
+                é assim que você costuma entrar, defina primeiro uma senha da GOG: gog.com → Sign in
+                → Password reset.</li>
+            <li>Toque em <b>Verificar biblioteca</b>. O RimWorld aparece como um cartão, com os DLCs
+                dele abaixo.</li>
+            <li>Toque em <b>Baixar</b> no jogo e em cada DLC que quiser. Os arquivos são baixados um
+                depois do outro na pasta pública <b>Download/RimDroid</b>; permita o <b>acesso a
+                todos os arquivos</b> quando for pedido. Enquanto isso você pode usar outros apps. Se
+                um download parar, toque no botão de novo para continuar.</li>
+            <li>Quando o jogo termina de baixar, o botão dele vira <b>Criar uma instância</b>. A nova
+                instância recebe o jogo junto com todos os DLCs que você já baixou.</li>
+        </ol>
+        <details>
+            <summary>No PC</summary>
+            <div class="details-content">
+                <p>Na sua biblioteca em gog.com, baixe os instaladores <b>Linux</b> (arquivos .sh)
+                    do RimWorld e dos DLCs que você tem. Coloque todos em um único arquivo
+                    <b>.zip</b>, copie para o celular e adicione como explicado em
+                    <a href="#zip-archive">A partir de um arquivo .zip</a>. O .zip é necessário
+                    porque os gerenciadores de arquivos nem sempre entregam um arquivo .sh solto para
+                    os apps.</p>
+            </div>
+        </details>
+    </section>
+
+    <section id="zip-archive">
+        <h3>3. A partir de um arquivo .zip</h3>
+        <p>
+            Abra o menu lateral e toque em <b>Adicionar instância do jogo</b>, ou no <b>+</b> no
+            topo da tela principal. Digite um nome, toque em <b>Escolher arquivo ZIP…</b>, escolha o
+            arquivo e toque em <b>Instalar</b>.
+        </p>
+        <ul>
+            <li>O .zip pode conter a versão <b>Linux</b> do RimWorld, a que tem o arquivo
+                <code>RimWorldLinux</code> (pode estar dentro de uma pasta, o RimDroid encontra), ou
+                os instaladores <b>.sh</b> da GOG do jogo e dos DLCs.</li>
+            <li>Use um nome curto: letras latinas e números, até 40 caracteres.</li>
+            <li>Guardar o .zip não é obrigatório, mas ajuda depois para reinstalar ou criar outra
+                instância da mesma versão.</li>
+        </ul>
+    </section>
+</section>
+
+<hr>
+
+<section id="dlc">
+    <h2>DLC</h2>
+    <ul>
+        <li><b>Pela Steam:</b> em <b>Downloads da Steam</b>, aba <b>DLC</b>, marque os DLCs que a sua
+            conta tem e toque em <b>Baixar os DLCs selecionados</b>. Cada um é salvo como um .zip em
+            <b>Download/RimDroid</b>.</li>
+        <li><b>Pela GOG:</b> baixe pelo cartão dele em <b>Entrar na GOG</b> e depois toque em
+            <b>Instalar</b> no mesmo cartão. Um DLC baixado antes de criar a instância entra nela
+            automaticamente.</li>
+        <li><b>Para instalar um arquivo de DLC</b>, abra o menu lateral, toque em <b>Instalar mod /
+            DLC</b>, escolha o arquivo e a instância, defina o tipo como <b>DLC</b> e toque em
+            <b>Instalar</b>. Os instaladores da GOG são reconhecidos sozinhos.</li>
+        <li>Um DLC tem que combinar com a versão do jogo da instância: um DLC para 1.6 vai em uma
+            instância 1.6. Por isso a tela de instalação sempre pede para você escolher a
+            instância.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="mods">
+    <h2>Mods</h2>
+    <ul>
+        <li><b>Downloads da Steam</b>, aba <b>Mods</b>, baixa mods do Workshop por ID: o número no
+            fim do link do Workshop (<i>…/filedetails/?id=NÚMERO</i>). Não precisa entrar na Steam;
+            vários IDs podem ser separados por espaços. Cada mod é salvo como um .zip em
+            <b>Download/RimDroid</b>. <b>Baixar pelo navegador</b>, na mesma aba, abre um site de
+            terceiros no lugar.</li>
+        <li>Instale pelo menu lateral, <b>Instalar mod / DLC</b>, tipo <b>Mod</b>. O RimDroid
+            encontra a pasta real do mod (a que tem <code>About/About.xml</code>) dentro de qualquer
+            .zip.</li>
+        <li>Mods que precisam do <b>Harmony</b> funcionam: adicione também o próprio mod Harmony,
+            como no PC.</li>
+        <li>Foram testadas listas de até uns 50 mods. Listas maiores ainda não foram
+            testadas.</li>
+        <li><b>Gerenciar armazenamento</b>, no menu ⋮ de um cartão de instância, abre a pasta dessa
+            instância no gerenciador de arquivos do celular, se você quiser adicionar ou remover
+            arquivos à mão.</li>
+        <li>Se o texto em chinês, japonês ou coreano não aparecer, instale o mod de fontes
+            <a href="https://www.mediafire.com/file/s4axik3wwdvrtze/RimDroidCJKmod.zip/file" target="_blank">RimDroidCJKmod</a>:
+            adicione o .zip com <b>Instalar mod / DLC</b>, tipo <b>Mod</b>, e ative-o no menu de mods
+            do jogo. Ele não precisa de outros mods.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="renderers">
+    <h2>Renderizadores e drivers</h2>
+    <p>
+        Um renderizador traduz os gráficos de desktop do jogo para o Android. Escolha nas
+        configurações da instância (ícone de engrenagem), cartão <b>Vídeo</b>.
+    </p>
+
+    <h3>Zink ZFA (Vulkan)</h3>
+    <p>
+        É o padrão e o recomendado. Desenha pelo driver Vulkan do seu celular, escolhido logo
+        abaixo.
+    </p>
+
+    <h3>MobileGlues (sem Vulkan)</h3>
+    <p>
+        Desenha pelo driver OpenGL ES do celular e não precisa de Vulkan. Experimental. Experimente
+        se o Zink der tela preta ou imagem quebrada; pode ajudar em celulares sem GPU Snapdragon
+        (Adreno).
+    </p>
+
+    <h3>Drivers Vulkan (para o Zink)</h3>
+    <p>
+        Ao criar uma instância, o RimDroid escolhe um driver para a sua GPU, e
+        <b>Driver recomendado (detectar GPU)</b> faz isso de novo. Se a imagem ficar errada ou
+        continuar preta, tente outro.
+    </p>
+    <ul>
+        <li><b>System (phone driver)</b>: o driver do próprio celular. Funciona com qualquer GPU e é
+            a escolha certa em celulares sem GPU Snapdragon (Adreno).</li>
+        <li><b>Turnip</b> e <b>Freedreno</b>: drivers de código aberto para GPUs Snapdragon (Adreno),
+            cada um feito para a geração de GPU indicada na lista (6xx, 7xx, 8xx, 830/840).</li>
+        <li><b>Turnip Adreno 7XX_new (v26.2)</b>: o primeiro a tentar em Adreno 7xx quando a tela
+            continua preta.</li>
+        <li><b>Turnip Adreno 6xx (legacy)</b>: para GPUs Adreno 6xx antigas, como a do
+            Snapdragon 685.</li>
+        <li><b>Custom driver (imported)</b>: o seu próprio driver. Importe no menu lateral,
+            <b>Driver Vulkan personalizado</b> (um arquivo .so ou um .zip do AdrenoTools). Depois ele
+            é compartilhado por todas as instâncias.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="picture">
+    <h2>Imagem e fluidez</h2>
+    <p>Tudo isso fica nas configurações da instância (ícone de engrenagem).</p>
+    <ul>
+        <li><b>Resolução de renderização</b>: uma resolução menor dá mais FPS em GPUs fracas e uma
+            interface maior; tela cheia na resolução do próprio celular é a mais nítida.
+            <b>Bordas pretas 1280×720</b> é a mais rápida.</li>
+        <li><b>Compressão de texturas</b> reduz as texturas para economizar memória e ganhar FPS, e
+            é necessária para carregar vários DLCs em celulares mais fracos. Afeta principalmente
+            plantas e recursos; colonos e animais nunca são alterados. <b>Baixa</b> é um bom
+            equilíbrio; <b>Muito baixa</b> é um pouco mais rápida, mas as plantas ficam
+            borradas.</li>
+        <li><b>Mostrar contador de FPS</b> mostra a taxa de quadros no canto superior
+            esquerdo.</li>
+        <li><b>Limite de FPS</b> (30, 60 ou sem limite) suaviza os solavancos e deixa mais
+            processador para o jogo, o que pode aumentar a velocidade do jogo em celulares mais
+            fracos. Tente 60 ou 30 se o contador oscilar muito.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="controls">
+    <h2>Controles</h2>
+
+    <h3>Toque</h3>
+    <ul>
+        <li><b>Toque</b> para clique esquerdo.</li>
+        <li><b>Segure um dedo parado</b> por um instante para clique direito, que dá ordens como
+            “ir aqui”. Uma vibração curta confirma.</li>
+        <li><b>Faça pinça</b> com dois dedos para dar zoom.</li>
+        <li>Mova a câmera com o analógico esquerdo. Para arrastar o mapa com um dedo, ative
+            <b>Mover o mapa arrastando o dedo</b> nas configurações da instância.</li>
+    </ul>
+
+    <h3>Controles na tela</h3>
+    <ul>
+        <li>O layout padrão tem um analógico para o cursor do mouse, um analógico para a câmera,
+            botões de clique esquerdo e direito, <b>Esc</b>, <b>Space</b> (pausa), as velocidades
+            <b>1</b>–<b>3</b> e os atalhos do jogo. <b>V</b> esconde e mostra os controles;
+            <b>KB</b> abre o teclado do celular.</li>
+        <li>Mude nas configurações da instância, <b>Editar controles na tela…</b>: toque em um item
+            para selecioná-lo e arraste para movê-lo. <b>Adicionar</b> cria botões ligados a
+            qualquer tecla ou ação do mouse; <b>Restaurar</b> volta ao layout padrão.</li>
+        <li><b>Exportar layout dos controles…</b> e <b>Importar layout dos controles…</b>, no menu
+            lateral, compartilham um layout como arquivo .json.</li>
+    </ul>
+
+    <h3>Digitar</h3>
+    <p>
+        Para digitar no jogo, por exemplo para renomear um colono, toque no campo de texto e depois
+        em <b>KB</b>: o teclado do celular abre e o que você digitar vai para o jogo. Toque em
+        <b>KB</b> de novo para fechar. Funciona só no RimWorld 1.6 e só com letras latinas.
+    </p>
+
+    <h3>Controle, mouse e teclado</h3>
+    <ul>
+        <li>Um <b>controle</b> físico funciona: o analógico direito move o cursor, o esquerdo a
+            câmera, os gatilhos clicam e os botões de ombro dão zoom. Se os botões estiverem
+            trocados, corrija nas configurações da instância, <b>Mapeamento do controle</b>: toque
+            em <b>Começar</b> e pressione o botão que quiser para cada ação.</li>
+        <li><b>Mouse e teclado</b> físicos também funcionam.</li>
+        <li>O jogo roda sempre na horizontal. <b>Girar a imagem (180°)</b> inverte a imagem para um
+            controle ou suporte que segura o celular de cabeça para baixo. Vale a partir da próxima
+            inicialização.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="saves">
+    <h2>Jogos salvos e configurações</h2>
+    <ul>
+        <li><b>Exportar jogos salvos</b> e <b>Importar jogos salvos</b>, no menu lateral, tiram e
+            colocam os jogos salvos de uma instância como um .zip: para backup ou para levar a outra
+            instância ou outro celular.</li>
+        <li><b>Exportar configurações</b> e <b>Importar configurações</b> fazem o mesmo com as
+            configurações do jogo: opções, atalhos de teclado, a lista de mods e as configurações
+            dos mods.</li>
+        <li><b>Jogos salvos na Steam Cloud</b>: se você também joga RimWorld no PC pela Steam, isto
+            traz os seus jogos salvos da nuvem para o celular e envia os do celular de volta. O
+            login é aprovado no app Steam Mobile, então o Steam Guard precisa estar ativo lá. Quando
+            o mesmo jogo salvo existe dos dois lados, você escolhe qual manter. Feche o jogo antes
+            de enviar.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="compat-mode">
+    <h2>Modo de compatibilidade</h2>
+    <p>
+        Nas configurações da instância, cartão <b>Avançado</b> (toque no título para abrir). Ative
+        se o jogo não iniciar: tela preta ou travado no carregamento. Com ele o jogo fica um pouco
+        mais lento, então deixe desligado quando não precisar. É uma solução provisória e pode não
+        ajudar em todos os celulares.
+    </p>
+    <p>
+        O mesmo cartão tem o <b>Modo de depuração</b>, que grava um registro mais detalhado, e
+        <b>Variáveis de ambiente</b>. Não mexa neles a menos que a gente peça.
+    </p>
+</section>
+
+<hr>
+
+<section id="performance">
+    <h2>Como tirar o máximo de desempenho</h2>
+    <p>
+        O RimWorld exige muito do processador, e a emulação soma a isso. Um começo novo com três
+        colonos é leve; uma colônia grande e antiga, com muitos colonos e mods, é bem mais pesada, e
+        até um celular forte sente.
+    </p>
+    <ul>
+        <li>Ative o <b>modo de jogo</b> do seu celular e escolha o perfil de maior desempenho:
+            Samsung Game Booster, Xiaomi/POCO Game Turbo, Realme/OPPO/OnePlus Game Space, vivo/iQOO
+            Ultra Game Mode, Infinix/Tecno Game Mode.</li>
+        <li>Instale um <b>mod de desempenho</b> como o RocketMan. O limite é o processador, e esses
+            mods cortam direto o custo da simulação.</li>
+        <li>Defina um <b>Limite de FPS</b> de 60 ou 30 e, em celulares mais fracos, tente
+            <b>Compressão de texturas: Baixa</b> e uma <b>Resolução de renderização</b> menor.</li>
+        <li>Em celulares mais fracos, mantenha a colônia e a lista de mods modestas, e feche os apps
+            em segundo plano.</li>
+        <li>Em celulares mais fracos, os botões de velocidade do jogo podem nem mudar a taxa de
+            quadros. É o esperado: o limite é a simulação, não os gráficos.</li>
+    </ul>
+</section>
+
+<hr>
+
+<section id="known-issues">
+    <h2>Problemas conhecidos</h2>
+
+    <h3>Tela preta ao iniciar o jogo de novo</h3>
+    <p>
+        Se você sair do jogo enquanto ele ainda está rodando e tocar em <b>▶</b> de novo, a tela
+        pode ficar preta. Em vez disso, volte ao jogo aberto pela tela de apps recentes. Se já
+        estiver preta, feche o RimDroid por completo (deslize-o para fora nos apps recentes) e
+        inicie de novo.
+    </p>
+
+    <h3>Imagem cortada dos dois lados (OPPO e outros celulares com ColorOS)</h3>
+    <p>
+        A configuração de tela por app <b>Ocultar câmera</b> (Hide camera) encolhe o jogo e corta os
+        dois lados. <b>Solução:</b> desative <b>Ocultar câmera</b> para o RimDroid, mantenha
+        <b>Tela cheia</b> (Full screen) ativada, feche o app por completo e inicie de novo. Os nomes
+        dessas configurações variam de celular para celular; procure “tela cheia” nas configurações
+        do celular.
+    </p>
+
+    <h3>Artefatos em GPUs Mali antigas</h3>
+    <p>
+        Em celulares com GPU Mali antiga, a imagem pode mostrar artefatos que mudam de uma
+        inicialização para outra. Tente o renderizador <b>MobileGlues</b>.
+    </p>
+</section>
+
+<hr>
+
+<section id="report">
+    <h2>Como relatar um problema</h2>
+    <p>
+        Abra o menu lateral, toque em <b>Relatar um problema</b> e escolha a instância onde o
+        problema aconteceu. O RimDroid anexa os registros dela e os dados do seu celular a uma
+        mensagem para nós: escolha o seu app de e-mail, descreva o problema e toque em
+        <b>Enviar</b>. Relate logo depois que o problema acontecer, enquanto o registro ainda o
+        guarda. <b>Exportar registros (ZIP)…</b> salva os mesmos registros como arquivo, por exemplo
+        para anexar a uma issue no GitHub.
+    </p>
+    <p>
+        Os ícones no topo do menu lateral levam às novas versões no GitHub e ao RimDroid no X e no
+        Reddit.
+    </p>
+</section>
+</body>
+</html>

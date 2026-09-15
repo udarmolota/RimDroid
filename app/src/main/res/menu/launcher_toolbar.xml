@@ -4,6 +4,13 @@
      (see LauncherActivity.onPrepareOptionsMenu). -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <!-- The wiki, opened at the section for whichever screen this is pressed on
+         (LauncherActivity.wikiSectionFor). Shown everywhere except the wiki itself. -->
+    <item
+        android:id="@+id/action_wiki_help"
+        android:icon="@drawable/mt_icon_help_toolbar"
+        android:title="@string/nav_wiki"
+        app:showAsAction="always" />
     <item
         android:id="@+id/action_install_instance"
         android:icon="@drawable/mt_icon_add"

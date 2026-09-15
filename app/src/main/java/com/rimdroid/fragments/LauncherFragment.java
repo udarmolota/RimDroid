@@ -49,6 +49,7 @@ public class LauncherFragment extends Fragment {
 
     private RecyclerView rvInstances;
     private TextView tvNoInstances;
+    private Button btnQuickStart;
     private volatile String pendingInstallName;   // ZIP instance being installed → GPU driver advisor
     private Button btnClearLog;
     private TextView tvLog;
@@ -76,6 +77,10 @@ public class LauncherFragment extends Fragment {
 
         rvInstances        = view.findViewById(R.id.rv_instances);
         tvNoInstances      = view.findViewById(R.id.tv_no_instances);
+        btnQuickStart      = view.findViewById(R.id.btn_quick_start);
+        // Shown with the empty state: a first-time user's way into the wiki's quick start.
+        btnQuickStart.setOnClickListener(v -> Navigation.findNavController(v)
+                .navigate(R.id.action_open_wiki, WikiFragment.section("quick-start")));
         btnClearLog        = view.findViewById(R.id.btn_clear_log);
         tvLog              = view.findViewById(R.id.tv_log);
         scrollLog          = view.findViewById(R.id.scroll_log);
@@ -129,9 +134,9 @@ public class LauncherFragment extends Fragment {
         instances.clear();
         instances.addAll(GameInstanceManager.requireSingleton().getInstances());
         if (instanceAdapter != null) instanceAdapter.notifyDataSetChanged();
-        if (tvNoInstances != null) {
-            tvNoInstances.setVisibility(instances.isEmpty() ? View.VISIBLE : View.GONE);
-        }
+        int empty = instances.isEmpty() ? View.VISIBLE : View.GONE;
+        if (tvNoInstances != null) tvNoInstances.setVisibility(empty);
+        if (btnQuickStart != null) btnQuickStart.setVisibility(empty);
     }
 
     /** One card per instance: name + a settings (gear) button + a Launch button. */
@@ -294,6 +299,8 @@ public class LauncherFragment extends Fragment {
                     .setTitle(R.string.incomplete_game_title)
                     .setMessage(getString(R.string.incomplete_game_msg, String.join("\n", missing)))
                     .setPositiveButton(android.R.string.ok, null)
+                    .setNeutralButton(R.string.nav_wiki, (d, w) -> Navigation.findNavController(requireView())
+                            .navigate(R.id.action_open_wiki, WikiFragment.section("get-game")))
                     .show();
             return;
         }

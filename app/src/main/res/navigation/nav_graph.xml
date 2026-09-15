@@ -49,6 +49,11 @@
         android:name="com.rimdroid.fragments.GogLoginFragment"
         android:label="@string/nav_gog_login" />
 
+    <fragment
+        android:id="@+id/wiki_fragment"
+        android:name="com.rimdroid.fragments.WikiFragment"
+        android:label="@string/nav_wiki" />
+
     <action android:id="@+id/action_settings"
         app:destination="@id/settings_fragment" />
 
@@ -72,5 +77,8 @@
 
     <action android:id="@+id/action_gog_login"
         app:destination="@id/gog_login_fragment" />
+
+    <action android:id="@+id/action_open_wiki"
+        app:destination="@id/wiki_fragment" />
 
 </navigation>

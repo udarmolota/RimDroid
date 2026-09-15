@@ -33,6 +33,13 @@ import java.util.List;
  */
 public class InstallContentFragment extends Fragment {
 
+    /**
+     * Optional navigation argument: the absolute path of a file to install, so the page opens with it
+     * already chosen. The GOG downloader sends an expansion it has just fetched. Which instance it
+     * goes into is still the user's choice — see the placeholder note in onViewCreated.
+     */
+    public static final String ARG_PRESELECTED_FILE = "preselected_file";
+
     private Spinner spInstance;
     private RadioGroup rgType;
     private TextView tvFile;
@@ -59,6 +66,20 @@ public class InstallContentFragment extends Fragment {
         tvFile     = v.findViewById(R.id.tv_install_file);
         Button btnPick = v.findViewById(R.id.btn_install_pick);
         Button btnGo   = v.findViewById(R.id.btn_install_go);
+
+        // Opened with the file already chosen (see ARG_PRESELECTED_FILE). The picker is ZIP-only
+        // because file explorers do not reliably hand over a bare .sh; a path we produced ourselves
+        // never goes through it, and ContentInstaller sniffs content rather than the extension.
+        String preselected = getArguments() == null
+                ? null : getArguments().getString(ARG_PRESELECTED_FILE);
+        if (preselected != null && !preselected.isEmpty()) {
+            java.io.File chosen = new java.io.File(preselected);
+            if (chosen.isFile()) {
+                selectedZip = Uri.fromFile(chosen);
+                tvFile.setText(chosen.getName());
+                rgType.check(R.id.rb_install_dlc);
+            }
+        }
 
         GameInstanceManager.requireSingleton().reload();
         instances = GameInstanceManager.requireSingleton().getInstances();

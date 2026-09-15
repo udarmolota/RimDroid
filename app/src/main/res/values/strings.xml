@@ -64,8 +64,6 @@ In the cloud: %2$s
     <string name="reverse_landscape_hint">Flips the game to the opposite landscape — still fixed, no free rotation. Turn on if your gamepad or cradle holds the phone the other way up.</string>
     <string name="compat_mode_label">Compatibility mode</string>
     <string name="compat_mode_hint">Turn on if the game won\'t start (black screen / stuck on loading). A bit slower, but helps it launch on some devices.</string>
-    <string name="compat_mode_dialog_title">Compatibility mode — please read</string>
-    <string name="compat_mode_dialog_msg">This is a temporary workaround. It may not work, or only work partially (graphics glitches, missing textures, errors on load).\n\nIf you get save problems — colonists disappearing from your saves — download and install the <b>RimDroidSaveFix</b> mod.</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
     <string name="show_fps_label">Show FPS counter (top-left)</string>
@@ -98,6 +96,9 @@ In the cloud: %2$s
     <string name="nav_import_layout">Import controls layout…</string>
     <string name="nav_updates">New versions (GitHub)</string>
     <string name="nav_bug_report">Report a bug</string>
+    <string name="nav_wiki">Wiki</string>
+    <string name="wiki_more">More in the wiki</string>
+    <string name="launcher_empty_guide">To start playing, create an instance — an installed copy of RimWorld. Add your game files with the + at the top, or download the game straight from Steam or GOG in the side menu. From Steam the instance is created by itself; from GOG, with the “Create an instance” button.</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid on X</string>
     <string name="link_reddit">RimDroid on Reddit</string>
@@ -178,17 +179,36 @@ In the cloud: %2$s
     <!-- GOG sign-in. Deliberately NOT the Steam wording: a WebView login cannot work without
          leaving cookies in this app\'s store, so promising that nothing is kept would be false. -->
     <string name="nav_gog_login">Sign in to GOG</string>
-    <string name="gog_login_note">Sign in with your GOG e-mail and password. Signing in through a linked account does not complete inside an app — if that is how you normally log in, set a GOG password first: gog.com → Sign in → Password reset.\n\nRimDroid never sees your password — you type it on GOG\'s own page. The access token is kept in memory only and is gone when the app closes; the sign-in cookies stay in this app\'s private storage so you are not asked every time, and signing out clears both.</string>
+    <string name="gog_login_note">Sign in with your GOG e-mail and password. Signing in through a linked account does not complete inside an app — if that is how you normally log in, set a GOG password first: gog.com → Sign in → Password reset.</string>
+    <string name="gog_disclaimer_title">Disclaimer</string>
+    <string name="gog_disclaimer_text">RimDroid never sees your password — you type it on GOG\'s own page. The access token is kept in memory only and is gone when the app closes; the sign-in cookies stay in this app\'s private storage so you are not asked every time, and signing out clears both.</string>
     <string name="gog_login_finishing">Completing sign-in…</string>
     <string name="gog_login_ok">Signed in to GOG</string>
     <string name="gog_login_failed">Sign-in failed: %1$s</string>
-    <string name="gog_signed_in_as">Signed in to GOG (user %1$s)</string>
+    <string name="gog_user_id">User ID: %1$s</string>
     <!-- Temporary library probe: proves GogLibrary works against a real account. -->
     <string name="gog_check_library">Check library</string>
     <string name="gog_sign_out">Sign out</string>
     <string name="gog_checking">Reading the library…</string>
     <string name="gog_probe_owned">%1$d products owned</string>
     <string name="gog_probe_failed">Library check failed: %1$s</string>
+    <string name="gog_download">Download</string>
+    <string name="gog_needs_all_files">Downloads go to the public Download/RimDroid folder, which needs All-files access. Grant it, then try again.</string>
+    <string name="gog_saved_to">Saved to Download/RimDroid/%1$s\n\nYou can create an instance from it now — the file stays there, so you can reinstall later without downloading again.</string>
+    <string name="gog_create_instance">Create an instance</string>
+    <string name="gog_scanning">Checking your library — %1$d of %2$d</string>
+    <string name="gog_no_rimworld">No RimWorld in this account — showing every game that has a Linux installer.</string>
+    <string name="gog_nothing_linux">Nothing in this account has a Linux installer.</string>
+    <string name="gog_item_installer">%1$s · %2$s</string>
+    <string name="gog_keepalive">Downloading from GOG — you can switch to other apps</string>
+    <string name="gog_download_interrupted">The download was interrupted. Tap “%1$s” again to continue.</string>
+    <string name="gog_download_failed">Download failed: %1$s</string>
+    <string name="gog_queued">Queued</string>
+    <string name="gog_downloading">Downloading…</string>
+    <string name="gog_percent">%1$d%%</string>
+    <string name="gog_install_dlc">Install</string>
+    <string name="gog_item_dlc">DLC · %1$s</string>
+    <string name="new_instance_with_dlc">%1$s\n+ DLC: %2$d</string>
     <string name="download_manifest_hint">Advanced: Manifest ID — blank = recommended 1.5</string>
     <string name="download_start">Download</string>
     <string name="download_tab_game">Game</string>

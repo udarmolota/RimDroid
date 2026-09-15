@@ -104,18 +104,10 @@ public class SettingsFragment extends Fragment {
         // Compatibility mode: box64 FP/barrier tuning (WEAKBARRIER=2 + X87DOUBLE=1) that lets the game launch
         // on devices hit by the deep "won't start / black screen" bug (Adreno 610/725, weak-Vulkan Mali).
         swCompat.setChecked(inst.isCompatibilityMode());
-        swCompat.setOnCheckedChangeListener((btn, checked) -> {
-            inst.setCompatibilityMode(checked);
-            if (checked) {
-                // Warn that compat mode is a temporary workaround (may not fully work) + point to the
-                // save-fix mod if pawns disappear. Dialog (not a toast) so the user actually reads it.
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setTitle(R.string.compat_mode_dialog_title)
-                        .setMessage(R.string.compat_mode_dialog_msg)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-            }
-        });
+        // No warning dialog on enabling it any more: it sent players to the RimDroidSaveFix mod, and
+        // the save bug that mod worked around is fixed at the root (box64 qsort). The switch's own
+        // hint already says it is slower and only helps some devices.
+        swCompat.setOnCheckedChangeListener((btn, checked) -> inst.setCompatibilityMode(checked));
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
         // FPS overlay ("FPS: XX", top-left) — GLOBAL. Shows the true presented frame rate; helps

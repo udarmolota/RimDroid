@@ -68,8 +68,6 @@ Na nuvem: %2$s
     <string name="reverse_landscape_hint">Inverte o jogo para o outro modo paisagem; continua fixo, sem rotação livre. Ative se o seu controle ou suporte segura o celular de cabeça para baixo.</string>
     <string name="compat_mode_label">Modo de compatibilidade</string>
     <string name="compat_mode_hint">Ative se o jogo não iniciar (tela preta ou travado no carregamento). Fica um pouco mais lento, mas ajuda a abrir em alguns aparelhos.</string>
-    <string name="compat_mode_dialog_title">Modo de compatibilidade: leia antes</string>
-    <string name="compat_mode_dialog_msg">Isto é uma solução temporária. Pode não funcionar, ou funcionar só em parte (falhas gráficas, texturas faltando, erros ao carregar).\n\nSe você tiver problemas com jogos salvos, ou seja, colonos que somem, baixe e instale o mod <b>RimDroidSaveFix</b>.</string>
     <string name="haptic_label">Vibrar ao tocar um botão</string>
     <string name="audio_label">Som do jogo</string>
     <string name="show_fps_label">Mostrar contador de FPS (canto superior esquerdo)</string>
@@ -102,6 +100,9 @@ Na nuvem: %2$s
     <string name="nav_import_layout">Importar layout dos controles…</string>
     <string name="nav_updates">Novas versões (GitHub)</string>
     <string name="nav_bug_report">Relatar um problema</string>
+    <string name="nav_wiki">Wiki</string>
+    <string name="wiki_more">Mais na wiki</string>
+    <string name="launcher_empty_guide">Para começar a jogar, crie uma instância: uma cópia instalada do RimWorld. Adicione os arquivos do jogo com o + no topo ou baixe o jogo direto da Steam ou da GOG pelo menu lateral. Pela Steam a instância é criada sozinha; pela GOG, com o botão “Criar uma instância”.</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid no X</string>
     <string name="link_reddit">RimDroid no Reddit</string>
@@ -165,16 +166,35 @@ Na nuvem: %2$s
     <string name="download_login_note">Seus dados vão para a Steam (igual ao que o DepotDownloader faz) e NÃO são guardados. Aprove o login no seu app Steam Mobile, ou digite o código do Steam Guard quando for pedido.</string>
 
     <string name="nav_gog_login">Entrar na GOG</string>
-    <string name="gog_login_note">Entre com seu e-mail e senha da GOG. O login por conta vinculada não se conclui dentro de um app: se você costuma entrar assim, defina primeiro uma senha da GOG em gog.com → Sign in → Password reset.\n\nO RimDroid nunca vê sua senha — você a digita na página da própria GOG. O token de acesso fica apenas na memória e some quando o app fecha; os cookies do login permanecem no armazenamento privado deste app para não perguntar toda vez, e sair da conta apaga os dois.</string>
+    <string name="gog_login_note">Entre com seu e-mail e senha da GOG. O login por conta vinculada não se conclui dentro de um app: se você costuma entrar assim, defina primeiro uma senha da GOG em gog.com → Sign in → Password reset.</string>
+    <string name="gog_disclaimer_title">Aviso</string>
+    <string name="gog_disclaimer_text">O RimDroid nunca vê sua senha — você a digita na página da própria GOG. O token de acesso fica apenas na memória e some quando o app fecha; os cookies do login permanecem no armazenamento privado deste app para não perguntar toda vez, e sair da conta apaga os dois.</string>
     <string name="gog_login_finishing">Concluindo o login…</string>
     <string name="gog_login_ok">Login na GOG concluído</string>
     <string name="gog_login_failed">Não foi possível entrar: %1$s</string>
-    <string name="gog_signed_in_as">Login na GOG feito (usuário %1$s)</string>
+    <string name="gog_user_id">ID de usuário: %1$s</string>
     <string name="gog_check_library">Verificar biblioteca</string>
     <string name="gog_sign_out">Sair</string>
     <string name="gog_checking">Lendo a biblioteca…</string>
     <string name="gog_probe_owned">%1$d produtos na conta</string>
     <string name="gog_probe_failed">Não foi possível ler a biblioteca: %1$s</string>
+    <string name="gog_download">Baixar</string>
+    <string name="gog_needs_all_files">Os downloads vão para a pasta pública Download/RimDroid, que exige acesso a todos os arquivos. Conceda o acesso e tente de novo.</string>
+    <string name="gog_saved_to">Salvo em Download/RimDroid/%1$s\n\nJá dá para criar uma instância com ele. O arquivo continua lá, então dá para reinstalar sem baixar de novo.</string>
+    <string name="gog_create_instance">Criar uma instância</string>
+    <string name="gog_scanning">Verificando a sua biblioteca — %1$d de %2$d</string>
+    <string name="gog_no_rimworld">Não há RimWorld nesta conta — mostrando todos os jogos com instalador para Linux.</string>
+    <string name="gog_nothing_linux">Nenhum jogo desta conta tem instalador para Linux.</string>
+    <string name="gog_item_installer">%1$s · %2$s</string>
+    <string name="gog_keepalive">Baixando da GOG: você pode alternar para outros aplicativos</string>
+    <string name="gog_download_interrupted">O download foi interrompido. Toque em “%1$s” de novo para continuar.</string>
+    <string name="gog_download_failed">Falha no download: %1$s</string>
+    <string name="gog_queued">Na fila</string>
+    <string name="gog_downloading">Baixando…</string>
+    <string name="gog_percent">%1$d%%</string>
+    <string name="gog_install_dlc">Instalar</string>
+    <string name="gog_item_dlc">DLC · %1$s</string>
+    <string name="new_instance_with_dlc">%1$s\n+ DLC: %2$d</string>
 
     <string name="nav_label_donate">Doar</string>
     <string name="zomdroid_dialog_message">O Zomdroid roda o Project Zomboid no Android, do mesmo jeito que este launcher roda o RimWorld. Mesmo autor, mesma abordagem.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>

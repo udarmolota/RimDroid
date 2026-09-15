@@ -31,15 +31,40 @@ public class DownloadKeepAliveService extends Service {
     private static final String EXTRA_TEXT = "text";
     private static final String DEFAULT_TEXT = "Downloading from Steam — keep the app open";
 
+    /**
+     * A start() whose onStartCommand has not run yet. A stop() can land in that window — a download
+     * that fails the instant it begins (no network, say) calls it within milliseconds of start() —
+     * and stopping a service started with startForegroundService() before it has called
+     * startForeground() is not a no-op: Android crashes the app ("Context.startForegroundService()
+     * did not then call Service.startForeground()"). So an early stop is only recorded, and the
+     * service carries it out itself once it has gone foreground.
+     */
+    private static boolean startPending;
+    /** A stop() that arrived while {@link #startPending}. */
+    private static boolean stopPending;
+
     public static void start(Context ctx) { start(ctx, DEFAULT_TEXT); }
 
     public static void start(Context ctx, String text) {
+        synchronized (DownloadKeepAliveService.class) {
+            startPending = true;
+            stopPending = false;
+        }
         Intent i = new Intent(ctx.getApplicationContext(), DownloadKeepAliveService.class);
         i.putExtra(EXTRA_TEXT, text);
-        ContextCompat.startForegroundService(ctx.getApplicationContext(), i);
+        try {
+            ContextCompat.startForegroundService(ctx.getApplicationContext(), i);
+        } catch (RuntimeException e) {
+            // Refused (e.g. asked from the background): no onStartCommand is coming to clear it.
+            synchronized (DownloadKeepAliveService.class) { startPending = false; }
+            throw e;
+        }
     }
 
     public static void stop(Context ctx) {
+        synchronized (DownloadKeepAliveService.class) {
+            if (startPending) { stopPending = true; return; }
+        }
         ctx.getApplicationContext().stopService(
                 new Intent(ctx.getApplicationContext(), DownloadKeepAliveService.class));
     }
@@ -57,6 +82,14 @@ public class DownloadKeepAliveService extends Service {
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();
         startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        boolean stopNow;
+        synchronized (DownloadKeepAliveService.class) {
+            startPending = false;
+            stopNow = stopPending;
+            stopPending = false;
+        }
+        // Foreground as promised, so a stop that came early is now safe to honour.
+        if (stopNow) stopSelf();
         return START_NOT_STICKY;   // don't auto-restart if killed
     }
 

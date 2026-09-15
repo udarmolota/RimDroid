@@ -26,6 +26,7 @@ import com.rimdroid.R;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
 
 public class NewInstanceFragment extends Fragment {
 
@@ -38,12 +39,29 @@ public class NewInstanceFragment extends Fragment {
     // leaving ~48; 40 keeps a margin for work-profile/cloned-app user dirs (/data/user/<n>/...).
     private static final int MAX_NAME_LEN = 40;
 
+    /**
+     * Optional navigation argument: the absolute path of an archive to install, so the screen opens
+     * with the file already chosen and the picker is never needed. Used by the GOG downloader,
+     * which hands over the installer it just fetched.
+     */
+    public static final String ARG_PRESELECTED_FILE = "preselected_file";
+
+    /**
+     * Optional navigation argument, alongside {@link #ARG_PRESELECTED_FILE}: absolute paths of GOG
+     * expansion installers to extract into the new instance after the game, so it comes up with its
+     * expansions in one step. Dropped if the user picks a different archive — they belong to the
+     * game that was handed over.
+     */
+    public static final String ARG_EXTRA_FILES = "extra_files";
+
     private EditText etInstanceName;
     private Button   btnPickZip;
     private Button   btnInstall;
     private TextView tvSelectedZip;
 
     private Uri selectedZipUri;
+    /** Expansion installers riding along with the handed-over game (see ARG_EXTRA_FILES). */
+    private ArrayList<String> extraInstallers = new ArrayList<>();
     private String lastInstanceName;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -69,6 +87,7 @@ public class NewInstanceFragment extends Fragment {
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri == null) return;
                 selectedZipUri = uri;
+                extraInstallers = new ArrayList<>();   // they belonged to the handed-over game
                 tvSelectedZip.setText(uri.getLastPathSegment());
                 // Deliberately do NOT auto-fill the name from the zip filename: repack zips carry
                 // very long names that blow the X-socket path budget (see MAX_NAME_LEN). The field
@@ -95,6 +114,25 @@ public class NewInstanceFragment extends Fragment {
         tvSelectedZip  = view.findViewById(R.id.tv_selected_zip);
 
         btnInstall.setEnabled(false);
+
+        // Opened with the file already chosen (see ARG_PRESELECTED_FILE). The picker below is
+        // deliberately ZIP-only because most file explorers will not hand over a bare GOG .sh —
+        // but a path we produced ourselves never goes through the picker, so that restriction does
+        // not apply here, and InstallerService sniffs content rather than the extension anyway.
+        String preselected = getArguments() == null
+                ? null : getArguments().getString(ARG_PRESELECTED_FILE);
+        if (preselected != null && !preselected.isEmpty()) {
+            File chosen = new File(preselected);
+            if (chosen.isFile()) {
+                selectedZipUri = Uri.fromFile(chosen);
+                ArrayList<String> extras = getArguments().getStringArrayList(ARG_EXTRA_FILES);
+                if (extras != null) extraInstallers = extras;
+                tvSelectedZip.setText(extraInstallers.isEmpty() ? chosen.getName()
+                        : getString(R.string.new_instance_with_dlc,
+                                chosen.getName(), extraInstallers.size()));
+                btnInstall.setEnabled(true);
+            }
+        }
 
         // Pre-fill a short, always-fits default so most users just tap Install and never hit the
         // name-length limit; the field stays editable for anyone who wants a custom name.
@@ -184,6 +222,7 @@ public class NewInstanceFragment extends Fragment {
         // seen in a tester's log. The application context outlives the fragment; UI touches go
         // through mainHandler behind an isAdded() check.
         final android.content.Context appCtx = requireContext().getApplicationContext();
+        final String[] extras = extraInstallers.toArray(new String[0]);
         new Thread(() -> {
             try {
                 File cacheZip = new File(appCtx.getCacheDir(), "instance.zip");
@@ -195,7 +234,7 @@ public class NewInstanceFragment extends Fragment {
                     while ((len = in.read(buf)) != -1) out.write(buf, 0, len);
                 }
                 InstallerService.startInstallInstance(
-                        appCtx, cacheZip.getAbsolutePath(), instanceName);
+                        appCtx, cacheZip.getAbsolutePath(), instanceName, extras);
             } catch (Exception e) {
                 mainHandler.post(() -> {
                     if (!isAdded() || getView() == null) return;

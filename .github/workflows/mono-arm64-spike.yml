@@ -1,0 +1,116 @@
+name: Build Unity Mono ARM64 spike
+
+on:
+  push:
+    branches:
+      - codex/mono-arm64-spike
+    paths:
+      - .github/workflows/mono-arm64-spike.yml
+      - tools/mono-arm64/**
+  workflow_dispatch:
+    inputs:
+      mono_commit:
+        description: Unity Mono commit to build
+        required: true
+        default: c11bc9adba5d9dcad976d64b295bca8424fa41cd
+      ndk_version:
+        description: Android NDK package version
+        required: true
+        default: 19.2.5345600
+
+permissions:
+  contents: read
+
+jobs:
+  build-runtime:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout RimDroid spike
+        uses: actions/checkout@v4
+
+      - name: Install host build tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake gettext libtool make mono-devel texinfo
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        env:
+          NDK_VERSION: ${{ inputs.ndk_version }}
+        run: |
+          set -euo pipefail
+          sdkmanager "ndk;$NDK_VERSION"
+          echo "MONO_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Checkout matching Unity Mono source
+        env:
+          MONO_COMMIT: ${{ inputs.mono_commit }}
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/Unity-Technologies/mono.git "$RUNNER_TEMP/unity-mono"
+          git -C "$RUNNER_TEMP/unity-mono" checkout --detach "$MONO_COMMIT"
+          git -C "$RUNNER_TEMP/unity-mono" submodule update --init --depth 1 external/bdwgc
+
+      - name: Build Unity Mono for Android ARM64
+        env:
+          ANDROID_API: 21
+        run: |
+          set -euo pipefail
+          chmod +x tools/mono-arm64/build-unity-mono-arm64.sh
+          tools/mono-arm64/build-unity-mono-arm64.sh \
+            "$RUNNER_TEMP/unity-mono" \
+            "$MONO_NDK_ROOT" \
+            "$RUNNER_TEMP/mono-arm64"
+
+      - name: Build native ARM64 probe
+        env:
+          ANDROID_API: 21
+        run: |
+          set -euo pipefail
+          chmod +x tools/mono-arm64/native-probe/build.sh
+          tools/mono-arm64/native-probe/build.sh \
+            "$MONO_NDK_ROOT" \
+            "$RUNNER_TEMP/mono-arm64"
+
+      - name: Verify artifact architecture and Unity API
+        run: |
+          set -euo pipefail
+          runtime="$RUNNER_TEMP/mono-arm64/libmonobdwgc-2.0.so"
+          readelf -h "$runtime" | grep -q 'Class:.*ELF64'
+          readelf -h "$runtime" | grep -q 'Machine:.*AArch64'
+          LC_ALL=C sort -c tools/mono-arm64/baseline-required-exports.txt
+          test "$(wc -l < tools/mono-arm64/baseline-required-exports.txt)" -eq 286
+          readelf --dyn-syms --wide "$runtime" |
+            awk '$7 != "UND" && $8 ~ /^mono_/ { sub(/@.*/, "", $8); print $8 }' |
+            LC_ALL=C sort -u > "$RUNNER_TEMP/candidate-exports.txt"
+          comm -23 \
+            tools/mono-arm64/baseline-required-exports.txt \
+            "$RUNNER_TEMP/candidate-exports.txt" > "$RUNNER_TEMP/missing-exports.txt"
+          if [[ -s "$RUNNER_TEMP/missing-exports.txt" ]]; then
+            echo "Missing required UnityPlayer Mono exports:"
+            cat "$RUNNER_TEMP/missing-exports.txt"
+            exit 1
+          fi
+          readelf -h "$runtime"
+          readelf -d "$runtime" | grep NEEDED || true
+          cat "$RUNNER_TEMP/mono-arm64/build-manifest.txt"
+          cat "$RUNNER_TEMP/mono-arm64/SHA256SUMS"
+
+      - name: Pack research artifact
+        run: |
+          set -euo pipefail
+          tar -C "$RUNNER_TEMP/mono-arm64" -czf unity-mono-arm64-spike.tar.gz .
+
+      - name: Upload runtime and probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-mono-arm64-${{ inputs.mono_commit }}
+          path: unity-mono-arm64-spike.tar.gz
+          if-no-files-found: error
+          retention-days: 14

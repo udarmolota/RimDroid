@@ -21,6 +21,10 @@ on:
 permissions:
   contents: read
 
+env:
+  MONO_COMMIT: ${{ inputs.mono_commit || 'c11bc9adba5d9dcad976d64b295bca8424fa41cd' }}
+  NDK_VERSION: ${{ inputs.ndk_version || '19.2.5345600' }}
+
 jobs:
   build-runtime:
     runs-on: ubuntu-22.04
@@ -36,20 +40,22 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y autoconf automake gettext libtool make mono-devel texinfo
 
+      - name: Set up JDK 17 for sdkmanager
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android NDK
-        env:
-          NDK_VERSION: ${{ inputs.ndk_version }}
         run: |
           set -euo pipefail
           sdkmanager "ndk;$NDK_VERSION"
           echo "MONO_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
 
       - name: Checkout matching Unity Mono source
-        env:
-          MONO_COMMIT: ${{ inputs.mono_commit }}
         run: |
           set -euo pipefail
           git clone --filter=blob:none --no-checkout \
@@ -110,7 +116,7 @@ jobs:
       - name: Upload runtime and probe
         uses: actions/upload-artifact@v4
         with:
-          name: unity-mono-arm64-${{ inputs.mono_commit }}
+          name: unity-mono-arm64-${{ env.MONO_COMMIT }}
           path: unity-mono-arm64-spike.tar.gz
           if-no-files-found: error
           retention-days: 14

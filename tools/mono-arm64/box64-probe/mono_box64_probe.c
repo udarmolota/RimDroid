@@ -21,6 +21,9 @@ typedef MonoClass *(*mono_class_from_name_fn)(MonoImage *, const char *, const c
 typedef MonoMethod *(*mono_class_get_method_from_name_fn)(MonoClass *, const char *, int);
 typedef MonoObject *(*mono_runtime_invoke_fn)(MonoMethod *, void *, void **, MonoObject **);
 typedef void *(*mono_object_unbox_fn)(MonoObject *);
+typedef MonoClass *(*mono_object_get_class_fn)(MonoObject *);
+typedef const char *(*mono_class_get_name_fn)(MonoClass *);
+typedef const char *(*mono_class_get_namespace_fn)(MonoClass *);
 typedef const char *(*mono_get_runtime_build_info_fn)(void);
 typedef void (*mono_add_internal_call_fn)(const char *, const void *);
 
@@ -69,6 +72,9 @@ int main(int argc, char **argv)
     LOAD(mono_class_get_method_from_name);
     LOAD(mono_runtime_invoke);
     LOAD(mono_object_unbox);
+    LOAD(mono_object_get_class);
+    LOAD(mono_class_get_name);
+    LOAD(mono_class_get_namespace);
     LOAD(mono_get_runtime_build_info);
     LOAD(mono_add_internal_call);
 #undef LOAD
@@ -98,6 +104,12 @@ int main(int argc, char **argv)
     MonoObject *exception = NULL;
     MonoObject *boxed_result = mono_runtime_invoke(method, NULL, NULL, &exception);
     if (exception || !boxed_result) {
+        if (exception) {
+            MonoClass *exception_class = mono_object_get_class(exception);
+            fprintf(stderr, "BOX64_MONO_PROBE exception=%s.%s\n",
+                    exception_class ? mono_class_get_namespace(exception_class) : "?",
+                    exception_class ? mono_class_get_name(exception_class) : "?");
+        }
         fprintf(stderr, "BOX64_MONO_PROBE phase=invoke result=%s\n", exception ? "MANAGED_EXCEPTION" : "NULL");
         mono_jit_cleanup(domain);
         return 32;

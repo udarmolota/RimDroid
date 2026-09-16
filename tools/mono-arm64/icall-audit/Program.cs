@@ -137,7 +137,11 @@ static string ToAbiCode(string type, IReadOnlyDictionary<string, string> enumAbi
     return bare switch
     {
         "void" => "v",
-        "bool" or "char" or "int8" or "uint8" or "int16" or "uint16" or "int32" => "i",
+        "bool" or "uint8" => "C",
+        "int8" => "c",
+        "char" or "uint16" => "W",
+        "int16" => "w",
+        "int32" => "i",
         "uint32" => "u",
         "int64" => "I",
         "uint64" => "U",

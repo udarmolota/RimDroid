@@ -130,6 +130,10 @@ static string CType(char code) => code switch
 {
     'v' => "void",
     'p' => "void*",
+    'c' => "int8_t",
+    'C' => "uint8_t",
+    'w' => "int16_t",
+    'W' => "uint16_t",
     'i' => "int32_t",
     'u' => "uint32_t",
     'I' => "int64_t",

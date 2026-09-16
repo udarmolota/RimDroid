@@ -1,10 +1,12 @@
 assembly	name	instance	return	parameters	abi
 UnityEngine.TestModule.dll	UnityEngine.Test::Double	0	float64	float64,float64	dFdd
 UnityEngine.TestModule.dll	UnityEngine.Test::Float	0	float32	float32,float32	fFff
+UnityEngine.TestModule.dll	UnityEngine.Test::Int16	0	int16	int16,uint16	wFwW
 UnityEngine.TestModule.dll	UnityEngine.Test::Int32	0	int32	int32,uint32	iFiu
 UnityEngine.TestModule.dll	UnityEngine.Test::Int64	0	int64	int64,uint64	IFIU
 UnityEngine.TestModule.dll	UnityEngine.Test::LongCall	0	int32	many	iFppppiffiiiiiiiiiffffiip
 UnityEngine.TestModule.dll	UnityEngine.Test::Pointer	0	object	object	pFp
 UnityEngine.TestModule.dll	UnityEngine.Test::UInt32	0	uint32	uint32	uFu
 UnityEngine.TestModule.dll	UnityEngine.Test::UInt64	0	uint64	uint64	UFU
+UnityEngine.TestModule.dll	UnityEngine.Test::UInt8	0	uint8	int8,uint8	CFcC
 UnityEngine.TestModule.dll	UnityEngine.Test::Void	0	void	object,int32	vFpi

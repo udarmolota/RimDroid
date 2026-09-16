@@ -51,29 +51,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install NDK and build ARM64 Box64 with the Mono probe wrapper
+      - name: Install NDK and compile the ARM64 Mono probe wrapper
         run: |
           set -euo pipefail
           sdk_root="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
           sdkmanager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
           test -x "$sdkmanager"
           yes | "$sdkmanager" --licenses >/dev/null || true
-          "$sdkmanager" "ndk;27.0.12077973" "cmake;3.22.1"
-          cmake -S box64 -B "$RUNNER_TEMP/box64-arm64" -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="$sdk_root/ndk/27.0.12077973/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-21
-          cmake --build "$RUNNER_TEMP/box64-arm64" --target box64 --parallel 2
-          readelf -h "$RUNNER_TEMP/box64-arm64/box64" | grep -q 'Machine:.*AArch64'
+          "$sdkmanager" "ndk;27.0.12077973"
+          ndk="$sdk_root/ndk/27.0.12077973"
+          "$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" \
+            --target=aarch64-none-linux-android21 \
+            --sysroot="$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot" \
+            -DANDROID -DCONFIG_64BIT -fPIC -std=gnu11 \
+            -Ibox64/src/include -Ibox64/src -Ibox64/src/wrapped/generated \
+            -c box64/src/wrapped/wrappedrdmonoprobe.c \
+            -o "$RUNNER_TEMP/wrappedrdmonoprobe.o"
+          readelf -h "$RUNNER_TEMP/wrappedrdmonoprobe.o" | grep -q 'Machine:.*AArch64'
 
       - name: Upload P1 test executables
         uses: actions/upload-artifact@v4
         with:
           name: box64-mono-p1-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/box64-arm64/box64
             ${{ runner.temp }}/box64-probe/mono_box64_probe
+            ${{ runner.temp }}/wrappedrdmonoprobe.o
           if-no-files-found: error
           retention-days: 14
 

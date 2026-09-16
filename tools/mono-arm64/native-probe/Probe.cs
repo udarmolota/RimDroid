@@ -9,6 +9,23 @@ namespace RimDroid.MonoArm64Probe
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern int NativeAdd(int left, int right);
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern long NativeAddLong(long left, long right);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern IntPtr NativePointerIdentity(IntPtr value);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern double NativeAddDouble(double left, double right);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern double NativeAddFloatArgs(float left, float right);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern long NativeSumNine(
+            long a, long b, long c, long d, long e,
+            long f, long g, long h, long i);
+
         public static int RunBasic()
         {
             return 0x5244;
@@ -17,6 +34,27 @@ namespace RimDroid.MonoArm64Probe
         public static int RunReverseIcall()
         {
             return NativeAdd(0x5200, 0x44);
+        }
+
+        public static int RunAbiMatrix()
+        {
+            if (NativeAddLong(0x1234567800000000L, 0x44L) != 0x1234567800000044L)
+                return -101;
+
+            IntPtr pointer = new IntPtr(unchecked((long)0x123456789abcdef0UL));
+            if (NativePointerIdentity(pointer) != pointer)
+                return -102;
+
+            if (Math.Abs(NativeAddDouble(1.25, 2.5) - 3.75) > 0.000001)
+                return -103;
+
+            if (Math.Abs(NativeAddFloatArgs(1.25f, 2.5f) - 3.75) > 0.000001)
+                return -104;
+
+            if (NativeSumNine(1, 2, 3, 4, 5, 6, 7, 8, 9) != 45)
+                return -105;
+
+            return 0x5244;
         }
 
         public static int RunStress()

@@ -33,6 +33,33 @@ static int native_add(int left, int right)
     return left + right;
 }
 
+static int64_t native_add_long(int64_t left, int64_t right)
+{
+    return left + right;
+}
+
+static void *native_pointer_identity(void *value)
+{
+    return value;
+}
+
+static double native_add_double(double left, double right)
+{
+    return left + right;
+}
+
+static double native_add_float_args(float left, float right)
+{
+    return (double)(left + right);
+}
+
+static int64_t native_sum_nine(
+    int64_t a, int64_t b, int64_t c, int64_t d, int64_t e,
+    int64_t f, int64_t g, int64_t h, int64_t i)
+{
+    return a + b + c + d + e + f + g + h + i;
+}
+
 static void *require_symbol(void *library, const char *name)
 {
     dlerror();
@@ -91,6 +118,21 @@ int main(int argc, char **argv)
     mono_add_internal_call(
         "RimDroid.MonoArm64Probe.EntryPoint::NativeAdd",
         (const void *)native_add);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeAddLong",
+        (const void *)native_add_long);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativePointerIdentity",
+        (const void *)native_pointer_identity);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeAddDouble",
+        (const void *)native_add_double);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeAddFloatArgs",
+        (const void *)native_add_float_args);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeSumNine",
+        (const void *)native_sum_nine);
 
     MonoAssembly *assembly = mono_domain_assembly_open(domain, argv[3]);
     MonoImage *image = assembly ? mono_assembly_get_image(assembly) : NULL;

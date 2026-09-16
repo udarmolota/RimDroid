@@ -49,3 +49,8 @@ BOX64_MONO_PROBE verdict=PASS value=0x5244
 
 This proves one integer callback shape.  It does not yet implement Unity's full
 icall signature set, floating-point callbacks, exceptions, or foreign GC roots.
+
+`RunAbiMatrix` extends the gate to signed 64-bit values, pointers, double and
+float argument registers, and nine 64-bit arguments so both ABIs must use their
+stack calling convention. A `PASS` result means these representative shapes
+survived; it still does not replace the generated full Unity icall bridge.

@@ -105,7 +105,7 @@ export CPATH="$toolchain/sysroot/usr/include/$target:$toolchain/sysroot/usr/incl
 export CFLAGS="-O2 -g -fPIC -ffunction-sections -fdata-sections -DANDROID -DPLATFORM_ANDROID -DLINUX -D__linux__ -DHAVE_USR_INCLUDE_MALLOC_H -D_POSIX_PATH_MAX=256 -DS_IWRITE=S_IWUSR -DHAVE_PTHREAD_MUTEX_TIMEDLOCK"
 export CXXFLAGS="$CFLAGS"
 export CPPFLAGS="$CFLAGS"
-export LDFLAGS="-Wl,--no-undefined -Wl,--gc-sections -Wl,-z,max-page-size=16384 -ldl -lm -llog -lc"
+export LDFLAGS="-Wl,--no-undefined -Wl,--gc-sections -Wl,-z,max-page-size=16384 -ldl -lm -llog -lz -lc"
 
 source_commit="unknown"
 if git -C "$source_root" rev-parse HEAD >/dev/null 2>&1; then

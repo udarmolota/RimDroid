@@ -28,3 +28,24 @@ RIMDROID_NATIVE_MONO_PATH=/absolute/path/libmonobdwgc-2.0.so \
 ```
 
 `BOX64_MONO_PROBE verdict=PASS value=0x5244` is the only P1 success criterion.
+
+## P2-mini reverse icall gate
+
+Run the same executable with `RunReverseIcall`.  ARM64 Mono registers and calls
+the managed `InternalCall`, the Box64 wrapper converts its x86_64 function
+pointer to an ARM64 callback, and the x86 guest adds `0x5200 + 0x44`.
+
+```sh
+RIMDROID_NATIVE_MONO_PATH=/absolute/path/libmonobdwgc-2.0.so \
+  box64 ./mono_box64_probe MANAGED_DIR CONFIG_DIR RimDroid.MonoArm64Probe.dll RunReverseIcall
+```
+
+P2-mini passes only when both lines are present:
+
+```text
+BOX64_MONO_PROBE phase=reverse_icall left=0x5200 right=0x44
+BOX64_MONO_PROBE verdict=PASS value=0x5244
+```
+
+This proves one integer callback shape.  It does not yet implement Unity's full
+icall signature set, floating-point callbacks, exceptions, or foreign GC roots.

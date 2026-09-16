@@ -22,6 +22,13 @@ typedef MonoMethod *(*mono_class_get_method_from_name_fn)(MonoClass *, const cha
 typedef MonoObject *(*mono_runtime_invoke_fn)(MonoMethod *, void *, void **, MonoObject **);
 typedef void *(*mono_object_unbox_fn)(MonoObject *);
 typedef const char *(*mono_get_runtime_build_info_fn)(void);
+typedef void (*mono_add_internal_call_fn)(const char *, const void *);
+
+static int native_add(int left, int right)
+{
+    fprintf(stderr, "BOX64_MONO_PROBE phase=reverse_icall left=0x%x right=0x%x\n", left, right);
+    return left + right;
+}
 
 static void *require_symbol(void *library, const char *name)
 {
@@ -63,12 +70,16 @@ int main(int argc, char **argv)
     LOAD(mono_runtime_invoke);
     LOAD(mono_object_unbox);
     LOAD(mono_get_runtime_build_info);
+    LOAD(mono_add_internal_call);
 #undef LOAD
 
     fprintf(stderr, "BOX64_MONO_PROBE phase=runtime version=%s\n", mono_get_runtime_build_info());
     mono_set_dirs(argv[1], argv[2]);
     mono_set_assemblies_path(argv[1]);
     mono_config_parse(NULL);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeAdd",
+        (const void *)native_add);
 
     fprintf(stderr, "BOX64_MONO_PROBE phase=jit_init\n");
     MonoDomain *domain = mono_jit_init_version("RimDroidBox64MonoProbe", "v4.0.30319");

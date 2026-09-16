@@ -1,13 +1,22 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace RimDroid.MonoArm64Probe
 {
     public static class EntryPoint
     {
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern int NativeAdd(int left, int right);
+
         public static int RunBasic()
         {
             return 0x5244;
+        }
+
+        public static int RunReverseIcall()
+        {
+            return NativeAdd(0x5200, 0x44);
         }
 
         public static int RunStress()

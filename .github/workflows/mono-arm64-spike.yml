@@ -45,6 +45,12 @@ jobs:
           tools/mono-arm64/box64-probe/build-x86.sh "$RUNNER_TEMP/box64-probe"
           readelf -h "$RUNNER_TEMP/box64-probe/mono_box64_probe" | grep -q 'Machine:.*X86-64'
 
+      - name: Set up JDK 17 for sdkmanager
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Set up Android SDK and NDK
         uses: android-actions/setup-android@v3
 

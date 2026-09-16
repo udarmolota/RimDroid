@@ -6,6 +6,8 @@ on:
       - codex/mono-arm64-spike
     paths:
       - .github/workflows/mono-arm64-spike.yml
+      - box64
+      - box64/**
       - tools/mono-arm64/**
   workflow_dispatch:
     inputs:
@@ -26,6 +28,48 @@ env:
   NDK_VERSION: ${{ inputs.ndk_version || '19.2.5345600' }}
 
 jobs:
+  build-box64-probe:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout RimDroid spike and Box64
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build x86_64 probe guest
+        run: |
+          set -euo pipefail
+          chmod +x tools/mono-arm64/box64-probe/build-x86.sh
+          tools/mono-arm64/box64-probe/build-x86.sh "$RUNNER_TEMP/box64-probe"
+          readelf -h "$RUNNER_TEMP/box64-probe/mono_box64_probe" | grep -q 'Machine:.*X86-64'
+
+      - name: Set up Android SDK and NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build ARM64 Box64 with the Mono probe wrapper
+        run: |
+          set -euo pipefail
+          sdkmanager "ndk;27.0.12077973" "cmake;3.22.1"
+          cmake -S box64 -B "$RUNNER_TEMP/box64-arm64" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_SDK_ROOT/ndk/27.0.12077973/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-21
+          cmake --build "$RUNNER_TEMP/box64-arm64" --target box64 --parallel 2
+          readelf -h "$RUNNER_TEMP/box64-arm64/box64" | grep -q 'Machine:.*AArch64'
+
+      - name: Upload P1 test executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: box64-mono-p1-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/box64-arm64/box64
+            ${{ runner.temp }}/box64-probe/mono_box64_probe
+          if-no-files-found: error
+          retention-days: 14
+
   build-runtime:
     runs-on: ubuntu-22.04
     timeout-minutes: 90

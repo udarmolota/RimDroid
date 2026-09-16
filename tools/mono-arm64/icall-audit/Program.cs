@@ -4,14 +4,17 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text;
 
-if (args.Length is < 1 or > 2)
+if (args.Length is < 1 or > 3 || (args.Length == 3 && args[2] != "--unity-only"))
 {
-    Console.Error.WriteLine("usage: IcallAudit MANAGED_DIR [OUTPUT_TSV]");
+    Console.Error.WriteLine("usage: IcallAudit MANAGED_DIR [OUTPUT_TSV] [--unity-only]");
     return 2;
 }
 
 string managedDir = Path.GetFullPath(args[0]);
 string? outputPath = args.Length == 2 ? Path.GetFullPath(args[1]) : null;
+if (args.Length == 3)
+    outputPath = Path.GetFullPath(args[1]);
+bool unityOnly = args.Length == 3;
 if (!Directory.Exists(managedDir))
 {
     Console.Error.WriteLine($"managed directory not found: {managedDir}");
@@ -23,6 +26,10 @@ Dictionary<string, string> enumAbi = BuildEnumAbiCatalog(assemblyPaths);
 var rows = new List<Row>();
 foreach (string assemblyPath in assemblyPaths)
 {
+    string assemblyName = Path.GetFileName(assemblyPath);
+    if (unityOnly && !assemblyName.StartsWith("UnityEngine.", StringComparison.Ordinal))
+        continue;
+
     using var stream = File.OpenRead(assemblyPath);
     using var pe = new PEReader(stream);
     if (!pe.HasMetadata)
@@ -47,7 +54,7 @@ foreach (string assemblyPath in assemblyPaths)
 
         string registrationName = $"{typeName}::{methodName}";
         rows.Add(new Row(
-            Path.GetFileName(assemblyPath),
+            assemblyName,
             registrationName,
             signature.Header.IsInstance,
             signature.ReturnType,

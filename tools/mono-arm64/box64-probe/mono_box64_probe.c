@@ -83,13 +83,14 @@ int main(int argc, char **argv)
     mono_set_dirs(argv[1], argv[2]);
     mono_set_assemblies_path(argv[1]);
     mono_config_parse(NULL);
-    mono_add_internal_call(
-        "RimDroid.MonoArm64Probe.EntryPoint::NativeAdd",
-        (const void *)native_add);
 
     fprintf(stderr, "BOX64_MONO_PROBE phase=jit_init\n");
     MonoDomain *domain = mono_jit_init_version("RimDroidBox64MonoProbe", "v4.0.30319");
     if (!domain) return 30;
+
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeAdd",
+        (const void *)native_add);
 
     MonoAssembly *assembly = mono_domain_assembly_open(domain, argv[3]);
     MonoImage *image = assembly ? mono_assembly_get_image(assembly) : NULL;

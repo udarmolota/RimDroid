@@ -26,6 +26,18 @@ namespace RimDroid.MonoArm64Probe
             long a, long b, long c, long d, long e,
             long f, long g, long h, long i);
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern sbyte NativeSByteIdentity(sbyte value);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern byte NativeByteIdentity(byte value);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern short NativeInt16Identity(short value);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern ushort NativeUInt16Identity(ushort value);
+
         public static int RunBasic()
         {
             return 0x5244;
@@ -53,6 +65,18 @@ namespace RimDroid.MonoArm64Probe
 
             if (NativeSumNine(1, 2, 3, 4, 5, 6, 7, 8, 9) != 45)
                 return -105;
+
+            if (NativeSByteIdentity(-101) != -101)
+                return -106;
+
+            if (NativeByteIdentity(0xd3) != 0xd3)
+                return -107;
+
+            if (NativeInt16Identity(-12345) != -12345)
+                return -108;
+
+            if (NativeUInt16Identity(54321) != 54321)
+                return -109;
 
             return 0x5244;
         }

@@ -60,6 +60,11 @@ static int64_t native_sum_nine(
     return a + b + c + d + e + f + g + h + i;
 }
 
+static int8_t native_sbyte_identity(int8_t value) { return value; }
+static uint8_t native_byte_identity(uint8_t value) { return value; }
+static int16_t native_int16_identity(int16_t value) { return value; }
+static uint16_t native_uint16_identity(uint16_t value) { return value; }
+
 static void *require_symbol(void *library, const char *name)
 {
     dlerror();
@@ -133,6 +138,18 @@ int main(int argc, char **argv)
     mono_add_internal_call(
         "RimDroid.MonoArm64Probe.EntryPoint::NativeSumNine",
         (const void *)native_sum_nine);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeSByteIdentity",
+        (const void *)native_sbyte_identity);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeByteIdentity",
+        (const void *)native_byte_identity);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeInt16Identity",
+        (const void *)native_int16_identity);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeUInt16Identity",
+        (const void *)native_uint16_identity);
 
     MonoAssembly *assembly = mono_domain_assembly_open(domain, argv[3]);
     MonoImage *image = assembly ? mono_assembly_get_image(assembly) : NULL;

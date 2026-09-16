@@ -38,6 +38,15 @@ namespace RimDroid.MonoArm64Probe
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern ushort NativeUInt16Identity(ushort value);
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void NativePublishObject(object value);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void NativeInstallGuestRoot();
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void NativeClearGuestRoot();
+
         public static int RunBasic()
         {
             return 0x5244;
@@ -110,6 +119,52 @@ namespace RimDroid.MonoArm64Probe
             GC.Collect();
 
             return observed == expected ? 0x5244 : -1;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static WeakReference PrepareWeakObject(bool installRoot)
+        {
+            object target = new byte[128 * 1024];
+            var weak = new WeakReference(target);
+            NativePublishObject(target);
+            if (installRoot)
+                NativeInstallGuestRoot();
+            target = null;
+            return weak;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ScrubAndCollect()
+        {
+            for (int round = 0; round < 4; round++)
+            {
+                for (int i = 0; i < 64; i++)
+                {
+                    byte[] scratch = new byte[4096 + i];
+                    scratch[0] = (byte)i;
+                }
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+        }
+
+        public static int RunGcRootProbe()
+        {
+            WeakReference rooted = PrepareWeakObject(true);
+            ScrubAndCollect();
+            bool guestRootWasSeen = rooted.IsAlive;
+            NativeClearGuestRoot();
+
+            WeakReference masked = PrepareWeakObject(false);
+            ScrubAndCollect();
+            bool negativeControlDied = !masked.IsAlive;
+            NativeClearGuestRoot();
+
+            if (!guestRootWasSeen)
+                return -201;
+            if (!negativeControlDied)
+                return -202;
+            return 0x5244;
         }
     }
 }

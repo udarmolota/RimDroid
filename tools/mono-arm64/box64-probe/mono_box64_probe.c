@@ -65,6 +65,29 @@ static uint8_t native_byte_identity(uint8_t value) { return value; }
 static int16_t native_int16_identity(int16_t value) { return value; }
 static uint16_t native_uint16_identity(uint16_t value) { return value; }
 
+static volatile uintptr_t encoded_managed_object;
+static volatile uintptr_t *guest_root_slot;
+static const uintptr_t managed_object_mask = UINT64_C(0xa5a55a5af00dc33c);
+
+__attribute__((noinline)) static void native_publish_object(void *value)
+{
+    encoded_managed_object = (uintptr_t)value ^ managed_object_mask;
+}
+
+__attribute__((noinline)) static void native_install_guest_root(void)
+{
+    uintptr_t value = encoded_managed_object ^ managed_object_mask;
+    *guest_root_slot = value;
+    encoded_managed_object = 0;
+    __asm__ __volatile__("" : : "r"(value) : "memory");
+}
+
+__attribute__((noinline)) static void native_clear_guest_root(void)
+{
+    *guest_root_slot = 0;
+    encoded_managed_object = 0;
+}
+
 static void *require_symbol(void *library, const char *name)
 {
     dlerror();
@@ -150,6 +173,18 @@ int main(int argc, char **argv)
     mono_add_internal_call(
         "RimDroid.MonoArm64Probe.EntryPoint::NativeUInt16Identity",
         (const void *)native_uint16_identity);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativePublishObject",
+        (const void *)native_publish_object);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeInstallGuestRoot",
+        (const void *)native_install_guest_root);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeClearGuestRoot",
+        (const void *)native_clear_guest_root);
+
+    volatile uintptr_t guest_root = 0;
+    guest_root_slot = &guest_root;
 
     MonoAssembly *assembly = mono_domain_assembly_open(domain, argv[3]);
     MonoImage *image = assembly ? mono_assembly_get_image(assembly) : NULL;
@@ -176,6 +211,8 @@ int main(int argc, char **argv)
     }
 
     int32_t value = *(int32_t *)mono_object_unbox(boxed_result);
+    guest_root = 0;
+    guest_root_slot = NULL;
     mono_jit_cleanup(domain);
     dlclose(library);
     fprintf(stderr, "BOX64_MONO_PROBE verdict=%s value=0x%04x\n",

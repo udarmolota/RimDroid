@@ -121,15 +121,44 @@ namespace RimDroid.MonoArm64Probe
             return observed == expected ? 0x5244 : -1;
         }
 
+        // Boehm scans native stacks and saved registers conservatively. Publishing the object on the
+        // thread that later collects leaves its raw address behind in dead native frames of the Box64
+        // reverse-icall path, which kept BOTH the rooted object and the masked control alive (-202 on
+        // the baseline). A worker thread that exits before the collection takes that residue with it:
+        // afterwards the only copy of the address is the slot on the main thread's x86 guest stack.
+        private static WeakReference publishedWeak;
+
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static WeakReference PrepareWeakObject(bool installRoot)
+        private static void PublishOnCurrentThread(bool installRoot)
         {
             object target = new byte[128 * 1024];
-            var weak = new WeakReference(target);
+            publishedWeak = new WeakReference(target);
             NativePublishObject(target);
             if (installRoot)
                 NativeInstallGuestRoot();
-            target = null;
+        }
+
+        private static void PublishRooted()
+        {
+            PublishOnCurrentThread(true);
+        }
+
+        private static void PublishMasked()
+        {
+            PublishOnCurrentThread(false);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static WeakReference PrepareWeakObject(bool installRoot)
+        {
+            publishedWeak = null;
+            // Static methods, not a lambda: a closure object would be reachable from the Thread and
+            // could end up holding the target.
+            Thread worker = new Thread(installRoot ? new ThreadStart(PublishRooted) : new ThreadStart(PublishMasked));
+            worker.Start();
+            worker.Join();
+            WeakReference weak = publishedWeak;
+            publishedWeak = null;
             return weak;
         }
 

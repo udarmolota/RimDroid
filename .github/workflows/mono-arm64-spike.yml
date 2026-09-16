@@ -51,6 +51,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up .NET 8 for thunk generation
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
       - name: Install NDK and build ARM64 Box64 with the Mono probe wrapper
         run: |
           set -euo pipefail
@@ -59,6 +64,15 @@ jobs:
           test -x "$sdkmanager"
           yes | "$sdkmanager" --licenses >/dev/null || true
           "$sdkmanager" "ndk;27.0.12077973" "cmake;3.22.1"
+          dotnet run --project tools/mono-arm64/icall-thunk-gen/IcallThunkGen.csproj -- \
+            tools/mono-arm64/icall-thunk-gen/testdata/representative.tsv \
+            "$RUNNER_TEMP/rd-mono-icalls.generated.c"
+          "$sdk_root/ndk/27.0.12077973/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" \
+            --target=aarch64-linux-android21 \
+            -I tools/mono-arm64/icall-thunk-gen/testdata \
+            -Wall -Wextra -Werror -Wno-unused-function -Wno-unused-variable \
+            -c "$RUNNER_TEMP/rd-mono-icalls.generated.c" \
+            -o "$RUNNER_TEMP/rd-mono-icalls.generated.o"
           cmake -S box64 -B "$RUNNER_TEMP/box64-arm64" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="$sdk_root/ndk/27.0.12077973/build/cmake/android.toolchain.cmake" \

@@ -102,6 +102,20 @@ public class GameInstance {
 
     /** Args passed to RimWorldLinux binary */
     public String[] getArgs() {
+        String[] args = getBaseArgs();
+        // Native ARM64 Mono experiment (RIMDROID_NATIVE_MONO_PATH in the extra env field, see
+        // docs/MONO_ARM64_SPIKE.md): Burst direct calls hand managed code raw pointers into the
+        // x86_64 lib_burst_generated.so, which ARM64 JIT code cannot execute. Unity then falls back
+        // to the managed implementations. The two settings only make sense together.
+        String nativeMono = android.system.Os.getenv("RIMDROID_NATIVE_MONO_PATH");
+        if (nativeMono == null || nativeMono.isEmpty()) return args;
+        String[] withBurstOff = java.util.Arrays.copyOf(args, args.length + 1);
+        withBurstOff[args.length] = "--burst-disable-compilation";
+        android.util.Log.i("RimDroid", "getArgs: native ARM64 Mono -> --burst-disable-compilation");
+        return withBurstOff;
+    }
+
+    private String[] getBaseArgs() {
         // SPIKE toggle (RimWorld 1.6 bring-up, see [[rimworld_16_port]]): if a marker file
         // "rd_batchmode" exists in the instance dir, run HEADLESS (-batchmode -nographics).
         // This proves Mono-2022 + Burst + managed boot under box64 with the whole

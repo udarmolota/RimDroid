@@ -55,7 +55,7 @@ match, not proof that Unity used that exact commit.
 The extracted official ARMv7 runtime is a useful platform control:
 
 - SHA-256: `48b09c12322a5ff02366ce7c5dbccdf7eef6a171ccc71355bddf4b76c68c48c3`
-- It exports all `286/286` Mono entry points used by RimWorld's Linux
+- It exports all `286/286` `mono_*` entry points used by RimWorld's Linux
   `UnityPlayer.so`.
 - Therefore the immediate source-build gate is realistic; it does not prove
   callback or object-layout compatibility.
@@ -103,7 +103,8 @@ host also prints `guest_state=INTACT mask=0x0` (see P4).
 The x86_64 host loads the synthetic wrapped library, which opens the ARM64 runtime,
 initializes the JIT and invokes a managed method. PASS.
 
-The 286 Mono functions UnityPlayer resolves collapse to **50 distinct Box64 signatures**
+The 289 Mono functions UnityPlayer resolves (286 `mono_*` and 3 `unity_*`: the first headless
+run found the `unity_` ones, which the name audit had filtered out) collapse to **50 distinct Box64 signatures**
 with no floating-point arguments or returns, no stack-passed arguments, no structs by
 value and no varargs. Only three use 8/16-bit integers
 (`mono_gc_is_incremental`, `mono_error_get_error_code`, `mono_gc_set_incremental`).
@@ -220,7 +221,7 @@ internal call resolution) is complete. The points that shape the next phase:
   are enough. `mono_unity_set_vprintf_func` passes a `va_list`: format natively instead
   of bridging it. `mono_unity_install_unitytls_interface` is a struct of function
   pointers and is not needed before the main menu.
-- **No executable pointers flow from Mono to Unity.** None of the 286 functions returns
+- **No executable pointers flow from Mono to Unity.** None of the 289 functions returns
   JIT code or a native thunk that Unity would call.
 - **Internal call signatures:** Unity registers with `mono_add_internal_call` (flag
   `FOREIGN`), and in JIT mode Mono always wraps such calls
@@ -255,7 +256,7 @@ internal call resolution) is complete. The points that shape the next phase:
 
 Goal: RimWorld starts in batch mode and reaches its first managed method, then the menu.
 
-1. `wrappedlibmono` for all 286 functions, generated plus hand-written wrappers, and the
+1. `wrappedlibmono` for all 289 functions, generated plus hand-written wrappers, and the
    `library.c` exception so Unity gets the ARM64 runtime.
 2. Generated reverse thunks for the 596 internal call signatures, bound at resolution
    time, each carrying the P4 exception bridge.

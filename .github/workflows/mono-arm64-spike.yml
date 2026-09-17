@@ -160,9 +160,9 @@ jobs:
           readelf -h "$runtime" | grep -q 'Class:.*ELF64'
           readelf -h "$runtime" | grep -q 'Machine:.*AArch64'
           LC_ALL=C sort -c tools/mono-arm64/baseline-required-exports.txt
-          test "$(wc -l < tools/mono-arm64/baseline-required-exports.txt)" -eq 286
+          test "$(wc -l < tools/mono-arm64/baseline-required-exports.txt)" -eq 289
           readelf --dyn-syms --wide "$runtime" |
-            awk '$7 != "UND" && $8 ~ /^mono_/ { sub(/@.*/, "", $8); print $8 }' |
+            awk '$7 != "UND" && $8 ~ /^(mono_|unity_)/ { sub(/@.*/, "", $8); print $8 }' |
             LC_ALL=C sort -u > "$RUNNER_TEMP/candidate-exports.txt"
           comm -23 \
             tools/mono-arm64/baseline-required-exports.txt \

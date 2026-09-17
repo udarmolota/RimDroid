@@ -10,7 +10,7 @@ with an environment switch on the same build. Results, commits and analysis are 
 [`docs/MONO_ARM64_SPIKE.md`](../../../docs/MONO_ARM64_SPIKE.md).
 
 This is still a synthetic harness. The guest RimWorld `libmonobdwgc-2.0.so` is not
-intercepted, and it does not show that Unity itself boots: the 286-function Mono
+intercepted, and it does not show that Unity itself boots: the 289-function Mono
 wrapper, the generated internal call thunks, multi-thread GC registration, Burst
 and Steam P/Invokes belong to the integration phase.
 

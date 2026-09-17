@@ -43,7 +43,7 @@ first harness runs.
 `audit-mono-abi.ps1` extracts the Mono names embedded in `UnityPlayer.so`,
 intersects them with the exports of the known-good x86_64 Unity Mono, and can
 compare that baseline with an ARM64 candidate.
-`baseline-required-exports.txt` freezes that 286-symbol intersection for CI;
+`baseline-required-exports.txt` freezes that 289-symbol intersection (`mono_*` and `unity_*`) for CI;
 regenerate it only when either frozen runtime hash changes.
 
 Baseline-only run:

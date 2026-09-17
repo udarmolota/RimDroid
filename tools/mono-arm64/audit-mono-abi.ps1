@@ -116,7 +116,7 @@ function Get-MonoNamesFromBinary([string] $Path) {
     $names = [System.Collections.Generic.HashSet[string]]::new(
         [System.StringComparer]::Ordinal
     )
-    foreach ($match in [regex]::Matches($ascii, '(?<![A-Za-z0-9_])mono_[A-Za-z0-9_]+')) {
+    foreach ($match in [regex]::Matches($ascii, '(?<![A-Za-z0-9_])(mono|unity)_[A-Za-z0-9_]+')) {
         [void] $names.Add($match.Value)
     }
     return $names

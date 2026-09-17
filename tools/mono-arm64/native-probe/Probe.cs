@@ -59,6 +59,20 @@ namespace RimDroid.MonoArm64Probe
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void NativeReportBench(long reverseIcallNs, long managedCallNs, int calls);
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern int NativeSmcRound(int round);
+
+        private sealed class NullTarget
+        {
+            public int Value = 1;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static int ReadThroughNull(NullTarget target)
+        {
+            return target.Value;
+        }
+
         public static int RunBasic()
         {
             return 0x5244;
@@ -248,6 +262,33 @@ namespace RimDroid.MonoArm64Probe
             NativeReportBench(t1 - t0, t2 - t1, calls);
             GC.KeepAlive(sink);
             return NativeBenchIdentity(0x5244);
+        }
+
+        // P5: both runtimes rely on SIGSEGV in the same process. ARM64 Mono turns a fault at a small
+        // address inside JIT code into NullReferenceException; Box64 write-protects pages holding x86
+        // code it has translated and takes the fault to notice self-modifying code. Mono installs its
+        // handlers during JIT init and replaces Box64's, so every Box64 fault must be handed back to
+        // Box64 while every managed null dereference must still reach Mono. The rounds interleave the
+        // two kinds of fault on the same thread.
+        public static int RunSignalProbe()
+        {
+            const int rounds = 200;
+            int nullReferences = 0;
+            for (int i = 0; i < rounds; i++)
+            {
+                if (NativeSmcRound(i) != i * 3 + 7)
+                    return -501;
+                try
+                {
+                    ReadThroughNull(null);
+                    return -502;
+                }
+                catch (NullReferenceException)
+                {
+                    nullReferences++;
+                }
+            }
+            return nullReferences == rounds ? 0x5244 : -503;
         }
 
         public static int RunGcRootProbe()

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/mman.h>
 
 typedef struct _MonoAssembly MonoAssembly;
 typedef struct _MonoClass MonoClass;
@@ -253,6 +254,30 @@ static void run_forward_bench(mono_class_get_name_fn class_get_name, MonoClass *
             "forward_overhead_ns=%.1f calls=%d\n", api, plain, api - plain, calls);
 }
 
+/*
+ * P5 guest side: a tiny x86 function generated into an executable mapping (mov eax, imm32; ret).
+ * Every round rewrites the constant and calls it again. After the first call Box64 has translated
+ * that page and write-protected it, so the rewrite faults and only Box64's SIGSEGV handler can
+ * let it through and drop the stale translation. A wrong result means the rewrite was never seen.
+ */
+static unsigned char *smc_page;
+
+static int native_smc_round(int round)
+{
+    if (!smc_page) {
+        void *page = mmap(NULL, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (page == MAP_FAILED)
+            return -1;
+        smc_page = page;
+        smc_page[0] = 0xB8;             /* mov eax, imm32 */
+        smc_page[5] = 0xC3;             /* ret */
+    }
+    int32_t value = round * 3 + 7;
+    memcpy(smc_page + 1, &value, sizeof(value));
+    int (*generated)(void) = (int (*)(void))(void *)smc_page;
+    return generated();
+}
+
 static void *require_symbol(void *library, const char *name)
 {
     dlerror();
@@ -363,6 +388,9 @@ int main(int argc, char **argv)
     mono_add_internal_call(
         "RimDroid.MonoArm64Probe.EntryPoint::NativeReportBench",
         (const void *)native_report_bench);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeSmcRound",
+        (const void *)native_smc_round);
 
     volatile uintptr_t guest_root = 0;
     guest_root_slot = &guest_root;

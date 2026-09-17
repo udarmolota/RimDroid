@@ -26,6 +26,8 @@ typedef const char *(*mono_class_get_name_fn)(MonoClass *);
 typedef const char *(*mono_class_get_namespace_fn)(MonoClass *);
 typedef const char *(*mono_get_runtime_build_info_fn)(void);
 typedef void (*mono_add_internal_call_fn)(const char *, const void *);
+typedef MonoObject *(*mono_get_exception_argument_null_fn)(const char *);
+typedef void (*mono_raise_exception_fn)(MonoObject *);
 
 static int native_add(int left, int right)
 {
@@ -88,6 +90,111 @@ __attribute__((noinline)) static void native_clear_guest_root(void)
     encoded_managed_object = 0;
 }
 
+/*
+ * P4: managed exceptions raised by an x86 internal call.
+ *
+ * rd_guest_throw loads garbage into every callee-saved register and then raises through
+ * mono_raise_exception, which never returns, so its epilogue never restores them. That is exactly
+ * the state a Unity internal call leaves behind when it raises.
+ *
+ * rd_invoke_guarded runs mono_runtime_invoke with canaries in all callee-saved registers and
+ * records in rd_guard_bad which of them, or the stack pointer, did not survive. A consistent guest
+ * must come back with rd_guard_bad == 0 however many exceptions crossed the bridge meanwhile.
+ */
+static mono_get_exception_argument_null_fn p4_get_exception_argument_null;
+static mono_raise_exception_fn p4_raise_exception;
+uint64_t rd_guard_bad;
+int rd_guest_throw(int marker);
+MonoObject *rd_invoke_guarded(mono_runtime_invoke_fn fn, MonoMethod *method, MonoObject **exception);
+void rd_guest_throw_raise(void);
+
+__attribute__((noinline, used)) void rd_guest_throw_raise(void)
+{
+    p4_raise_exception(p4_get_exception_argument_null("rimdroid_p4"));
+}
+
+__asm__(
+    ".text\n"
+    ".globl rd_guest_throw\n"
+    ".type rd_guest_throw, @function\n"
+    "rd_guest_throw:\n"
+    "    push %rbx\n"
+    "    push %r12\n"
+    "    push %r13\n"
+    "    push %r14\n"
+    "    push %r15\n"
+    "    movabs $0x524400000000bad1, %rbx\n"
+    "    movabs $0x524400000000bad2, %r12\n"
+    "    movabs $0x524400000000bad3, %r13\n"
+    "    movabs $0x524400000000bad4, %r14\n"
+    "    movabs $0x524400000000bad5, %r15\n"
+    "    call rd_guest_throw_raise\n"
+    "    pop %r15\n"
+    "    pop %r14\n"
+    "    pop %r13\n"
+    "    pop %r12\n"
+    "    pop %rbx\n"
+    "    mov $-1, %eax\n"
+    "    ret\n"
+    ".size rd_guest_throw, .-rd_guest_throw\n"
+    ".globl rd_invoke_guarded\n"
+    ".type rd_invoke_guarded, @function\n"
+    "rd_invoke_guarded:\n"
+    "    push %rbp\n"
+    "    push %rbx\n"
+    "    push %r12\n"
+    "    push %r13\n"
+    "    push %r14\n"
+    "    push %r15\n"
+    "    sub $8, %rsp\n"
+    "    mov %rsp, %rbp\n"
+    "    movabs $0xc0de00000000cafe, %rbx\n"
+    "    movabs $0xc0de00000000c012, %r12\n"
+    "    movabs $0xc0de00000000c013, %r13\n"
+    "    movabs $0xc0de00000000c014, %r14\n"
+    "    movabs $0xc0de00000000c015, %r15\n"
+    "    mov %rdi, %rax\n"
+    "    mov %rdx, %rcx\n"
+    "    mov %rsi, %rdi\n"
+    "    xor %esi, %esi\n"
+    "    xor %edx, %edx\n"
+    "    call *%rax\n"
+    "    xor %r10d, %r10d\n"
+    "    movabs $0xc0de00000000cafe, %r11\n"
+    "    cmp %r11, %rbx\n"
+    "    je 1f\n"
+    "    or $1, %r10\n"
+    "1:  movabs $0xc0de00000000c012, %r11\n"
+    "    cmp %r11, %r12\n"
+    "    je 2f\n"
+    "    or $2, %r10\n"
+    "2:  movabs $0xc0de00000000c013, %r11\n"
+    "    cmp %r11, %r13\n"
+    "    je 3f\n"
+    "    or $4, %r10\n"
+    "3:  movabs $0xc0de00000000c014, %r11\n"
+    "    cmp %r11, %r14\n"
+    "    je 4f\n"
+    "    or $8, %r10\n"
+    "4:  movabs $0xc0de00000000c015, %r11\n"
+    "    cmp %r11, %r15\n"
+    "    je 5f\n"
+    "    or $16, %r10\n"
+    "5:  cmp %rsp, %rbp\n"
+    "    je 6f\n"
+    "    or $32, %r10\n"
+    "6:  mov %r10, rd_guard_bad(%rip)\n"
+    "    add $8, %rsp\n"
+    "    pop %r15\n"
+    "    pop %r14\n"
+    "    pop %r13\n"
+    "    pop %r12\n"
+    "    pop %rbx\n"
+    "    pop %rbp\n"
+    "    ret\n"
+    ".size rd_invoke_guarded, .-rd_invoke_guarded\n"
+);
+
 static void *require_symbol(void *library, const char *name)
 {
     dlerror();
@@ -132,7 +239,11 @@ int main(int argc, char **argv)
     LOAD(mono_class_get_namespace);
     LOAD(mono_get_runtime_build_info);
     LOAD(mono_add_internal_call);
+    LOAD(mono_get_exception_argument_null);
+    LOAD(mono_raise_exception);
 #undef LOAD
+    p4_get_exception_argument_null = mono_get_exception_argument_null;
+    p4_raise_exception = mono_raise_exception;
 
     fprintf(stderr, "BOX64_MONO_PROBE phase=runtime version=%s\n", mono_get_runtime_build_info());
     mono_set_dirs(argv[1], argv[2]);
@@ -182,6 +293,9 @@ int main(int argc, char **argv)
     mono_add_internal_call(
         "RimDroid.MonoArm64Probe.EntryPoint::NativeClearGuestRoot",
         (const void *)native_clear_guest_root);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeThrowFromGuest",
+        (const void *)rd_guest_throw);
 
     volatile uintptr_t guest_root = 0;
     guest_root_slot = &guest_root;
@@ -197,7 +311,9 @@ int main(int argc, char **argv)
     }
 
     MonoObject *exception = NULL;
-    MonoObject *boxed_result = mono_runtime_invoke(method, NULL, NULL, &exception);
+    MonoObject *boxed_result = rd_invoke_guarded(mono_runtime_invoke, method, &exception);
+    fprintf(stderr, "BOX64_MONO_PROBE guest_state=%s mask=0x%llx\n",
+            rd_guard_bad ? "CORRUPT" : "INTACT", (unsigned long long)rd_guard_bad);
     if (exception || !boxed_result) {
         if (exception) {
             MonoClass *exception_class = mono_object_get_class(exception);
@@ -215,7 +331,8 @@ int main(int argc, char **argv)
     guest_root_slot = NULL;
     mono_jit_cleanup(domain);
     dlclose(library);
+    int passed = value == 0x5244 && rd_guard_bad == 0;
     fprintf(stderr, "BOX64_MONO_PROBE verdict=%s value=0x%04x\n",
-            value == 0x5244 ? "PASS" : "FAIL", (unsigned int)value);
-    return value == 0x5244 ? 0 : 40;
+            passed ? "PASS" : "FAIL", (unsigned int)value);
+    return passed ? 0 : 40;
 }

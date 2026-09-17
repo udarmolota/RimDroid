@@ -47,6 +47,9 @@ namespace RimDroid.MonoArm64Probe
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern void NativeClearGuestRoot();
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern int NativeThrowFromGuest(int marker);
+
         public static int RunBasic()
         {
             return 0x5244;
@@ -175,6 +178,33 @@ namespace RimDroid.MonoArm64Probe
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
+        }
+
+        // P4: an x86 internal call raises a managed exception with mono_raise_exception. The exception
+        // must reach this catch block, the x86 guest must keep a consistent state (the embedding host
+        // checks its callee-saved registers and stack pointer around mono_runtime_invoke), and reverse
+        // internal calls must keep working afterwards. Many rounds so a per-exception guest stack leak
+        // or a stale emulator state cannot hide.
+        public static int RunExceptionProbe()
+        {
+            const int rounds = 1000;
+            int caught = 0;
+            for (int i = 0; i < rounds; i++)
+            {
+                try
+                {
+                    NativeThrowFromGuest(i);
+                    return -301;
+                }
+                catch (ArgumentNullException)
+                {
+                    caught++;
+                }
+            }
+
+            if (NativeAdd(0x5200, 0x44) != 0x5244)
+                return -302;
+            return caught == rounds ? 0x5244 : -303;
         }
 
         public static int RunGcRootProbe()

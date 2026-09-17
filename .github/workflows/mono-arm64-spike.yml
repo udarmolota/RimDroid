@@ -153,6 +153,17 @@ jobs:
             "$MONO_NDK_ROOT" \
             "$RUNNER_TEMP/mono-arm64"
 
+      - name: Build ARM64 Steamworks stub
+        env:
+          ANDROID_API: 21
+        run: |
+          set -euo pipefail
+          chmod +x tools/mono-arm64/steam-stub/build.sh
+          tools/mono-arm64/steam-stub/build.sh \
+            "$MONO_NDK_ROOT" \
+            "$RUNNER_TEMP/mono-arm64"
+          readelf -h "$RUNNER_TEMP/mono-arm64/libsteam_api.so" | grep -q 'Machine:.*AArch64'
+
       - name: Verify artifact architecture and Unity API
         run: |
           set -euo pipefail

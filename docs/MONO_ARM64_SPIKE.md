@@ -88,7 +88,7 @@ ARM64 Mono/JIT -> generated callback thunk -> x86_64 UnityPlayer
 5. **Reverse callbacks, GC, exceptions, signals:** prove the bridge mechanics
    before attempting Unity. **Done (P2-P5, see below).**
 6. **Headless Unity:** run `-batchmode -nographics` and reach the first managed
-   RimWorld method. **Next.**
+   RimWorld method. **Reached** (see Headless Unity on native Mono).
 7. **Game matrix:** menu, map, save/load, DLC, Harmony, then long-run testing.
 
 ## Feasibility results
@@ -210,6 +210,30 @@ is why the lost handler went unnoticed until P5.
 - Result (RimDroid `f423ffb`): PASS and `INTACT` 3/3; P2, P3 and P4 still pass.
   `RIMDROID_P5_NO_SIGNAL_CHAINING=1`: Mono prints "Native Crash Reporting" and the
   process dies.
+
+## Headless Unity on native Mono (gate 6)
+
+First runs of the real game, 2026-09-17, S25: standalone CI Box64 with the `libmonobdwgc`
+wrapper, `RIMDROID_NATIVE_MONO_PATH` set, the launcher's Box64 environment,
+`./RimWorldLinux -batchmode -nographics --burst-disable-compilation`.
+
+1. `Failed to load mono`: UnityPlayer also resolves three `unity_*` exports that the
+   `mono_*` name audit had filtered out. Added; the list is 289 functions.
+2. Mono initializes, **all 8847 Unity internal calls bind (0 missing)**, eight Unity threads
+   register as GC root providers, and RimWorld's managed code runs (`Verse.Root.Start`,
+   `Verse.Root_Entry.Update` about 160 times per second). Every `File.Exists` failed:
+   `etc/mono/config` maps `System.Native` to `$mono_libdir/libmono-native.so`, which is the
+   game's x86_64 file.
+3. With the ARM64 `libmono-native.so` in its place the game prints
+   **`RimWorld 1.6.4871 rev600`** and exits cleanly (code 0, 13 collections) after 22 s:
+   Steamworks.NET quits the game on `DllNotFoundException` for `steam_api`.
+
+Fix for 2 and 3: the wrapper registers its own `mono_dl_fallback` handler, which Mono calls
+after its own `dlopen` fails, and loads a library of the same name from the directory of the
+native Mono runtime. That directory holds the ARM64 `libmono-native.so` and an ARM64
+`libsteam_api.so` stub whose functions all return 0 (`tools/mono-arm64/steam-stub`), i.e.
+"Steam is not running", as on the x86 path. Unity's own dl fallback stays ignored because it
+returns x86 handles.
 
 ## Bridge audit findings
 

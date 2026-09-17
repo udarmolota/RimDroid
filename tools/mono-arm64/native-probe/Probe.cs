@@ -50,6 +50,15 @@ namespace RimDroid.MonoArm64Probe
         [MethodImpl(MethodImplOptions.InternalCall)]
         private static extern int NativeThrowFromGuest(int marker);
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern int NativeBenchIdentity(int value);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern long NativeNowNs();
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern void NativeReportBench(long reverseIcallNs, long managedCallNs, int calls);
+
         public static int RunBasic()
         {
             return 0x5244;
@@ -205,6 +214,40 @@ namespace RimDroid.MonoArm64Probe
             if (NativeAdd(0x5200, 0x44) != 0x5244)
                 return -302;
             return caught == rounds ? 0x5244 : -303;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static int ManagedBenchIdentity(int value)
+        {
+            return value;
+        }
+
+        // Cost of one ARM64 Mono -> x86 internal call, the transition Unity pays on every engine call
+        // (Graphics.DrawMesh, transforms, input...). A plain managed call of the same shape is timed as the
+        // baseline so the report can show the transition overhead alone. Timing comes from the x86 host's
+        // clock_gettime: this probe's managed directory only has mscorlib, so there is no Stopwatch.
+        public static int RunIcallBenchmark()
+        {
+            const int warmup = 20000;
+            const int calls = 1000000;
+            int sink = 0;
+            for (int i = 0; i < warmup; i++)
+            {
+                sink += NativeBenchIdentity(i);
+                sink += ManagedBenchIdentity(i);
+            }
+
+            long t0 = NativeNowNs();
+            for (int i = 0; i < calls; i++)
+                sink += NativeBenchIdentity(i);
+            long t1 = NativeNowNs();
+            for (int i = 0; i < calls; i++)
+                sink += ManagedBenchIdentity(i);
+            long t2 = NativeNowNs();
+
+            NativeReportBench(t1 - t0, t2 - t1, calls);
+            GC.KeepAlive(sink);
+            return NativeBenchIdentity(0x5244);
         }
 
         public static int RunGcRootProbe()

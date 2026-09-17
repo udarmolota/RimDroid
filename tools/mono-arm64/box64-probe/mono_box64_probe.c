@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 typedef struct _MonoAssembly MonoAssembly;
 typedef struct _MonoClass MonoClass;
@@ -195,6 +197,62 @@ __asm__(
     ".size rd_invoke_guarded, .-rd_invoke_guarded\n"
 );
 
+/*
+ * Transition cost benchmark. RunIcallBenchmark times one million ARM64 Mono -> x86 internal calls
+ * against the same number of plain managed calls; the host times one million x86 -> ARM64 Mono
+ * API calls against plain x86 calls. The difference is what the bridge adds per call.
+ */
+static int64_t bench_now_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+static int native_bench_identity(int value)
+{
+    return value;
+}
+
+static int64_t native_now_ns(void)
+{
+    return bench_now_ns();
+}
+
+static void native_report_bench(int64_t reverse_icall_ns, int64_t managed_call_ns, int calls)
+{
+    double icall = (double)reverse_icall_ns / calls;
+    double managed = (double)managed_call_ns / calls;
+    fprintf(stderr, "BOX64_MONO_PROBE bench reverse_icall_ns=%.1f managed_call_ns=%.1f "
+            "reverse_overhead_ns=%.1f calls=%d\n", icall, managed, icall - managed, calls);
+}
+
+__attribute__((noinline)) static const char *bench_x86_identity(const char *value)
+{
+    return value;
+}
+
+static void run_forward_bench(mono_class_get_name_fn class_get_name, MonoClass *klass)
+{
+    const int calls = 1000000;
+    const char *volatile sink = NULL;
+    for (int i = 0; i < 20000; i++) {
+        sink = class_get_name(klass);
+        sink = bench_x86_identity(sink);
+    }
+    int64_t t0 = bench_now_ns();
+    for (int i = 0; i < calls; i++)
+        sink = class_get_name(klass);
+    int64_t t1 = bench_now_ns();
+    for (int i = 0; i < calls; i++)
+        sink = bench_x86_identity(sink);
+    int64_t t2 = bench_now_ns();
+    double api = (double)(t1 - t0) / calls;
+    double plain = (double)(t2 - t1) / calls;
+    fprintf(stderr, "BOX64_MONO_PROBE bench forward_api_ns=%.1f x86_call_ns=%.1f "
+            "forward_overhead_ns=%.1f calls=%d\n", api, plain, api - plain, calls);
+}
+
 static void *require_symbol(void *library, const char *name)
 {
     dlerror();
@@ -296,6 +354,15 @@ int main(int argc, char **argv)
     mono_add_internal_call(
         "RimDroid.MonoArm64Probe.EntryPoint::NativeThrowFromGuest",
         (const void *)rd_guest_throw);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeBenchIdentity",
+        (const void *)native_bench_identity);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeNowNs",
+        (const void *)native_now_ns);
+    mono_add_internal_call(
+        "RimDroid.MonoArm64Probe.EntryPoint::NativeReportBench",
+        (const void *)native_report_bench);
 
     volatile uintptr_t guest_root = 0;
     guest_root_slot = &guest_root;
@@ -309,6 +376,9 @@ int main(int argc, char **argv)
         mono_jit_cleanup(domain);
         return 31;
     }
+
+    if (strcmp(argv[4], "RunIcallBenchmark") == 0)
+        run_forward_bench(mono_class_get_name, klass);
 
     MonoObject *exception = NULL;
     MonoObject *boxed_result = rd_invoke_guarded(mono_runtime_invoke, method, &exception);

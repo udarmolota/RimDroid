@@ -3,6 +3,19 @@
 This directory is an isolated research spike. It does not replace the game's
 Mono runtime and is not part of the APK build.
 
+**Status:** the feasibility phase is complete. The ARM64 candidate builds, passes
+the ABI inventory and the native probe, and all five bridge gates of the
+[Box64 probe](box64-probe/README.md) (forward ABI, reverse internal calls, GC
+roots, exceptions, signals) pass on a Samsung S25. Results and the plan for the
+Unity integration phase: [`docs/MONO_ARM64_SPIKE.md`](../../docs/MONO_ARM64_SPIKE.md).
+
+| Directory | Purpose |
+|---|---|
+| `native-probe` | Managed probe assembly and an Android ARM64 embedding executable |
+| `box64-probe` | x86_64 embedding executable run through Box64, one gate per method |
+| `icall-audit` | Catalog of Unity internal calls reduced to Box64 ABI signatures |
+| `icall-thunk-gen` | Generator of typed ARM64 internal call thunks for the integration phase |
+
 ## Build a source candidate
 
 Unity 2022.3.35f1 does not ship an Android ARM64 Mono binary, but its public

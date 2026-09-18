@@ -103,7 +103,11 @@
     <string name="nav_bug_report">Сообщить об ошибке</string>
     <string name="nav_wiki">Вики</string>
     <string name="wiki_more">Подробнее — в вики</string>
-    <string name="launcher_empty_guide">Чтобы начать играть, создайте инстанс — установленную копию RimWorld. Добавьте в лаунчер файлы игры кнопкой + вверху или скачайте игру прямо из Steam или GOG через боковое меню. Из Steam инстанс создастся сам, из GOG — кнопкой «Создать инстанс».</string>
+    <string name="launcher_empty_title">С чего начать</string>
+    <string name="launcher_empty_quick_start">Быстрый старт</string>
+    <string name="launcher_empty_steam">Скачать из Steam</string>
+    <string name="launcher_empty_gog">Скачать из GOG</string>
+    <string name="launcher_empty_guide">Чтобы начать играть, создайте инстанс — установленную копию RimWorld. Добавьте в лаунчер файлы игры кнопкой + вверху или скачайте игру прямо из Steam или GOG кнопками ниже. Из Steam инстанс создастся сам, из GOG — кнопкой «Создать инстанс».</string>
     <string name="link_x">RimDroid в X</string>
     <string name="link_reddit">RimDroid на Reddit</string>
     <string name="link_support">Поддержать разработчика</string>

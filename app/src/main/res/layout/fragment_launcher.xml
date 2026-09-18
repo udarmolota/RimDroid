@@ -28,25 +28,60 @@
                 android:nestedScrollingEnabled="false"
                 android:layout_marginBottom="8dp" />
 
-            <TextView
-                android:id="@+id/tv_no_instances"
+            <!-- First steps for a player who opens the launcher knowing nothing: shown only while there
+                 is no instance, with a way into the wiki's quick start and straight into the Steam or GOG
+                 download. One button per row: three side by side do not fit a phone in any language. -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/launcher_empty_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/launcher_empty_guide"
-                android:gravity="center"
-                android:padding="12dp"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:visibility="gone" />
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
-            <!-- Shown together with the empty-state guide above: the link to the wiki's quick start. -->
-            <Button
-                android:id="@+id/btn_quick_start"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="@string/wiki_more"
-                android:visibility="gone" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/launcher_empty_title"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingMultiplier="1.2"
+                        android:text="@string/launcher_empty_guide"
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_empty_quick_start"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/launcher_empty_quick_start" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_empty_steam"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/launcher_empty_steam" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_empty_gog"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/launcher_empty_gog" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Log header row (sits right under the instances list) -->
             <LinearLayout

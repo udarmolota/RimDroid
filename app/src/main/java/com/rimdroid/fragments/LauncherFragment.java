@@ -48,8 +48,7 @@ public class LauncherFragment extends Fragment {
     private static final int MAX_LOG_LINES = 500;
 
     private RecyclerView rvInstances;
-    private TextView tvNoInstances;
-    private Button btnQuickStart;
+    private View emptyCard;
     private volatile String pendingInstallName;   // ZIP instance being installed → GPU driver advisor
     private Button btnClearLog;
     private TextView tvLog;
@@ -76,11 +75,15 @@ public class LauncherFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         rvInstances        = view.findViewById(R.id.rv_instances);
-        tvNoInstances      = view.findViewById(R.id.tv_no_instances);
-        btnQuickStart      = view.findViewById(R.id.btn_quick_start);
-        // Shown with the empty state: a first-time user's way into the wiki's quick start.
-        btnQuickStart.setOnClickListener(v -> Navigation.findNavController(v)
+        emptyCard          = view.findViewById(R.id.launcher_empty_card);
+        // The empty-state card (no instance yet): the wiki's quick start and the two in-app downloads,
+        // which are otherwise only in the drawer.
+        view.findViewById(R.id.btn_empty_quick_start).setOnClickListener(v -> Navigation.findNavController(v)
                 .navigate(R.id.action_open_wiki, WikiFragment.section("quick-start")));
+        view.findViewById(R.id.btn_empty_steam).setOnClickListener(v -> Navigation.findNavController(v)
+                .navigate(R.id.action_download_game));
+        view.findViewById(R.id.btn_empty_gog).setOnClickListener(v -> Navigation.findNavController(v)
+                .navigate(R.id.action_gog_login));
         btnClearLog        = view.findViewById(R.id.btn_clear_log);
         tvLog              = view.findViewById(R.id.tv_log);
         scrollLog          = view.findViewById(R.id.scroll_log);
@@ -135,8 +138,7 @@ public class LauncherFragment extends Fragment {
         instances.addAll(GameInstanceManager.requireSingleton().getInstances());
         if (instanceAdapter != null) instanceAdapter.notifyDataSetChanged();
         int empty = instances.isEmpty() ? View.VISIBLE : View.GONE;
-        if (tvNoInstances != null) tvNoInstances.setVisibility(empty);
-        if (btnQuickStart != null) btnQuickStart.setVisibility(empty);
+        if (emptyCard != null) emptyCard.setVisibility(empty);
     }
 
     /** One card per instance: name + a settings (gear) button + a Launch button. */

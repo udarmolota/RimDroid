@@ -106,7 +106,11 @@ En la nube: %2$s
     <string name="nav_bug_report">Reportar un error</string>
     <string name="nav_wiki">Wiki</string>
     <string name="wiki_more">Más en la wiki</string>
-    <string name="launcher_empty_guide">Para empezar a jugar, crea una instancia: una copia instalada de RimWorld. Agrega los archivos del juego con el + de arriba o descarga el juego directamente desde Steam o GOG en el menú lateral. Desde Steam la instancia se crea sola; desde GOG, con el botón «Crear una instancia».</string>
+    <string name="launcher_empty_title">Por dónde empezar</string>
+    <string name="launcher_empty_quick_start">Inicio rápido</string>
+    <string name="launcher_empty_steam">Descargar de Steam</string>
+    <string name="launcher_empty_gog">Descargar de GOG</string>
+    <string name="launcher_empty_guide">Para empezar a jugar, crea una instancia: una copia instalada de RimWorld. Agrega los archivos del juego con el + de arriba o descarga el juego directamente desde Steam o GOG con los botones de abajo. Desde Steam la instancia se crea sola; desde GOG, con el botón «Crear una instancia».</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid en X</string>
     <string name="link_reddit">RimDroid en Reddit</string>

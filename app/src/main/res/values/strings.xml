@@ -104,7 +104,11 @@ In the cloud: %2$s
     <string name="nav_bug_report">Report a bug</string>
     <string name="nav_wiki">Wiki</string>
     <string name="wiki_more">More in the wiki</string>
-    <string name="launcher_empty_guide">To start playing, create an instance — an installed copy of RimWorld. Add your game files with the + at the top, or download the game straight from Steam or GOG in the side menu. From Steam the instance is created by itself; from GOG, with the “Create an instance” button.</string>
+    <string name="launcher_empty_title">Getting started</string>
+    <string name="launcher_empty_quick_start">Quick start</string>
+    <string name="launcher_empty_steam">Download from Steam</string>
+    <string name="launcher_empty_gog">Download from GOG</string>
+    <string name="launcher_empty_guide">To start playing, create an instance — an installed copy of RimWorld. Add your game files with the + at the top, or download the game straight from Steam or GOG with the buttons below. From Steam the instance is created by itself; from GOG, with the “Create an instance” button.</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid on X</string>
     <string name="link_reddit">RimDroid on Reddit</string>

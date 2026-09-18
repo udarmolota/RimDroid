@@ -52,13 +52,16 @@ output.AppendLine("#include <stdint.h>");
 output.AppendLine("#include <string.h>");
 output.AppendLine("#include \"callback.h\"");
 output.AppendLine("/*");
-output.AppendLine(" * The includer supplies the bridge: rd_icall_frame_t, rd_icall_enter(), rd_icall_leave() and");
+output.AppendLine(" * The includer supplies the bridge: rd_icall_frame_t, rd_icall_enter(frame, index), rd_icall_leave() and");
 output.AppendLine(" * rd_icall_float_result(). rd_icall_leave() returns nonzero when the guest raised a managed exception;");
 output.AppendLine(" * the result is then discarded and Mono throws the pending exception in managed code.");
 output.AppendLine(" */");
 output.AppendLine("#ifndef RD_MONO_ICALL_BRIDGE_DEFINED");
 output.AppendLine("#include \"rd_mono_icall_bridge.h\"");
 output.AppendLine("#endif");
+output.AppendLine();
+output.AppendLine("/* Thunk index == position in rd_mono_icalls[]; the bridge can keep per-call statistics by it. */");
+output.AppendLine($"enum {{ RD_MONO_ICALL_COUNT = {rows.Length} }};");
 output.AppendLine();
 output.AppendLine("typedef struct rd_mono_icall_entry_s {");
 output.AppendLine("    const char* name;");
@@ -133,7 +136,7 @@ static void EmitThunk(StringBuilder output, Row row, int index)
     output.AppendLine($"static {CType(returnCode)} rd_icall_thunk_{index:D5}({parameters})");
     output.AppendLine("{");
     output.AppendLine("    rd_icall_frame_t frame;");
-    output.AppendLine("    rd_icall_enter(&frame);");
+    output.AppendLine($"    rd_icall_enter(&frame, {index});");
     switch (returnCode)
     {
         case 'v':

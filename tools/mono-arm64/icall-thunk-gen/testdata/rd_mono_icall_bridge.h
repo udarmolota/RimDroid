@@ -6,7 +6,7 @@ typedef struct rd_icall_frame_s {
     void* emu;
 } rd_icall_frame_t;
 
-void rd_icall_enter(rd_icall_frame_t* frame);
+void rd_icall_enter(rd_icall_frame_t* frame, int index);
 int rd_icall_leave(rd_icall_frame_t* frame);
 float rd_icall_float_result(rd_icall_frame_t* frame);
 

@@ -132,6 +132,7 @@ data we're missing, and they're how the device recommendations here will get mor
 ## Credits & Third-Party Sources
 
 - [box64](https://github.com/ptitSeb/box64) — x86_64→ARM64 emulation backend
+- [Mono (Unity fork)](https://github.com/Unity-Technologies/mono) — native ARM64 runtime behind the experimental "Native ARM64 Mono" switch (RimWorld 1.6)
 - [MobileGlues](https://github.com/MobileGL-Dev/MobileGlues) by [MobileGL-Dev](https://github.com/MobileGL-Dev)
   — the second renderer (OpenGL→OpenGL ES)
 - [Mesa / Zink](https://gitlab.freedesktop.org/mesa/mesa) — GPU rendering (OpenGL→Vulkan)

@@ -181,6 +181,18 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "compat_mode", v).apply();
     }
 
+    // --- Native ARM64 Mono (experimental, RimWorld 1.6 only): the game's C# code runs on a native ARM64
+    // build of Unity's Mono instead of the emulated x86_64 one (see com.rimdroid.game.NativeMono and
+    // box64 wrappedlibmonobdwgc.c). Default OFF; the switch is only shown when the runtime is packaged
+    // in this APK and the instance is a 1.6 one.
+    public boolean isNativeMono() {
+        return p.getBoolean(pfx + "native_mono", false);
+    }
+
+    public void setNativeMono(boolean v) {
+        p.edit().putBoolean(pfx + "native_mono", v).apply();
+    }
+
     // --- Extra env vars (KEY=VALUE, space-separated). Per-instance, falls back to the global value. ---
     // Power-user / diagnostic knob applied last in GameLauncher, so it can OVERRIDE the box64 defaults.
     // E.g. "BOX64_DYNAREC_ALIGNED_ATOMICS=1" (Mali/Cortex save-corruption test) or
@@ -234,6 +246,7 @@ public class InstanceSettings {
                 .remove(pfx + "debug")
                 .remove(pfx + "interpreter")
                 .remove(pfx + "compat_mode")
+                .remove(pfx + "native_mono")
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")

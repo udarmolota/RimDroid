@@ -57,6 +57,17 @@ SDL2                   zlib License         Copyright (c) 1997-2024 Sam Lantinga
 MobileGlues            LGPL-2.1             Copyright (c) MobileGL-Dev contributors
                        https://github.com/MobileGL-Dev/MobileGlues
 
+Mono (Unity fork)      MIT License          Copyright (c) .NET Foundation and Contributors;
+(libmonobdwgc-2.0.so,                       fork by Unity Technologies
+ libmono-native.so)                         github.com/Unity-Technologies/mono, commit c11bc9adba,
+                                            built for Android ARM64 by RimDroid
+                       Includes the Boehm-Demers-Weiser garbage collector (MIT-style license),
+                       Copyright (c) 1988-1989 Hans-J. Boehm, Alan J. Demers; 1991-1995 Xerox
+                       Corporation; 1996-1999 Silicon Graphics; 1999-2001 Hewlett-Packard.
+
+libsteam_api.so        RimDroid original work (GPL-3.0): an ARM64 stub that only exports the
+(arm64 stub)           Steamworks function names and returns 0; contains no Valve code.
+
 --- Proprietary runtime components ---
 
 FMOD Engine runtimes   FMOD EULA            Copyright (c) Firelight Technologies Pty Ltd.

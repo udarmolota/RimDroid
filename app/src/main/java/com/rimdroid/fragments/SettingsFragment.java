@@ -108,6 +108,19 @@ public class SettingsFragment extends Fragment {
         // the save bug that mod worked around is fixed at the root (box64 qsort). The switch's own
         // hint already says it is slower and only helps some devices.
         swCompat.setOnCheckedChangeListener((btn, checked) -> inst.setCompatibilityMode(checked));
+        // Native ARM64 Mono (experimental): offered only for a RimWorld 1.6 instance and only when this
+        // APK packages the runtime; everywhere else the switch and its hint stay hidden.
+        Switch swNativeMono = view.findViewById(R.id.sw_native_mono);
+        View tvNativeMonoHint = view.findViewById(R.id.tv_native_mono_hint);
+        GameInstance nativeMonoInstance = null;
+        for (GameInstance candidate : GameInstanceManager.requireSingleton().getInstances()) {
+            if (candidate.getName().equals(instanceName)) nativeMonoInstance = candidate;
+        }
+        boolean nativeMonoOffered = com.rimdroid.game.NativeMono.isSupported(nativeMonoInstance);
+        swNativeMono.setVisibility(nativeMonoOffered ? View.VISIBLE : View.GONE);
+        tvNativeMonoHint.setVisibility(nativeMonoOffered ? View.VISIBLE : View.GONE);
+        swNativeMono.setChecked(nativeMonoOffered && inst.isNativeMono());
+        swNativeMono.setOnCheckedChangeListener((btn, checked) -> inst.setNativeMono(checked));
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
         // FPS overlay ("FPS: XX", top-left) — GLOBAL. Shows the true presented frame rate; helps

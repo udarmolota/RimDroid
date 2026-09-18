@@ -751,12 +751,14 @@ public class GameLauncher {
         // setenv persists in this process, so a stale path must not leak into the next instance. It
         // sits before the env field so a developer can still point the field at another runtime.
         // GameInstance.getArgs() adds --burst-disable-compilation whenever this variable is set.
-        if (gameInstance.settings().isNativeMono()
-                && com.rimdroid.game.NativeMono.isSupported(gameInstance)) {
+        boolean nativeMono = gameInstance.settings().isNativeMono()
+                && com.rimdroid.game.NativeMono.isSupported(gameInstance);
+        if (nativeMono) {
             Os.setenv("RIMDROID_NATIVE_MONO_PATH", com.rimdroid.game.NativeMono.runtimePath(), true);
         } else {
             Os.unsetenv("RIMDROID_NATIVE_MONO_PATH");
         }
+        com.rimdroid.game.NativeMono.noteLaunch(gameInstance.settings(), nativeMono);
 
         // Custom env vars (KEY=VALUE pairs separated by spaces) — PER-INSTANCE (falls back to global).
         // MUST be applied after ALL defaults above — including the debug extras — so a power-user/

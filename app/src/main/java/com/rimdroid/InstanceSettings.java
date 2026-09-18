@@ -183,14 +183,35 @@ public class InstanceSettings {
 
     // --- Native ARM64 Mono (experimental, RimWorld 1.6 only): the game's C# code runs on a native ARM64
     // build of Unity's Mono instead of the emulated x86_64 one (see com.rimdroid.game.NativeMono and
-    // box64 wrappedlibmonobdwgc.c). Default OFF; the switch is only shown when the runtime is packaged
-    // in this APK and the instance is a 1.6 one.
+    // box64 wrappedlibmonobdwgc.c). Default ON: the value is only stored once the player flips the
+    // switch, so everyone who never touched it gets the native runtime. The switch is only shown (and
+    // the setting only used) for a 1.6 instance when the runtime is packaged in this APK.
     public boolean isNativeMono() {
-        return p.getBoolean(pfx + "native_mono", false);
+        return p.getBoolean(pfx + "native_mono", true);
     }
 
     public void setNativeMono(boolean v) {
         p.edit().putBoolean(pfx + "native_mono", v).apply();
+    }
+
+    // Safety net for the native runtime (NativeMono.settlePreviousLaunch): when a launch with it started,
+    // and how many launches in a row crashed early. Written with commit(): the process may die right after.
+    public long getNativeMonoLaunchTime() {
+        return p.getLong(pfx + "native_mono_launch_ms", 0L);
+    }
+
+    public void setNativeMonoLaunchTime(long millis) {
+        if (millis <= 0) p.edit().remove(pfx + "native_mono_launch_ms").commit();
+        else p.edit().putLong(pfx + "native_mono_launch_ms", millis).commit();
+    }
+
+    public int getNativeMonoFailures() {
+        return p.getInt(pfx + "native_mono_failures", 0);
+    }
+
+    public void setNativeMonoFailures(int count) {
+        if (count <= 0) p.edit().remove(pfx + "native_mono_failures").commit();
+        else p.edit().putInt(pfx + "native_mono_failures", count).commit();
     }
 
     // --- Extra env vars (KEY=VALUE, space-separated). Per-instance, falls back to the global value. ---
@@ -247,6 +268,8 @@ public class InstanceSettings {
                 .remove(pfx + "interpreter")
                 .remove(pfx + "compat_mode")
                 .remove(pfx + "native_mono")
+                .remove(pfx + "native_mono_launch_ms")
+                .remove(pfx + "native_mono_failures")
                 .remove(pfx + "env_vars")
                 .remove(pfx + "haptic")
                 .remove(pfx + "reverse_landscape")

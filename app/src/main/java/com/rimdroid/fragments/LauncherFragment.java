@@ -304,6 +304,31 @@ public class LauncherFragment extends Fragment {
                     .show();
             return;
         }
+        // Native ARM64 Mono is on by default for 1.6. If the last launches with it crashed early twice in a
+        // row, offer to go back to the emulated runtime before starting again (see NativeMono).
+        com.rimdroid.InstanceSettings instSettings = gi.settings();
+        int nativeMonoFailures = com.rimdroid.game.NativeMono.settlePreviousLaunch(requireContext(), instSettings);
+        if (nativeMonoFailures >= com.rimdroid.game.NativeMono.FAILURES_TO_ASK
+                && instSettings.isNativeMono() && com.rimdroid.game.NativeMono.isSupported(gi)) {
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.native_mono_crash_title)
+                    .setMessage(R.string.native_mono_crash_msg)
+                    .setPositiveButton(R.string.native_mono_crash_off, (d, w) -> {
+                        instSettings.setNativeMono(false);
+                        instSettings.setNativeMonoFailures(0);
+                        startGame(gi);
+                    })
+                    .setNegativeButton(R.string.native_mono_crash_keep, (d, w) -> {
+                        instSettings.setNativeMonoFailures(0);
+                        startGame(gi);
+                    })
+                    .show();
+            return;
+        }
+        startGame(gi);
+    }
+
+    private void startGame(GameInstance gi) {
         LauncherPreferences.requireSingleton().setLastInstanceName(gi.getName());
         clearLog();
 

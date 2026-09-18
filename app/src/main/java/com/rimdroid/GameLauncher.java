@@ -110,6 +110,8 @@ public class GameLauncher {
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
             + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
+            + "native mono   : " + (Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null
+                    ? "ON (ARM64 Mono, Burst off) " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
             + "box64         : DYNAREC=" + (interp ? "0" : "1")
@@ -745,6 +747,17 @@ public class GameLauncher {
             Os.setenv("BOX64_DYNAREC_LOG", "0", true);
         }
 
+        // Native ARM64 Mono (experimental per-instance switch, 1.6 only). Set OR unset every launch:
+        // setenv persists in this process, so a stale path must not leak into the next instance. It
+        // sits before the env field so a developer can still point the field at another runtime.
+        // GameInstance.getArgs() adds --burst-disable-compilation whenever this variable is set.
+        if (gameInstance.settings().isNativeMono()
+                && com.rimdroid.game.NativeMono.isSupported(gameInstance)) {
+            Os.setenv("RIMDROID_NATIVE_MONO_PATH", com.rimdroid.game.NativeMono.runtimePath(), true);
+        } else {
+            Os.unsetenv("RIMDROID_NATIVE_MONO_PATH");
+        }
+
         // Custom env vars (KEY=VALUE pairs separated by spaces) — PER-INSTANCE (falls back to global).
         // MUST be applied after ALL defaults above — including the debug extras — so a power-user/
         // diagnostic value (e.g. BOX64_LOG=2 for an mmap trace) always wins. It used to run before the
@@ -775,7 +788,12 @@ public class GameLauncher {
                 {"BOX64_DYNAREC_BIGBLOCK", "0"}, {"BOX64_DYNAREC_FASTNAN", "0"},
                 {"BOX64_DYNAREC_FASTROUND", "0"}, {"BOX64_DYNAREC_STRONGMEM", "4"}
             };
+            // With native ARM64 Mono the managed code is not emulated, so the emulated-Mono JIT race
+            // these clamps guard against does not apply to STRONGMEM; leave it open to the env field so
+            // its effect on the remaining x86 engine code can be measured on a release build.
+            boolean nativeMonoOn = Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null;
             for (String[] kv : clamp) {
+                if (nativeMonoOn && "BOX64_DYNAREC_STRONGMEM".equals(kv[0])) continue;
                 String v = Os.getenv(kv[0]);
                 if (v != null && !v.equals(kv[1])) {
                     Os.setenv(kv[0], kv[1], true);

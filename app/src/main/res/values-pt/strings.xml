@@ -68,6 +68,8 @@ Na nuvem: %2$s
     <string name="reverse_landscape_hint">Inverte o jogo para o outro modo paisagem; continua fixo, sem rotação livre. Ative se o seu controle ou suporte segura o celular de cabeça para baixo.</string>
     <string name="compat_mode_label">Modo de compatibilidade</string>
     <string name="compat_mode_hint">Ative se o jogo não iniciar (tela preta ou travado no carregamento). Fica um pouco mais lento, mas ajuda a abrir em alguns aparelhos.</string>
+    <string name="native_mono_label">Mono ARM64 nativo (experimental)</string>
+    <string name="native_mono_hint">Executa o código do próprio jogo nativamente em vez de emular x86. Costuma ser mais rápido e fluido em velocidades altas, sobretudo em colônias grandes. Apenas RimWorld 1.6. Experimental: faça antes um backup dos seus saves e desative se algo der errado.</string>
     <string name="haptic_label">Vibrar ao tocar um botão</string>
     <string name="audio_label">Som do jogo</string>
     <string name="show_fps_label">Mostrar contador de FPS (canto superior esquerdo)</string>

@@ -429,6 +429,27 @@
               android:alpha="0.7"
               android:text="@string/compat_mode_hint" />
 
+          <!-- Native ARM64 Mono (experimental). Shown by SettingsFragment only for a RimWorld 1.6
+               instance when the runtime is packaged in this APK. -->
+          <Switch
+              android:id="@+id/sw_native_mono"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="16dp"
+              android:textSize="14sp"
+              android:visibility="gone"
+              android:text="@string/native_mono_label" />
+
+          <TextView
+              android:id="@+id/tv_native_mono_hint"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="2dp"
+              android:textAppearance="?attr/textAppearanceBodySmall"
+              android:alpha="0.7"
+              android:visibility="gone"
+              android:text="@string/native_mono_hint" />
+
           <!-- Hidden dev/diagnostic elements — kept so SettingsFragment.findViewById() still resolves
                them (set GONE in code). Do not remove. -->
           <Switch

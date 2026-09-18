@@ -64,6 +64,8 @@ In the cloud: %2$s
     <string name="reverse_landscape_hint">Flips the game to the opposite landscape — still fixed, no free rotation. Turn on if your gamepad or cradle holds the phone the other way up.</string>
     <string name="compat_mode_label">Compatibility mode</string>
     <string name="compat_mode_hint">Turn on if the game won\'t start (black screen / stuck on loading). A bit slower, but helps it launch on some devices.</string>
+    <string name="native_mono_label">Native ARM64 Mono (experimental)</string>
+    <string name="native_mono_hint">Runs the game\'s own code natively instead of through x86 emulation. Usually faster and smoother at high game speed, especially in large colonies. RimWorld 1.6 only. Experimental: back up your saves first, and turn it off if something breaks.</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
     <string name="show_fps_label">Show FPS counter (top-left)</string>

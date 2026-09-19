@@ -7,7 +7,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,6 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.tabs.TabLayout;
 import com.rimdroid.ContentInstaller;
 import com.rimdroid.R;
 import com.rimdroid.game.GameInstance;
@@ -28,23 +28,28 @@ import java.util.List;
 
 /**
  * Dedicated "Install mod / DLC" page: pick a .zip from anywhere on the phone (SAF), choose the target
- * instance + Mod/DLC, then Install. A persistent page (not a dialog-from-callback) so the selection
- * survives the file-picker round trip reliably. Install itself reuses {@link ContentInstaller}.
+ * instance and the MODS/DLC tab, then Install. A persistent page (not a dialog-from-callback) so the
+ * selection survives the file-picker round trip reliably. Install itself reuses {@link ContentInstaller}.
  */
 public class InstallContentFragment extends Fragment {
 
     /**
      * Optional navigation argument: the absolute path of a file to install, so the page opens with it
      * already chosen. The GOG downloader sends an expansion it has just fetched. Which instance it
-     * goes into is still the user's choice — see the placeholder note in onViewCreated.
+     * goes into is still the user's choice when there is more than one — see onViewCreated.
      */
     public static final String ARG_PRESELECTED_FILE = "preselected_file";
 
+    /** Tab order is the contract the Install button reads: tab 0 = mods, tab 1 = DLC. */
+    private static final int TAB_DLC = 1;
+
     private Spinner spInstance;
-    private RadioGroup rgType;
+    private TabLayout tabsType;
     private TextView tvFile;
     private List<GameInstance> instances = new ArrayList<>();
     private Uri selectedZip;
+    /** True while the spinner carries the "choose an instance" prompt at index 0. */
+    private boolean hasInstancePrompt;
 
     private final ActivityResultLauncher<String[]> picker =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
@@ -62,7 +67,9 @@ public class InstallContentFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(v, savedInstanceState);
         spInstance = v.findViewById(R.id.sp_install_instance);
-        rgType     = v.findViewById(R.id.rg_install_type);
+        tabsType   = v.findViewById(R.id.tabs_install_type);
+        tabsType.addTab(tabsType.newTab().setText(R.string.install_content_mod));
+        tabsType.addTab(tabsType.newTab().setText(R.string.install_content_dlc));
         tvFile     = v.findViewById(R.id.tv_install_file);
         Button btnPick = v.findViewById(R.id.btn_install_pick);
         Button btnGo   = v.findViewById(R.id.btn_install_go);
@@ -77,7 +84,7 @@ public class InstallContentFragment extends Fragment {
             if (chosen.isFile()) {
                 selectedZip = Uri.fromFile(chosen);
                 tvFile.setText(chosen.getName());
-                rgType.check(R.id.rb_install_dlc);
+                tabsType.selectTab(tabsType.getTabAt(TAB_DLC));
             }
         }
 
@@ -88,11 +95,14 @@ public class InstallContentFragment extends Fragment {
             names.add(getString(R.string.no_instances));
             btnGo.setEnabled(false);
         } else {
-            // Index 0 is a deliberate "choose an instance" placeholder, NOT a real instance: a
-            // spinner that preselects one makes it far too easy to install a DLC into the wrong
-            // instance without ever looking at this field (e.g. 1.5 content into a 1.6 install).
-            // Install refuses to run while the placeholder is selected.
-            names.add(getString(R.string.choose_instance_prompt));
+            // With more than one instance, index 0 is a deliberate "choose an instance" placeholder
+            // rather than a real instance: preselecting one makes it far too easy to install content
+            // into the wrong instance without ever looking at this field (e.g. 1.5 content into a 1.6
+            // install). Install refuses to run while the placeholder is selected.
+            // With exactly one instance there is no wrong choice to make, so the prompt would be
+            // nothing but an extra tap - the instance is selected outright instead.
+            hasInstancePrompt = instances.size() > 1;
+            if (hasInstancePrompt) names.add(getString(R.string.choose_instance_prompt));
             for (GameInstance gi : instances) names.add(gi.getName());
         }
         ArrayAdapter<String> a = new ArrayAdapter<>(requireContext(),
@@ -109,15 +119,15 @@ public class InstallContentFragment extends Fragment {
                 Toast.makeText(requireContext(), "Choose a file first", Toast.LENGTH_SHORT).show();
                 return;
             }
-            // Spinner index 0 = the placeholder, so a real instance is index+1. Nothing chosen →
+            // The prompt, when present, shifts every real instance one place down. Nothing chosen →
             // say so instead of silently installing into whatever happened to be first.
-            int pos = spInstance.getSelectedItemPosition();
-            if (pos <= 0 || pos > instances.size()) {
+            int idx = spInstance.getSelectedItemPosition() - (hasInstancePrompt ? 1 : 0);
+            if (idx < 0 || idx >= instances.size()) {
                 Toast.makeText(requireContext(), R.string.choose_instance_first, Toast.LENGTH_LONG).show();
                 return;
             }
-            GameInstance inst = instances.get(pos - 1);
-            boolean intoData = rgType.getCheckedRadioButtonId() == R.id.rb_install_dlc;
+            GameInstance inst = instances.get(idx);
+            boolean intoData = tabsType.getSelectedTabPosition() == TAB_DLC;
             ContentInstaller.install(requireActivity(), selectedZip, inst, intoData);
         });
     }

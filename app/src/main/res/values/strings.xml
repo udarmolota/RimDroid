@@ -98,9 +98,9 @@ In the cloud: %2$s
     <string name="nav_import_saves">Import saves</string>
     <string name="nav_export_settings">Export settings</string>
     <string name="nav_import_settings">Import settings</string>
-    <string name="nav_export_logs">Export logs (ZIP)…</string>
-    <string name="nav_export_layout">Export controls layout…</string>
-    <string name="nav_import_layout">Import controls layout…</string>
+    <string name="nav_export_logs">Export logs (ZIP)</string>
+    <string name="nav_export_layout">Export controls layout</string>
+    <string name="nav_import_layout">Import controls layout</string>
     <string name="nav_updates">New versions (GitHub)</string>
     <string name="nav_bug_report">Report a bug</string>
     <string name="nav_wiki">Wiki</string>
@@ -137,7 +137,7 @@ In the cloud: %2$s
     <string name="url_x" translatable="false">https://x.com/rimdroid</string>
     <string name="url_reddit_sub" translatable="false">https://www.reddit.com/r/rimdroid/</string>
     <string name="on_screen_controls">On-screen controls</string>
-    <string name="edit_controls">Edit on-screen controls…</string>
+    <string name="edit_controls">Edit on-screen controls</string>
     <string name="editor_bg_set">Background</string>
     <string name="editor_bg_clear">No BG</string>
     <string name="editor_add">Add</string>
@@ -165,14 +165,14 @@ In the cloud: %2$s
     <string name="custom_driver_removed">Custom driver removed</string>
     <string name="nav_new_instance">Add game instance</string>
     <string name="nav_download_game">Steam Downloads</string>
-    <string name="nav_install_content">Install mod / DLC (ZIP)…</string>
-    <string name="nav_custom_driver">Custom Vulkan driver…</string>
-    <string name="install_content_note">Pick a .zip (mod or DLC) from your phone, choose the instance and type, then Install. The zip\'s real folder (the one with About/About.xml) is extracted — wrappers like Data/ are stripped automatically.</string>
+    <string name="nav_install_content">Install mod / DLC (ZIP)</string>
+    <string name="nav_custom_driver">Custom Vulkan driver</string>
+    <string name="install_content_note">Pick a .zip (mod or DLC) from your phone, choose the instance and type, then Install.</string>
     <string name="install_content_instance">Install into instance</string>
     <string name="install_content_type">Type</string>
-    <string name="install_content_mod">Mod → Mods/</string>
-    <string name="install_content_dlc">DLC → Data/</string>
-    <string name="install_content_pick">Choose ZIP file…</string>
+    <string name="install_content_mod">MODS</string>
+    <string name="install_content_dlc">DLC</string>
+    <string name="install_content_pick">Choose ZIP file</string>
     <string name="install_content_no_file">No file selected</string>
     <string name="install_content_go">Install</string>
 
@@ -227,7 +227,7 @@ In the cloud: %2$s
     <string name="download_tab_mods">Mods</string>
     <string name="download_dlc_note">Pick the DLC your account owns. Each downloads as a portable .zip into /Download/RimDroid — import it into any instance from the menu. (Unowned DLC are skipped.)</string>
     <string name="download_dlc_start">Download selected DLC</string>
-    <string name="download_install_content">Install a mod / DLC into an instance…</string>
+    <string name="download_install_content">Install a mod / DLC into an instance</string>
     <string name="download_mods_note">Download Workshop mods by ID (the number in the workshop URL: …/sharedfiles/filedetails/?id=NUMBER). No Steam login needed. Several IDs can be space-separated. Each is saved as a .zip in /Download/RimDroid.</string>
     <string name="download_mods_hint">Workshop ID(s) — space-separated</string>
     <string name="download_mods_hint_single">Workshop ID</string>
@@ -265,7 +265,7 @@ In the cloud: %2$s
     <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
     <string name="steam_dl_label">Steam download spike (RimWorld)</string>
-    <string name="pick_zip">Pick ZIP file…</string>
+    <string name="pick_zip">Pick ZIP file</string>
     <string name="install">Install</string>
     <string name="installing">Installing…</string>
     <string name="instance_name_hint">Instance name</string>

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Two cards, matching the settings screen and the instance list so the app reads as one thing:
+     WHERE it goes (instance), and WHAT is being installed (type + file). The Install button sits
+     outside both, because it acts on the two together. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -9,68 +13,92 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/nav_install_content"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
+        <!-- ============================ WHERE ============================ -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/install_content_note"
-            android:textAppearance="?attr/textAppearanceBodySmall"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="2dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/install_content_instance" />
-        <Spinner
-            android:id="@+id/sp_install_instance"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" />
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/install_content_type" />
-        <RadioGroup
-            android:id="@+id/rg_install_type"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
-            <RadioButton
-                android:id="@+id/rb_install_mod"
+            <TextView
+                style="@style/AppTheme.CardHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/install_content_mod" />
-            <RadioButton
-                android:id="@+id/rb_install_dlc"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/install_content_dlc" />
-        </RadioGroup>
+                android:text="@string/install_content_instance"
+                android:layout_marginBottom="6dp" />
 
-        <Button
-            android:id="@+id/btn_install_pick"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            <Spinner
+                android:id="@+id/sp_install_instance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+          </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ============================ WHAT ============================ -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/install_content_pick" />
-
-        <TextView
-            android:id="@+id/tv_install_file"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
             android:layout_marginBottom="16dp"
-            android:text="@string/install_content_no_file"
-            android:textAppearance="?attr/textAppearanceBodySmall" />
+            app:cardCornerRadius="14dp"
+            app:cardElevation="2dp">
+
+          <LinearLayout
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical"
+              android:padding="16dp">
+
+            <TextView
+                style="@style/AppTheme.CardHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nav_install_content"
+                android:layout_marginBottom="6dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/install_content_note"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Two tabs rather than radio buttons: it is a choice between two whole modes, and a
+                 tab row says that more plainly than a pair of ticks. Added in code so the labels
+                 stay in one place with everything else. -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabs_install_type"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:tabGravity="fill"
+                app:tabMode="fixed" />
+
+            <Button
+                android:id="@+id/btn_install_pick"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/install_content_pick" />
+
+            <TextView
+                android:id="@+id/tv_install_file"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/install_content_no_file"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+          </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <Button
             android:id="@+id/btn_install_go"

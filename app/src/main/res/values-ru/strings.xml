@@ -97,9 +97,9 @@
     <string name="nav_import_saves">Импорт сейвов</string>
     <string name="nav_export_settings">Экспорт настроек</string>
     <string name="nav_import_settings">Импорт настроек</string>
-    <string name="nav_export_logs">Экспорт логов (ZIP)…</string>
-    <string name="nav_export_layout">Экспорт раскладки управления…</string>
-    <string name="nav_import_layout">Импорт раскладки управления…</string>
+    <string name="nav_export_logs">Экспорт логов (ZIP)</string>
+    <string name="nav_export_layout">Экспорт раскладки управления</string>
+    <string name="nav_import_layout">Импорт раскладки управления</string>
     <string name="nav_updates">Новые версии (GitHub)</string>
     <string name="nav_bug_report">Сообщить об ошибке</string>
     <string name="nav_wiki">Вики</string>
@@ -121,7 +121,7 @@
     <string name="donate_title">Поддержать разработку</string>
     <string name="donate_message">Нравится RimDroid и хочешь поддержать?\n\nДелаю и поддерживаю: ko-fi.com/udarmolota\n\nЛюбая помощь помогает продолжать работу. Спасибо! ❤</string>
     <string name="on_screen_controls">Экранное управление</string>
-    <string name="edit_controls">Редактировать экранные кнопки…</string>
+    <string name="edit_controls">Редактировать экранные кнопки</string>
     <string name="editor_bg_set">Фон</string>
     <string name="editor_bg_clear">Без фона</string>
     <string name="editor_add">Добавить</string>
@@ -149,14 +149,14 @@
     <string name="custom_driver_removed">Свой драйвер удалён</string>
     <string name="nav_new_instance">Добавить игру (инстанс)</string>
     <string name="nav_download_game">Загрузки из Steam</string>
-    <string name="nav_install_content">Установить мод / DLC (ZIP)…</string>
-    <string name="nav_custom_driver">Свой Vulkan-драйвер…</string>
-    <string name="install_content_note">Выберите .zip (мод или DLC) на телефоне, укажите инстанс и тип, затем «Установить». Извлекается настоящая папка из архива (та, где About/About.xml) — обёртки вроде Data/ убираются автоматически.</string>
+    <string name="nav_install_content">Установить мод / DLC (ZIP)</string>
+    <string name="nav_custom_driver">Свой Vulkan-драйвер</string>
+    <string name="install_content_note">Выберите .zip (мод или DLC) на телефоне, укажите инстанс и тип, затем «Установить».</string>
     <string name="install_content_instance">Установить в инстанс</string>
     <string name="install_content_type">Тип</string>
-    <string name="install_content_mod">Мод → Mods/</string>
-    <string name="install_content_dlc">DLC → Data/</string>
-    <string name="install_content_pick">Выбрать ZIP-файл…</string>
+    <string name="install_content_mod">МОДЫ</string>
+    <string name="install_content_dlc">DLC</string>
+    <string name="install_content_pick">Выбрать ZIP-файл</string>
     <string name="install_content_no_file">Файл не выбран</string>
     <string name="install_content_go">Установить</string>
 
@@ -208,7 +208,7 @@
     <string name="download_tab_mods">Моды</string>
     <string name="download_dlc_note">Выберите DLC, которыми владеет ваш аккаунт. Каждое скачивается портативным .zip в /Download/RimDroid — затем импортируйте его в любой инстанс из меню. (Чужие DLC пропускаются.)</string>
     <string name="download_dlc_start">Скачать выбранные DLC</string>
-    <string name="download_install_content">Установить мод / DLC в инстанс…</string>
+    <string name="download_install_content">Установить мод / DLC в инстанс</string>
     <string name="download_mods_note">Скачивание модов Мастерской по ID (число в URL мастерской: …/sharedfiles/filedetails/?id=ЧИСЛО). Логин Steam не нужен. Несколько ID — через пробел. Каждый сохраняется в .zip в /Download/RimDroid.</string>
     <string name="download_mods_hint">ID Мастерской — через пробел</string>
     <string name="download_mods_hint_single">ID Мастерской</string>
@@ -247,7 +247,7 @@
     <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
     <string name="steam_spike_label">Проба входа в Steam (QR)</string>
     <string name="steam_dl_label">Проба загрузки Steam (RimWorld)</string>
-    <string name="pick_zip">Выбрать ZIP-файл…</string>
+    <string name="pick_zip">Выбрать ZIP-файл</string>
     <string name="install">Установить</string>
     <string name="installing">Установка…</string>
     <string name="instance_name_hint">Имя инстанса</string>

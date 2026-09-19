@@ -100,9 +100,9 @@ En la nube: %2$s
     <string name="nav_import_saves">Importar partidas</string>
     <string name="nav_export_settings">Exportar ajustes</string>
     <string name="nav_import_settings">Importar ajustes</string>
-    <string name="nav_export_logs">Exportar registros (ZIP)…</string>
-    <string name="nav_export_layout">Exportar diseño de controles…</string>
-    <string name="nav_import_layout">Importar diseño de controles…</string>
+    <string name="nav_export_logs">Exportar registros (ZIP)</string>
+    <string name="nav_export_layout">Exportar diseño de controles</string>
+    <string name="nav_import_layout">Importar diseño de controles</string>
     <string name="nav_updates">Nuevas versiones (GitHub)</string>
     <string name="nav_bug_report">Reportar un error</string>
     <string name="nav_wiki">Wiki</string>
@@ -124,7 +124,7 @@ En la nube: %2$s
     <string name="donate_title">Apoyar el desarrollo</string>
     <string name="donate_message">¿Te gusta RimDroid y quieres apoyarlo?\n\nCreado y mantenido por: ko-fi.com/udarmolota\n\nCada aporte ayuda a que el trabajo siga adelante. ¡Gracias! ❤</string>
     <string name="on_screen_controls">Controles en pantalla</string>
-    <string name="edit_controls">Editar controles en pantalla…</string>
+    <string name="edit_controls">Editar controles en pantalla</string>
     <string name="editor_bg_set">Fondo</string>
     <string name="editor_bg_clear">Sin fondo</string>
     <string name="editor_add">Añadir</string>
@@ -152,14 +152,14 @@ En la nube: %2$s
     <string name="custom_driver_removed">Controlador personalizado eliminado</string>
     <string name="nav_new_instance">Añadir instancia del juego</string>
     <string name="nav_download_game">Descargas de Steam</string>
-    <string name="nav_install_content">Instalar mod / DLC (ZIP)…</string>
-    <string name="nav_custom_driver">Controlador Vulkan personalizado…</string>
-    <string name="install_content_note">Elige un .zip (mod o DLC) de tu teléfono, selecciona la instancia y el tipo, y pulsa Instalar. Se extrae la carpeta real del zip (la que tiene About/About.xml); las envolturas como Data/ se quitan automáticamente.</string>
+    <string name="nav_install_content">Instalar mod / DLC (ZIP)</string>
+    <string name="nav_custom_driver">Controlador Vulkan personalizado</string>
+    <string name="install_content_note">Elige un .zip (mod o DLC) de tu teléfono, selecciona la instancia y el tipo, y pulsa Instalar.</string>
     <string name="install_content_instance">Instalar en la instancia</string>
     <string name="install_content_type">Tipo</string>
-    <string name="install_content_mod">Mod → Mods/</string>
-    <string name="install_content_dlc">DLC → Data/</string>
-    <string name="install_content_pick">Elegir archivo ZIP…</string>
+    <string name="install_content_mod">MODS</string>
+    <string name="install_content_dlc">DLC</string>
+    <string name="install_content_pick">Elegir archivo ZIP</string>
     <string name="install_content_no_file">Ningún archivo seleccionado</string>
     <string name="install_content_go">Instalar</string>
 
@@ -214,7 +214,7 @@ En la nube: %2$s
     <string name="download_tab_mods">Mods</string>
     <string name="download_dlc_note">Elige los DLC que tenga tu cuenta. Cada uno se descarga como un .zip portable en /Download/RimDroid; impórtalo en cualquier instancia desde el menú. (Los DLC que no tengas se omiten.)</string>
     <string name="download_dlc_start">Descargar los DLC seleccionados</string>
-    <string name="download_install_content">Instalar un mod / DLC en una instancia…</string>
+    <string name="download_install_content">Instalar un mod / DLC en una instancia</string>
     <string name="download_mods_note">Descarga mods del Workshop por ID (el número de la URL del workshop: …/sharedfiles/filedetails/?id=NÚMERO). No hace falta iniciar sesión en Steam. Puedes poner varios ID separados por espacios. Cada uno se guarda como .zip en /Download/RimDroid.</string>
     <string name="download_mods_hint">ID del Workshop — separados por espacios</string>
     <string name="download_mods_hint_single">ID del Workshop</string>
@@ -252,7 +252,7 @@ En la nube: %2$s
     <string name="smoketest_label">Probar el renderizador por software (OSMesa)</string>
     <string name="steam_spike_label">Prueba de inicio de sesión en Steam (QR)</string>
     <string name="steam_dl_label">Prueba de descarga de Steam (RimWorld)</string>
-    <string name="pick_zip">Elegir archivo ZIP…</string>
+    <string name="pick_zip">Elegir archivo ZIP</string>
     <string name="install">Instalar</string>
     <string name="installing">Instalando…</string>
     <string name="instance_name_hint">Nombre de la instancia</string>

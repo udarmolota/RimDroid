@@ -68,6 +68,7 @@ En la nube: %2$s
     <string name="compat_mode_hint">Actívalo si el juego no inicia (pantalla negra o se queda en la carga). Es un poco más lento, pero ayuda a que arranque en algunos dispositivos.</string>
     <string name="native_mono_label">Mono ARM64 nativo (experimental)</string>
     <string name="native_mono_hint">Ejecuta el código del propio juego de forma nativa en lugar de emular x86. Suele ser más rápido y fluido a alta velocidad de juego, sobre todo en colonias grandes. Solo RimWorld 1.6. Experimental: haz antes una copia de tus partidas y desactívalo si algo falla.</string>
+    <string name="native_mono_off_msg">El juego funcionará en el modo anterior, más lento. Si lo desactivaste por un problema, envíanos los registros: nos ayuda a solucionarlo.</string>
     <string name="native_mono_crash_title">El juego no se inició</string>
     <string name="native_mono_crash_msg">RimWorld se cerró dos veces seguidas al iniciar con Mono ARM64 nativo. ¿Desactivarlo e iniciar el juego como siempre? Puedes volver a activarlo en los ajustes de esta instancia.</string>
     <string name="native_mono_crash_off">Desactivar y jugar</string>

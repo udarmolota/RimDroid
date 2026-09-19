@@ -66,6 +66,7 @@ In the cloud: %2$s
     <string name="compat_mode_hint">Turn on if the game won\'t start (black screen / stuck on loading). A bit slower, but helps it launch on some devices.</string>
     <string name="native_mono_label">Native ARM64 Mono (experimental)</string>
     <string name="native_mono_hint">Runs the game\'s own code natively instead of through x86 emulation. Usually faster and smoother at high game speed, especially in large colonies. RimWorld 1.6 only. Experimental: back up your saves first, and turn it off if something breaks.</string>
+    <string name="native_mono_off_msg">The game will run in the previous, slower mode. If you turned it off because of a problem, please send us the logs — it helps us fix it.</string>
     <string name="native_mono_crash_title">The game failed to start</string>
     <string name="native_mono_crash_msg">RimWorld crashed twice in a row while starting with Native ARM64 Mono. Turn it off and start the game the usual way? You can turn it back on in this instance\'s settings.</string>
     <string name="native_mono_crash_off">Turn off and play</string>

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Toolbar action(s) for the launcher main screen. The "+" is a quick path to add an instance,
      in addition to the drawer item (same global nav action). Shown only on the launcher destination
-     (see LauncherActivity.onPrepareOptionsMenu). -->
+     (see LauncherActivity.onPrepareOptionsMenu). The icons are drawn in a fixed light grey; the
+     toolbar does not recolour them the way the drawer does, so the tint comes from the theme here,
+     otherwise they almost vanish on the light theme. -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <!-- The wiki, opened at the section for whichever screen this is pressed on
@@ -10,10 +12,12 @@
         android:id="@+id/action_wiki_help"
         android:icon="@drawable/mt_icon_help_toolbar"
         android:title="@string/nav_wiki"
+        app:iconTint="?attr/colorOnSurfaceVariant"
         app:showAsAction="always" />
     <item
         android:id="@+id/action_install_instance"
         android:icon="@drawable/mt_icon_add"
         android:title="@string/nav_new_instance"
+        app:iconTint="?attr/colorOnSurfaceVariant"
         app:showAsAction="always" />
 </menu>

@@ -57,6 +57,7 @@
     <li><a href="#controls">Controls</a></li>
     <li><a href="#saves">Saves and settings</a></li>
     <li><a href="#compat-mode">Compatibility mode</a></li>
+    <li><a href="#native-mono">Native ARM64 Mono</a></li>
     <li><a href="#performance">Getting the best performance</a></li>
     <li><a href="#known-issues">Known issues</a></li>
     <li><a href="#report">Reporting a problem</a></li>
@@ -353,6 +354,26 @@
         The same card has <b>Debug mode</b>, which writes a more detailed log, and
         <b>Environment variables</b>. Leave both alone unless we ask you to change them.
     </p>
+</section>
+
+<section id="native-mono">
+    <h2>Native ARM64 Mono</h2>
+    <p>
+        In the instance settings, card <b>Advanced</b>. RimWorld 1.6 only, on by default.
+    </p>
+    <p>
+        Normally RimDroid emulates all of RimWorld, including the code of the game itself and of its
+        mods. With this switch the game's and the mods' code runs directly on the phone's processor,
+        and only the Unity engine is emulated. Simulation, loading and high game speeds get
+        noticeably faster. For our testers loading got about twice as fast, and speed 3 is finally
+        really faster than speed 2. The bigger the colony and the modlist, the bigger the difference.
+    </p>
+    <ul>
+        <li>If the game crashes twice in a row while starting, the launcher offers to turn native
+            Mono off.</li>
+        <li>If something is wrong, just turn the switch off: the game goes back to the previous
+            mode. Your saves are not affected, they load in both modes.</li>
+    </ul>
 </section>
 
 <hr>

@@ -120,7 +120,16 @@ public class SettingsFragment extends Fragment {
         swNativeMono.setVisibility(nativeMonoOffered ? View.VISIBLE : View.GONE);
         tvNativeMonoHint.setVisibility(nativeMonoOffered ? View.VISIBLE : View.GONE);
         swNativeMono.setChecked(nativeMonoOffered && inst.isNativeMono());
-        swNativeMono.setOnCheckedChangeListener((btn, checked) -> inst.setNativeMono(checked));
+        swNativeMono.setOnCheckedChangeListener((btn, checked) -> {
+            inst.setNativeMono(checked);
+            // Turning it off is the player's way around a problem we would otherwise never hear about.
+            if (!checked) {
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setMessage(R.string.native_mono_off_msg)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+            }
+        });
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
         // FPS overlay ("FPS: XX", top-left) — GLOBAL. Shows the true presented frame rate; helps

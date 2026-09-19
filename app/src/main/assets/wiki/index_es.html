@@ -57,6 +57,7 @@
     <li><a href="#controls">Controles</a></li>
     <li><a href="#saves">Partidas y ajustes</a></li>
     <li><a href="#compat-mode">Modo de compatibilidad</a></li>
+    <li><a href="#native-mono">Mono ARM64 nativo</a></li>
     <li><a href="#performance">Cómo sacar el máximo rendimiento</a></li>
     <li><a href="#known-issues">Problemas conocidos</a></li>
     <li><a href="#report">Cómo reportar un problema</a></li>
@@ -372,6 +373,28 @@
         La misma tarjeta tiene <b>Modo de depuración</b>, que escribe un registro más detallado, y
         <b>Variables de entorno</b>. No los toques a menos que te lo pidamos.
     </p>
+</section>
+
+<section id="native-mono">
+    <h2>Mono ARM64 nativo</h2>
+    <p>
+        En los ajustes de la instancia, tarjeta <b>Avanzado</b>. Solo RimWorld 1.6, activado por
+        defecto.
+    </p>
+    <p>
+        Normalmente RimDroid emula todo RimWorld, incluido el código del propio juego y de sus mods.
+        Con este interruptor el código del juego y de los mods se ejecuta directamente en el
+        procesador del teléfono, y solo se emula el motor Unity. La simulación, la carga y las
+        velocidades altas del juego son notablemente más rápidas. A nuestros testers la carga les
+        fue aproximadamente el doble de rápida, y la velocidad 3 por fin es de verdad más rápida que
+        la 2. Cuanto más grande la colonia y la lista de mods, más se nota.
+    </p>
+    <ul>
+        <li>Si el juego se cierra dos veces seguidas al iniciar, el launcher te ofrecerá desactivar
+            el Mono nativo.</li>
+        <li>Si algo va mal, simplemente desactiva el interruptor: el juego vuelve al modo anterior.
+            Tus partidas no cambian y se cargan en ambos modos.</li>
+    </ul>
 </section>
 
 <hr>

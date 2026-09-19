@@ -110,6 +110,11 @@ In the cloud: %2$s
     <string name="launcher_empty_steam">Download from Steam</string>
     <string name="launcher_empty_gog">Download from GOG</string>
     <string name="launcher_empty_guide">To start playing, create an instance — an installed copy of RimWorld. Add your game files with the + at the top, or download the game straight from Steam or GOG with the buttons below. From Steam the instance is created by itself; from GOG, with the “Create an instance” button.</string>
+    <!-- "What's new" dialog, shown once per version (LauncherFragment.maybeShowReleaseNotes). English
+         only, like the release notes it is cut from. Read with getText, so <b>/<i> are kept; keep it on
+         one line, because a line break inside a string resource turns into a leading space. -->
+    <string name="release_notes_title" translatable="false">What\'s new in v%1$s</string>
+    <string name="release_notes_body" translatable="false"><b>– Native ARM64 Mono for RimWorld 1.6 (on by default)</b>\nWith Native ARM64 Mono, the game\'s and mods\' code runs directly on your phone\'s processor, and only the Unity engine is emulated. Simulation, loading and high game speeds are noticeably faster.\n<i>It is still marked experimental. If something looks wrong, turn it off and send us the logs, it really helps.</i>\n\n<b>– Download from GOG inside the app</b>\nSign in to GOG, load your GOG library, and RimWorld and its DLC show up as cards.\n\n<b>– In-app wiki in four languages</b>\nEnglish, Russian, Spanish and Portuguese. The <b>?</b> at the top of every screen opens the part of the wiki about that screen.\n\n<b>– New first screen</b>\nWhen you have no instance yet, the main screen shows <b>Getting started</b> with three buttons: <b>Quick start</b>, <b>Download from Steam</b> and <b>Download from GOG</b>.\n\n<b>– Updated launcher GUI</b>\n<b>Install mod / DLC (ZIP)</b> is easier to use: one card for where the content goes and one for what you install, with <b>MODS</b> and <b>DLC</b> tabs and a shorter explanation. If you have only one instance, it is picked for you.</string>
     <!-- Drawer footer icon labels (accessibility) -->
     <string name="link_x">RimDroid on X</string>
     <string name="link_reddit">RimDroid on Reddit</string>

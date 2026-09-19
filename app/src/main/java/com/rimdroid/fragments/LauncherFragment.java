@@ -103,6 +103,33 @@ public class LauncherFragment extends Fragment {
             appendLog("Installing renderer libraries...");
             InstallerService.startInstallDeps(requireContext());
         }
+
+        maybeShowReleaseNotes();
+    }
+
+    /**
+     * "What's new", shown once per installed version - after an update AND after a fresh install,
+     * as in Zomdroid: a clean install is a common way to update, and treating those players as
+     * newcomers would hide the notes from exactly them. The text ships in strings.xml instead of
+     * being fetched, so it does not depend on the network being up at that moment.
+     */
+    private void maybeShowReleaseNotes() {
+        LauncherPreferences lp = LauncherPreferences.requireSingleton();
+        String current = com.rimdroid.BuildConfig.VERSION_NAME;
+        if (current.equals(lp.getReleaseNotesShownFor())) return;
+        lp.setReleaseNotesShownFor(current);
+
+        // getText, not getString: the text carries <b>/<i> markup.
+        android.text.SpannableString text = new android.text.SpannableString(getText(R.string.release_notes_body));
+        android.text.util.Linkify.addLinks(text, android.text.util.Linkify.WEB_URLS);
+        androidx.appcompat.app.AlertDialog dialog =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(getString(R.string.release_notes_title, current))
+                        .setMessage(text)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+        TextView message = dialog.findViewById(android.R.id.message);
+        if (message != null) message.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
     }
 
     @Override

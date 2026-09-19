@@ -301,6 +301,14 @@ public class LauncherPreferences {
         prefs.edit().putString("update_latest_tag", tag == null ? "" : tag).apply();
     }
 
+    // --- "What's new" dialog ---
+    // The version it was last shown for, so it comes up once per version (LauncherFragment).
+
+    public String getReleaseNotesShownFor() { return prefs.getString("release_notes_shown_for", ""); }
+    public void setReleaseNotesShownFor(String version) {
+        prefs.edit().putString("release_notes_shown_for", version).apply();
+    }
+
     // --- Custom env vars (advanced) ---
 
     @Nullable

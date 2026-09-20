@@ -785,17 +785,18 @@ public class GameLauncher {
         // FASTROUND=1, STRONGMEM=0. In RELEASE builds we re-pin these to safe values AFTER the user
         // field, so a pasted dangerous value can't silently eat colonies. DEBUG builds leave them
         // untouched so we (devs) can still A/B these knobs.
-        if (!BuildConfig.DEBUG && rawEnvVars != null) {
+        // With native ARM64 Mono the game's own code and Mono's JIT never run through box64, so the
+        // emulated-Mono JIT race these clamps guard against cannot happen at all — and the clamps are
+        // exactly what stops these knobs from being measured on a release build (the only build whose
+        // timings mean anything). So the field is left alone there; the clamps still apply to 1.5 and
+        // to 1.6 with native Mono switched off, where Mono is emulated as before.
+        boolean nativeMonoOn = Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null;
+        if (!BuildConfig.DEBUG && !nativeMonoOn && rawEnvVars != null) {
             String[][] clamp = {
                 {"BOX64_DYNAREC_BIGBLOCK", "0"}, {"BOX64_DYNAREC_FASTNAN", "0"},
                 {"BOX64_DYNAREC_FASTROUND", "0"}, {"BOX64_DYNAREC_STRONGMEM", "4"}
             };
-            // With native ARM64 Mono the managed code is not emulated, so the emulated-Mono JIT race
-            // these clamps guard against does not apply to STRONGMEM; leave it open to the env field so
-            // its effect on the remaining x86 engine code can be measured on a release build.
-            boolean nativeMonoOn = Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null;
             for (String[] kv : clamp) {
-                if (nativeMonoOn && "BOX64_DYNAREC_STRONGMEM".equals(kv[0])) continue;
                 String v = Os.getenv(kv[0]);
                 if (v != null && !v.equals(kv[1])) {
                     Os.setenv(kv[0], kv[1], true);

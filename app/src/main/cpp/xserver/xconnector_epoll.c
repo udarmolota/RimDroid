@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <errno.h>
 #include <jni.h>
 #include <sys/epoll.h>
 #include <sys/poll.h>
@@ -104,7 +105,9 @@ static int waitForSocketRead(jint clientFd, jint shutdownFd) {
     pfds[1].events = POLLIN;
 
     int res = poll(pfds, 2, -1);
-    if (res < 0 || (pfds[1].revents & POLLIN)) return -1;
+    // A signal is not a disconnect: poll is never restarted after a handler runs.
+    if (res < 0) return errno == EINTR ? 0 : -1;
+    if (pfds[1].revents & POLLIN) return -1;
     return (pfds[0].revents & POLLIN) ? 1 : 0;
 }
 
@@ -231,7 +234,13 @@ static void* epollThread(void* param) {
 
     while (connector->running) {
         int numFds = epoll_wait(connector->epollFd, events, MAX_EVENTS, -1);
-        if (numFds < 0) break;
+        if (numFds < 0) {
+            // A signal on this thread (e.g. ART unwinding every thread for a SIGQUIT stack
+            // dump) interrupts epoll_wait, which is never restarted. Wait again instead of
+            // dropping every client: the game would see "X connection broken" and exit.
+            if (errno == EINTR) continue;
+            break;
+        }
         for (int i = 0; i < numFds; i++) {
             if (events[i].data.ptr == &connector->serverFd) {
                 int clientFd = accept(connector->serverFd, NULL, NULL);

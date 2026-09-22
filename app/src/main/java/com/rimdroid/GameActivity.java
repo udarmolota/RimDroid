@@ -66,18 +66,41 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
      *  Keyboard.onKeyEvent with the full Android map; this covers only what layouts use). */
     private static com.rimdroid.xserver.XKeycode xKey(int sdlScancode) {
         switch (sdlScancode) {
-            case 26: return com.rimdroid.xserver.XKeycode.KEY_W;
+            // the whole alphabet: Binding lets a layout put any letter on a button, and a letter
+            // missing here used to vanish silently (H and R did nothing in 1.6 — report 22092026_1046)
             case 4:  return com.rimdroid.xserver.XKeycode.KEY_A;
-            case 22: return com.rimdroid.xserver.XKeycode.KEY_S;
-            case 7:  return com.rimdroid.xserver.XKeycode.KEY_D;
-            case 20: return com.rimdroid.xserver.XKeycode.KEY_Q;
-            case 8:  return com.rimdroid.xserver.XKeycode.KEY_E;
+            case 5:  return com.rimdroid.xserver.XKeycode.KEY_B;
             case 6:  return com.rimdroid.xserver.XKeycode.KEY_C;
+            case 7:  return com.rimdroid.xserver.XKeycode.KEY_D;
+            case 8:  return com.rimdroid.xserver.XKeycode.KEY_E;
             case 9:  return com.rimdroid.xserver.XKeycode.KEY_F;
+            case 10: return com.rimdroid.xserver.XKeycode.KEY_G;
+            case 11: return com.rimdroid.xserver.XKeycode.KEY_H;
+            case 12: return com.rimdroid.xserver.XKeycode.KEY_I;
+            case 13: return com.rimdroid.xserver.XKeycode.KEY_J;
+            case 14: return com.rimdroid.xserver.XKeycode.KEY_K;
+            case 15: return com.rimdroid.xserver.XKeycode.KEY_L;
+            case 16: return com.rimdroid.xserver.XKeycode.KEY_M;
+            case 17: return com.rimdroid.xserver.XKeycode.KEY_N;
+            case 18: return com.rimdroid.xserver.XKeycode.KEY_O;
+            case 19: return com.rimdroid.xserver.XKeycode.KEY_P;
+            case 20: return com.rimdroid.xserver.XKeycode.KEY_Q;
+            case 21: return com.rimdroid.xserver.XKeycode.KEY_R;
+            case 22: return com.rimdroid.xserver.XKeycode.KEY_S;
+            case 23: return com.rimdroid.xserver.XKeycode.KEY_T;
+            case 24: return com.rimdroid.xserver.XKeycode.KEY_U;
+            case 25: return com.rimdroid.xserver.XKeycode.KEY_V;
+            case 26: return com.rimdroid.xserver.XKeycode.KEY_W;
+            case 27: return com.rimdroid.xserver.XKeycode.KEY_X;
+            case 28: return com.rimdroid.xserver.XKeycode.KEY_Y;
+            case 29: return com.rimdroid.xserver.XKeycode.KEY_Z;
             case 44: return com.rimdroid.xserver.XKeycode.KEY_SPACE;
             case 41: return com.rimdroid.xserver.XKeycode.KEY_ESC;
             case 40: return com.rimdroid.xserver.XKeycode.KEY_ENTER;
             case 43: return com.rimdroid.xserver.XKeycode.KEY_TAB;
+            case 42: return com.rimdroid.xserver.XKeycode.KEY_BKSP;
+            case 54: return com.rimdroid.xserver.XKeycode.KEY_COMMA;
+            case 55: return com.rimdroid.xserver.XKeycode.KEY_PERIOD;
             case 225: return com.rimdroid.xserver.XKeycode.KEY_SHIFT_L;
             case 224: return com.rimdroid.xserver.XKeycode.KEY_CTRL_L;
             case 30: return com.rimdroid.xserver.XKeycode.KEY_1;

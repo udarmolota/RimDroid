@@ -129,6 +129,8 @@ Na nuvem: %2$s
     <string name="edit_controls">Editar controles na tela</string>
     <string name="editor_bg_set">Fundo</string>
     <string name="editor_bg_clear">Sem fundo</string>
+    <string name="editor_grid_on">Grade: sim</string>
+    <string name="editor_grid_off">Grade: não</string>
     <string name="editor_add">Adicionar</string>
     <string name="editor_reset">Restaurar</string>
     <string name="editor_done">Concluir</string>

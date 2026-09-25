@@ -145,6 +145,8 @@ In the cloud: %2$s
     <string name="edit_controls">Edit on-screen controls</string>
     <string name="editor_bg_set">Background</string>
     <string name="editor_bg_clear">No BG</string>
+    <string name="editor_grid_on">Grid: on</string>
+    <string name="editor_grid_off">Grid: off</string>
     <string name="editor_add">Add</string>
     <string name="editor_reset">Reset</string>
     <string name="editor_done">Done</string>

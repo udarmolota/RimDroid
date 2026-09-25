@@ -124,6 +124,8 @@
     <string name="edit_controls">Редактировать экранные кнопки</string>
     <string name="editor_bg_set">Фон</string>
     <string name="editor_bg_clear">Без фона</string>
+    <string name="editor_grid_on">Сетка: вкл</string>
+    <string name="editor_grid_off">Сетка: выкл</string>
     <string name="editor_add">Добавить</string>
     <string name="editor_reset">Сброс</string>
     <string name="editor_done">Готово</string>

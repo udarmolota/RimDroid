@@ -127,6 +127,8 @@ En la nube: %2$s
     <string name="edit_controls">Editar controles en pantalla</string>
     <string name="editor_bg_set">Fondo</string>
     <string name="editor_bg_clear">Sin fondo</string>
+    <string name="editor_grid_on">Cuadrícula: sí</string>
+    <string name="editor_grid_off">Cuadrícula: no</string>
     <string name="editor_add">Añadir</string>
     <string name="editor_reset">Restablecer</string>
     <string name="editor_done">Listo</string>

@@ -53,6 +53,14 @@ public class InputControlsView extends View {
     // just selects/moves it — so quick drags don't pop the panel.
     private static final long EDIT_PANEL_TAP_MS = 350;
     private EditorListener editorListener;
+    // Editor grid snapping: while on, a dragged element's CENTER lands on the nearest grid node, so
+    // same-size buttons line up. The step is in dp, so the grid is the same physical size on every
+    // screen. dragRawX/Y follow the finger unsnapped — snapping from the element's own (already
+    // snapped) position would stick it to one node when the finger moves slowly.
+    private static final float GRID_STEP_DP = 24f;
+    private boolean snapToGrid = false;
+    private float dragRawX, dragRawY;
+    private final Paint gridPaint = new Paint();
 
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final Paint curFill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -261,12 +269,21 @@ public class InputControlsView extends View {
     // ============================== drawing ===================================
 
     @Override protected void onDraw(Canvas c) {
+        if (editMode && snapToGrid) drawGrid(c);
         for (ControlElement el : elements) {
             // In play mode, when hidden, draw only the toggle button. The editor always shows all.
             if (!editMode && controlsHidden && !isControlsToggle(el)) continue;
             el.draw(c);
         }
         if (!editMode && curX >= 0) drawCursor(c);
+    }
+
+    private void drawGrid(Canvas c) {
+        float step = GRID_STEP_DP * density;
+        gridPaint.setColor(0x33FFFFFF);
+        gridPaint.setStrokeWidth(1f);
+        for (float x = step; x < getWidth(); x += step) c.drawLine(x, 0, x, getHeight(), gridPaint);
+        for (float y = step; y < getHeight(); y += step) c.drawLine(0, y, getWidth(), y, gridPaint);
     }
 
     private void drawCursor(Canvas c) {
@@ -299,6 +316,8 @@ public class InputControlsView extends View {
     }
 
     public boolean isEditMode() { return editMode; }
+
+    public void setSnapToGrid(boolean on) { snapToGrid = on; invalidate(); }
     public ControlElement getSelected() { return selected; }
     public List<ControlElement> getElements() { return elements; }
 
@@ -314,6 +333,7 @@ public class InputControlsView extends View {
                 if (hit != null) {
                     selectQuiet(hit);   // highlight for dragging — do NOT open the panel yet
                     dragging = hit;
+                    dragRawX = hit.centerX(); dragRawY = hit.centerY();
                 } else {
                     select(null);       // tap on empty space clears selection + closes the panel
                     dragging = null;
@@ -324,7 +344,15 @@ public class InputControlsView extends View {
                 if (dragging != null) {
                     if (Math.abs(e.getX() - editDownX) + Math.abs(e.getY() - editDownY) > 10 * density)
                         editMoved = true;
-                    dragging.moveCenterPx(e.getX() - lastTouchX, e.getY() - lastTouchY);
+                    float dx = e.getX() - lastTouchX, dy = e.getY() - lastTouchY;
+                    dragRawX += dx; dragRawY += dy;
+                    if (snapToGrid) {
+                        float step = GRID_STEP_DP * density;
+                        dragging.setCenterPx(Math.round(dragRawX / step) * step,
+                                             Math.round(dragRawY / step) * step);
+                    } else {
+                        dragging.moveCenterPx(dx, dy);
+                    }
                     lastTouchX = e.getX(); lastTouchY = e.getY();
                     invalidate();
                 }

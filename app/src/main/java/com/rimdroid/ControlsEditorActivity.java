@@ -88,6 +88,17 @@ public class ControlsEditorActivity extends Activity implements InputControlsVie
         ((Button) findViewById(R.id.btn_reset)).setOnClickListener(v -> showResetDialog());
         ((Button) findViewById(R.id.btn_done)).setOnClickListener(v -> { controls.saveToPrefs(); finish(); });
 
+        // Grid snapping toggle: remembered across editor sessions, editor-only (no effect in game).
+        final android.content.SharedPreferences editorPrefs =
+                getSharedPreferences("controls_editor", MODE_PRIVATE);
+        android.widget.ToggleButton grid = findViewById(R.id.btn_grid);
+        grid.setChecked(editorPrefs.getBoolean("snap_to_grid", false));
+        controls.setSnapToGrid(grid.isChecked());
+        grid.setOnCheckedChangeListener((btn, on) -> {
+            controls.setSnapToGrid(on);
+            editorPrefs.edit().putBoolean("snap_to_grid", on).apply();
+        });
+
         // Reference background: pick a screenshot to place buttons against. Editor-only helper —
         // copied to a file so it survives reopening the editor, and cleared on demand. Never affects
         // the game itself.

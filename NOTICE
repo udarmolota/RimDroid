@@ -25,8 +25,8 @@ content/mod is not official and is not endorsed by Ludeon."
 THIRD-PARTY COMPONENTS
 ================================================================================
 
-RimDroid's own source code is licensed under GPL-3.0 unless a source file states
-otherwise. RimDroid also bundles and/or uses third-party components under their
+RimDroid's own source code is licensed under GPL-3.0 unless a source file or this
+NOTICE states otherwise. RimDroid also bundles and/or uses third-party components under their
 respective open-source or proprietary licenses.
 
 Third-party components remain the property of their respective copyright holders
@@ -38,6 +38,49 @@ app/src/main/java/com/rimdroid/SteamAnonModSpike.java (original work by udarmolo
 is licensed under the MIT License. The author may reuse it in her other projects
 (e.g. Zomdroid) and others may reuse it too, provided the copyright notice is preserved.
 MIT is GPL-compatible, so this does not affect the GPL-3.0 status of the rest of RimDroid.
+
+--- Source code ported into RimDroid ---
+
+Winlator X server      LGPL-2.1             Copyright (c) BrunoSX (brunodev85)
+                       https://github.com/brunodev85/winlator-app
+                       (main project: https://github.com/brunodev85/winlator)
+                       The in-process X11 server that RimWorld 1.6 draws and gets input
+                       through: app/src/main/java/com/rimdroid/xserver/,
+                       app/src/main/java/com/rimdroid/xconnector/,
+                       app/src/main/java/com/rimdroid/sysvshm/ and app/src/main/cpp/xserver/.
+                       Modified by RimDroid (2026): packages and JNI symbols renamed from
+                       com.winlator to com.rimdroid, reduced to what RimWorld needs, and changed
+                       for RimDroid's input, soft-keyboard text and stability fixes.
+                       These files remain under LGPL-2.1 (full text: LICENSES/LGPL-2.1.txt),
+                       which allows their use in a GPL-3.0 program.
+
+Zomdroid               MIT License          Copyright (c) 2025 liamelui;
+                                            later changes Copyright (c) 2025-2026 udarmolota
+                       https://github.com/udarmolota/zomdroid (a fork of liamelui's Zomdroid)
+                       Ported from or modelled on Zomdroid and adapted to RimDroid's input path:
+                       the gamepad remapper (GamepadMapperActivity, input/GamepadMapping), the
+                       on-screen controls layout model (input/ControlElementDescription,
+                       input/Binding) and the controls editor (ControlsEditorActivity), all under
+                       app/src/main/java/com/rimdroid/. The MIT notice below applies to the
+                       Zomdroid-derived portions of these files:
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
 
 --- Native (bundled .so / linked / git submodules) ---
 
@@ -56,6 +99,7 @@ SDL2                   zlib License         Copyright (c) 1997-2024 Sam Lantinga
 
 MobileGlues            LGPL-2.1             Copyright (c) MobileGL-Dev contributors
                        https://github.com/MobileGL-Dev/MobileGlues
+                       (license text: LICENSES/LGPL-2.1.txt)
 
 Mono (Unity fork)      MIT License          Copyright (c) .NET Foundation and Contributors;
 (libmonobdwgc-2.0.so,                       fork by Unity Technologies

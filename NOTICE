@@ -32,11 +32,14 @@ respective open-source or proprietary licenses.
 Third-party components remain the property of their respective copyright holders
 and are not relicensed under GPL-3.0 by their inclusion in RimDroid.
 
-Per-file exception (MIT, not GPL-3.0): the anonymous Steam Workshop mod-download
-mechanism — app/src/main/java/com/rimdroid/SteamAnonModDownloader.java and
-app/src/main/java/com/rimdroid/SteamAnonModSpike.java (original work by udarmolota) —
-is licensed under the MIT License. The author may reuse it in her other projects
-(e.g. Zomdroid) and others may reuse it too, provided the copyright notice is preserved.
+Per-file exceptions (MIT, not GPL-3.0), original work by udarmolota:
+- the anonymous Steam Workshop mod-download mechanism —
+  app/src/main/java/com/rimdroid/SteamAnonModDownloader.java and
+  app/src/main/java/com/rimdroid/SteamAnonModSpike.java;
+- the libpulse-simple → AAudio audio shim — app/src/main/cpp/pulse_simple_shim.c.
+These files are licensed under the MIT License. The author may reuse them in her other
+projects (e.g. Zomdroid) and others may reuse them too, provided the copyright notice is
+preserved.
 MIT is GPL-compatible, so this does not affect the GPL-3.0 status of the rest of RimDroid.
 
 --- Source code ported into RimDroid ---

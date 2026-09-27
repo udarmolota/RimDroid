@@ -182,22 +182,49 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         public android.view.inputmethod.InputConnection onCreateInputConnection(
                 android.view.inputmethod.EditorInfo outAttrs) {
             if (!accepting) return null;
-            outAttrs.inputType = android.text.InputType.TYPE_CLASS_TEXT;
+            // VISIBLE_PASSWORD + NO_SUGGESTIONS (the terminal-emulator trick): keyboards then send each
+            // letter at once via commitText instead of holding the word as composing text. Samsung
+            // Keyboard with predictions on kept the whole word composing; we only handled commitText,
+            // so nothing was typed while Backspace/Enter (plain key events) still went through
+            // (report 26092026_1419).
+            outAttrs.inputType = android.text.InputType.TYPE_CLASS_TEXT
+                    | android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                    | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
             outAttrs.imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_FULLSCREEN
                     | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI;
             return new android.view.inputmethod.BaseInputConnection(this, false) {
+                // Safety net for keyboards that compose anyway: keep the word they are composing and
+                // type it when they finish it. Never sent while composing — the game has no way to
+                // take it back if the keyboard then replaces it.
+                private String composing = "";
                 @Override public boolean commitText(CharSequence text, int newCursorPosition) {
-                    if (text == null) return true;
-                    com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
-                    if (xs != null) {
-                        // 1.6: type through the X server (the proven path — SDL makes the text itself).
-                        xs.injectText(text.toString());
-                    } else {
-                        // 1.5 has NO X server (different SDL video driver); the only channel is the
-                        // synthetic SDL_TEXTINPUT. 1.6 ignored it, but 1.5's driver differs, so try it.
-                        try { nativeText(text.toString()); } catch (UnsatisfiedLinkError ignored) {}
+                    composing = "";   // a commit replaces the word being composed
+                    if (text != null) typeText(text.toString());
+                    return true;
+                }
+                @Override public boolean setComposingText(CharSequence text, int newCursorPosition) {
+                    composing = text == null ? "" : text.toString();
+                    return true;
+                }
+                @Override public boolean finishComposingText() {
+                    if (!composing.isEmpty()) {
+                        String word = composing;
+                        composing = "";
+                        typeText(word);
                     }
                     return true;
+                }
+                // Enter and Backspace from the keyboard arrive here as key events and would reach the
+                // game at once, while typed text goes out one key every 45 ms — so Enter could close
+                // the name dialog before the word is in. Hold such keys until the text is typed.
+                @Override public boolean sendKeyEvent(android.view.KeyEvent event) {
+                    com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+                    long wait = xs != null ? xs.textPendingMs() : 0;
+                    if (wait > 0) {
+                        KeyboardCatcher.this.postDelayed(() -> super.sendKeyEvent(event), wait);
+                        return true;
+                    }
+                    return super.sendKeyEvent(event);
                 }
                 @Override public boolean deleteSurroundingText(int before, int after) {
                     com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
@@ -212,6 +239,22 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
                     return true;
                 }
             };
+        }
+
+        private static void typeText(String text) {
+            if (text.isEmpty()) return;
+            com.rimdroid.xserver.XServer xs = com.rimdroid.xserver.XServerRunner.getXServer();
+            // Length only, never the text itself: it can be anything the player types.
+            android.util.Log.i(TAG, "IME text: " + text.length() + " char(s) -> "
+                    + (xs != null ? "X server" : "SDL"));
+            if (xs != null) {
+                // 1.6: type through the X server (the proven path — SDL makes the text itself).
+                xs.injectText(text);
+            } else {
+                // 1.5 has NO X server (different SDL video driver); the only channel is the
+                // synthetic SDL_TEXTINPUT. 1.6 ignored it, but 1.5's driver differs, so try it.
+                try { nativeText(text); } catch (UnsatisfiedLinkError ignored) {}
+            }
         }
     }
 

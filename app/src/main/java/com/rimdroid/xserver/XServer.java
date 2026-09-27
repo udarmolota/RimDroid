@@ -337,9 +337,18 @@ public class XServer {
      * Press/release are spaced out so SDL registers each keystroke; this replaces synthesising an
      * SDL_TEXTINPUT, which RimWorld ignores.
      */
+    // Soft-keyboard text is typed one key every 45 ms. Main thread only (IME callbacks). A new commit
+    // queues behind the keys still pending instead of interleaving with them, and textPendingMs()
+    // lets the keyboard hold Enter/Backspace until the text ahead of them is in.
+    private long textBusyUntil = 0;   // uptimeMillis once the last scheduled text key is released
+
+    public long textPendingMs() {
+        return Math.max(0, textBusyUntil - android.os.SystemClock.uptimeMillis());
+    }
+
     public void injectText(String text) {
         if (text == null) return;
-        int delay = 0;
+        int delay = (int) textPendingMs();
         for (int i = 0; i < text.length(); ) {
             final int cp = text.codePointAt(i);
             i += Character.charCount(cp);
@@ -364,12 +373,15 @@ public class XServer {
             }
             delay += 45;
         }
+        textBusyUntil = android.os.SystemClock.uptimeMillis() + delay;
     }
 
-    /** Backspace from the soft keyboard (IME deleteSurroundingText). */
+    /** Backspace from the soft keyboard (IME deleteSurroundingText); waits for pending text too. */
     public void injectBackspace() {
-        injectKeyPress(XKeycode.KEY_BKSP, 0xFF08);   // XK_BackSpace
-        injectHandler.postDelayed(() -> injectKeyRelease(XKeycode.KEY_BKSP), 20);
+        int delay = (int) textPendingMs();
+        injectHandler.postDelayed(() -> injectKeyPress(XKeycode.KEY_BKSP, 0xFF08), delay);   // XK_BackSpace
+        injectHandler.postDelayed(() -> injectKeyRelease(XKeycode.KEY_BKSP), delay + 20);
+        textBusyUntil = android.os.SystemClock.uptimeMillis() + delay + 45;
     }
 
     private Extension[] setupExtensions() {

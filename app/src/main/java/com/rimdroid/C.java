@@ -15,7 +15,11 @@ public class C {
         //        Adreno 610 SIGSEGV in tc_flush_resource before the first frame)
         //   v4 = + libmobileglues.so 2.0.0 (the MobileGlues renderer: desktop GL over the phone's
         //        own GLES driver, zero Vulkan — the broken-Vulkan/A11/Mali fallback)
-        public static final int BUNDLE_VERSION = 4;
+        //   v5 = - Zomdroid leftovers nothing here loads: lwjgl 3.2.3/3.3.6, libjassimp64,
+        //        libsqlitejdbc, libjemalloc, arm64 glibc/, a spare libc++_shared (the APK has its
+        //        own), x86 libjniwrapper/libpthread_wrapper and the disabled _ld-linux/_libc copies.
+        //        Extraction only adds files, so existing installs keep the old ones until reinstall.
+        public static final int BUNDLE_VERSION = 5;
         // x86_64 game libs (libgcc_s.so.1, libjniwrapper.so, etc.)
         public static final String LIBS_LINUX_X86_64 = ROOT + "/linux-x86_64";
         // Android ARM64 renderer libs — all in one flat directory

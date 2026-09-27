@@ -224,10 +224,8 @@
     <string name="gl4es_label">GL4ES (совместимый, старые GPU)</string>
     <string name="zink_zfa_label">Zink ZFA (Vulkan, рекомендуется)</string>
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, запасной)</string>
-    <string name="softpipe_label">Программный (медленный, любой GPU — для Mali/PowerVR)</string>
     <string name="mobileglues_label">MobileGlues (GL через GLES — экспериментальный, без Vulkan)</string>
     <string name="debug_mode">Режим отладки (подробный лог)</string>
-    <string name="strict_barriers">Режим интерпретатора (тест — ОЧЕНЬ медленно, диагностика порчи сейвов)</string>
     <string name="env_vars_title">Дополнительно: переменные запуска</string>
     <string name="env_vars_hint">Пары KEY=VALUE (через пробел), применяются при запуске и переопределяют значения по умолчанию. Для тестов — оставьте пустым, если не уверены. </string>
     <string name="env_vars_hint_example">напр. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
@@ -246,7 +244,6 @@
     <string name="sound_failed">Не удалось создать звуковой пак. Подробности в Download/_fmod_spike_result.txt.</string>
     <string name="env_section_header">Переменные окружения</string>
 
-    <string name="smoketest_label">Тест программного рендерера (OSMesa)</string>
     <string name="steam_spike_label">Проба входа в Steam (QR)</string>
     <string name="steam_dl_label">Проба загрузки Steam (RimWorld)</string>
     <string name="pick_zip">Выбрать ZIP-файл</string>

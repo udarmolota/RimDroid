@@ -230,10 +230,8 @@ En la nube: %2$s
     <string name="gl4es_label">GL4ES (compatible, GPU antiguas)</string>
     <string name="zink_zfa_label">Zink ZFA (Vulkan, recomendado)</string>
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, alternativa)</string>
-    <string name="softpipe_label">Software (lento, cualquier GPU — para Mali/PowerVR)</string>
     <string name="mobileglues_label">MobileGlues (GL sobre GLES — experimental, sin Vulkan)</string>
     <string name="debug_mode">Modo de depuración (registro detallado)</string>
-    <string name="strict_barriers">Modo intérprete (prueba — MUY lento, diagnóstico de partidas dañadas)</string>
     <string name="env_vars_title">Avanzado: variables de inicio adicionales</string>
     <string name="env_vars_hint">Pares CLAVE=VALOR (separados por espacios), aplicados al iniciar y con prioridad sobre los valores por defecto. Para pruebas de diagnóstico: déjalo vacío si no sabes lo que haces. </string>
     <string name="env_vars_hint_example">p. ej. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
@@ -251,7 +249,6 @@ En la nube: %2$s
     <string name="sound_done">¡Paquete de sonido listo! Activa \"Sonido del juego\" en Ajustes para usarlo.</string>
     <string name="sound_failed">Falló la generación del paquete de sonido. Revisa Download/_fmod_spike_result.txt.</string>
     <string name="env_section_header">Variables de entorno</string>
-    <string name="smoketest_label">Probar el renderizador por software (OSMesa)</string>
     <string name="steam_spike_label">Prueba de inicio de sesión en Steam (QR)</string>
     <string name="steam_dl_label">Prueba de descarga de Steam (RimWorld)</string>
     <string name="pick_zip">Elegir archivo ZIP</string>

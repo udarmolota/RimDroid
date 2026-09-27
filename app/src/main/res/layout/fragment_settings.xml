@@ -31,11 +31,8 @@
             android:text="@string/card_video"
             android:layout_marginBottom="6dp" />
 
-        <!-- Renderer chooser, back from the dead (2026-08-09): the A11/Adreno-640 hang proved
-             SOFTPIPE (CPU, no Vulkan at all) is the only path for devices whose Vulkan driver
-             breaks zink — a player got RimWorld's loading screen with it on a phone where zink
-             hangs forever. Known defect being debugged: Unity's scene mostly misses FBO 0
-             (pale/dark picture) — see SettingsFragment for state. GL4ES/ZINK_OSMESA stay gone. -->
+        <!-- Renderer chooser: ZINK_ZFA (GPU via Vulkan) or MobileGlues (the phone's own GLES,
+             zero Vulkan). GL4ES / ZINK_OSMESA stay hidden. -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -452,20 +449,6 @@
 
           <!-- Hidden dev/diagnostic elements — kept so SettingsFragment.findViewById() still resolves
                them (set GONE in code). Do not remove. -->
-          <Switch
-              android:id="@+id/sw_strict_barriers"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:text="@string/strict_barriers"
-              android:visibility="gone" />
-
-          <Button
-              android:id="@+id/btn_smoketest"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:text="@string/smoketest_label"
-              android:visibility="gone" />
-
           <Button
               android:id="@+id/btn_steam_dl"
               android:layout_width="wrap_content"

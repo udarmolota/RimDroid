@@ -80,7 +80,6 @@ public class GameLauncher {
         if (!actualSo.equals(policySo)) {
             decisionReason += "; overridden by Extra env vars";
         }
-        boolean interp = s.isInterpreter();
         return "=== RimDroid launch config ===\n"
             + "instance      : " + gi.getName() + "\n"
             + "app version   : " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
@@ -108,13 +107,12 @@ public class GameLauncher {
             + "resolution    : " + fixedResReport(s) + fixedGeomReport() + "\n"
             + "texture compr : " + texTierReport(s) + "\n"
             + "debug         : " + (s.isDebug() ? "ON" : "off") + "\n"
-            + "interpreter   : " + (interp ? "ON (dynarec OFF)" : "off") + "\n"
             + "compat mode   : " + (s.isCompatibilityMode() ? "ON (WEAKBARRIER=2 X87DOUBLE=1 MAXCPU=1)" : "off") + "\n"
             + "native mono   : " + (Os.getenv("RIMDROID_NATIVE_MONO_PATH") != null
                     ? "ON (ARM64 Mono, Burst off) " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
-            + "box64         : DYNAREC=" + (interp ? "0" : "1")
+            + "box64         : DYNAREC=1"
                 + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=" + (s.isCompatibilityMode() ? "2 X87DOUBLE=1 MAXCPU=1" : "1") + "\n"
             + "extra env     : " + envFieldReport(s) + "\n"
             + "active mods   : " + readActiveMods(gi) + "\n"
@@ -246,15 +244,6 @@ public class GameLauncher {
         }
         // BOX64_DYNAREC_DIRTY=2 TESTED 2026-06-03 (Adreno 830): REJECTED. FPS collapsed to 12→7 (got WORSE over
         // time, opposite of cold-cache warmup) — NEVERCLEAN hotpages break Mono-JIT SMC handling. Keep default (0).
-        // "Interpreter mode" test toggle → disable box64 dynarec entirely (BOX64_DYNAREC=0,
-        // run x86_64 via the interpreter). VERY slow, but the DECISIVE diagnostic for the save
-        // corruption: if pawns serialize correctly with the dynarec OFF, the bug is a dynarec
-        // codegen miscompile (fixable via a box64 flag/patch); if they're STILL empty, it's in
-        // box64's wrapper / atomic emulation (common to both paths). Earlier this toggle tried
-        // WEAKBARRIER=0 and DF=0 — neither fixed the save, so we go to the interpreter.
-        if (gameInstance.settings().isInterpreter()) {
-            Os.setenv("BOX64_DYNAREC", "0", true);
-        }
         // Compatibility mode → box64 dynarec FP/barrier tuning that dodges the deep "won't launch past the
         // loading dots / black screen" bug on affected devices (Adreno 610/725, weak-Vulkan Mali). Tester-
         // discovered: WEAKBARRIER=2 (looser memory barriers) + X87DOUBLE=1 (64-bit x87, no 80↔64 spill) →
@@ -466,7 +455,7 @@ public class GameLauncher {
             }
         }
         // The enum name maps 1:1 to the native renderer token parsed in rimdroid.c
-        // (GL4ES / ZINK_ZFA / ZINK_OSMESA / SOFTPIPE).
+        // (GL4ES / ZINK_ZFA / ZINK_OSMESA).
         Os.setenv("RIMDROID_RENDERER", renderer.name(), true);  // read by rimdroid.c on init
         Os.setenv("RIMDROID_CACHE_DIR", AppStorage.requireSingleton().getCachePath(), true);
         Os.unsetenv("RIMDROID_MG_STORAGE_EXT");
@@ -559,15 +548,12 @@ public class GameLauncher {
                     true);
                 break;
             case ZINK_ZFA: {
-                // GPU path: Zink (GL-on-Vulkan) via libzfa. (SOFTPIPE has its own
-                // case below — it uses OSMesa, NOT libzfa, because the zfa frontend
-                // hardcodes a Zink screen and ignores GALLIUM_DRIVER.)
-                boolean soft = false;
+                // GPU path: Zink (GL-on-Vulkan) via libzfa.
                 // Absolute path so host dlopen() in the parent finds libzfa.so
                 // (the isolated namespace does not resolve it by bare soname).
                 String arm64Dir = AppStorage.requireSingleton().getGl4esLibsPath();
                 Os.setenv("BOX64_LIBGL", arm64Dir + "/libzfa.so", true);
-                Os.setenv("GALLIUM_DRIVER", soft ? "softpipe" : "zink", true);
+                Os.setenv("GALLIUM_DRIVER", "zink", true);
                 Os.setenv("MESA_GL_VERSION_OVERRIDE", "4.3", true);
                 Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "430", true);
                 // DEBUG: surface Zink/Mesa shader compile/link errors + GL errors
@@ -575,7 +561,7 @@ public class GameLauncher {
                 // the GfxDevice device-lost teardown loop (SDL_GL_DeleteContext loop).
                 Os.setenv("MESA_DEBUG", "1", true);          // GL errors + warnings to stderr
                 Os.setenv("MESA_GLSL", "errors", true);      // GLSL compile/link errors
-                if (!soft) Os.setenv("ZINK_DEBUG", "compact", true);    // Zink-level diagnostics
+                Os.setenv("ZINK_DEBUG", "compact", true);    // Zink-level diagnostics
                 // libzfa.so exports a fixed classic-GL symbol set but is MISSING the
                 // entry points for several advertised extensions (whole DSA family,
                 // internalformat_query, timer_query, sparse_texture, blend_equation_
@@ -604,15 +590,13 @@ public class GameLauncher {
                 // Chosen in Settings (driver spinner); defaults to libvulkan_freedreno.so.
                 // Empty string = "System" option = use the phone's own Vulkan driver
                 // (rimdroid.c treats empty as NULL and skips the bundled Turnip ICD).
-                // Software path needs no Vulkan ICD; GPU (Zink) path uses the chosen driver.
-                String configuredDriver = soft ? "" : gameInstance.settings().getVulkanDriverSo();
+                String configuredDriver = gameInstance.settings().getVulkanDriverSo();
                 launchGpu = GpuInfo.query();
                 // A stored, empty driver = the player deliberately picked "System" in the spinner
                 // (instance creation always writes the advised driver, so an empty stored value is
                 // a conscious override). Honour it instead of re-imposing a Turnip — Adreno 640
                 // crashes on every bundled Turnip, so System is its only working path.
-                boolean explicitSystem = !soft
-                        && gameInstance.settings().hasExplicitDriver()
+                boolean explicitSystem = gameInstance.settings().hasExplicitDriver()
                         && configuredDriver.isEmpty();
                 driverDecision = VulkanDriverPolicy.resolve(
                         configuredDriver, launchGpu, forceGlesZfa, explicitSystem);
@@ -627,39 +611,6 @@ public class GameLauncher {
                 Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", driverDecision.effectiveSo, true);
                 // SDL_DYNAPI interception (same mechanism as GL4ES) so our
                 // my2_SDL_GL_CreateContext/SwapWindow route to ZFA.
-                Os.setenv("SDL_DYNAMIC_API",
-                    AppStorage.requireSingleton().getLibsLinuxX86Path() + "/libSDL2-2.0.so.0",
-                    true);
-                break;
-            }
-            case SOFTPIPE: {
-                // CPU software renderer: Mesa softpipe via OSMesa (OFFSCREEN) + a
-                // manual blit to the surface (rimdroid.c). Bypasses GPU/Vulkan/EGL
-                // entirely → works on ANY device (Mali/PowerVR/old Mali where Zink
-                // fails or mis-renders), supports all texture formats incl. BC, but
-                // is slower (CPU). Unlike Zink it does NOT go through libzfa (the zfa
-                // frontend hardcodes a Zink screen and ignores GALLIUM_DRIVER), so we
-                // load libOSMesa directly. libOSMesa.so is loaded by rimdroid.c via
-                // the rimdroid linker namespace (so libcutils/liblog resolve); box64
-                // resolves GL entry points from that handle (g_osmesa_handle).
-                Os.setenv("BOX64_LIBGL", "libOSMesa.so", true);
-                Os.setenv("GALLIUM_DRIVER", "softpipe", true);
-                // softpipe caps at GL 3.3 (RimWorld/Unity need only 3.2 core).
-                Os.setenv("MESA_GL_VERSION_OVERRIDE", "3.3", true);
-                Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "330", true);
-                // NOTE: large textures (BC7 hero-art) render BLACK on softpipe — but
-                // on-device testing proved this is NOT a compression issue: disabling
-                // all compression so Unity CPU-decompresses to RGBA still rendered
-                // black (and forced slow emulated decompress). So we DON'T override
-                // texture-compression extensions here — softpipe uses its native set
-                // (faster). The black-large-texture bug is tracked separately (likely a
-                // softpipe mip/sampling issue). softpipe also has the full libOSMesa, so
-                // unlike ZFA we don't need the DSA/query-disable overrides either.
-                // Pure CPU → no Vulkan ICD. Empty = rimdroid.c skips the Turnip inject.
-                Os.setenv("RIMDROID_VULKAN_DRIVER_NAME", "", true);
-                // Same SDL_DYNAPI interception as GL4ES/ZFA so the game's static SDL2
-                // loads our stub and box64's my2_SDL_GL_* (CreateContext / MakeCurrent
-                // / SwapWindow / GetProcAddress) route to the OSMesa softpipe path.
                 Os.setenv("SDL_DYNAMIC_API",
                     AppStorage.requireSingleton().getLibsLinuxX86Path() + "/libSDL2-2.0.so.0",
                     true);
@@ -1050,10 +1001,6 @@ public class GameLauncher {
     public static native int setSurface(Surface surface, int width, int height);
     public static native void destroySurface();
 
-    /** Software-renderer (OSMesa + softpipe) smoke test: render a test frame on the CPU and
-     *  blit it to the current surface. Returns 0 on success. Requires a live surface
-     *  (call after setSurface). osmesaLibPath = absolute path to libOSMesa.so. */
-    public static native int nativeOsmesaSmokeTest(String osmesaLibPath);
     static native void startGame(String gameDirPath, String libraryDirPath, String[] args);
 
     /**

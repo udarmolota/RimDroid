@@ -159,15 +159,6 @@ public class InstanceSettings {
         p.edit().putBoolean(pfx + "haptic", v).apply();
     }
 
-    // --- Interpreter mode (BOX64_DYNAREC=0 diagnostic; pref key kept for back-compat as "interpreter") ---
-    public boolean isInterpreter() {
-        return p.getBoolean(pfx + "interpreter", global.isStrictBarriers());
-    }
-
-    public void setInterpreter(boolean v) {
-        p.edit().putBoolean(pfx + "interpreter", v).apply();
-    }
-
     // --- Compatibility mode: box64 dynarec tuning that dodges the deep "won't launch past the loading
     // dots / black screen" bug on affected devices (Adreno 610/725, weak-Vulkan Mali). Discovered via a
     // tester: sets BOX64_DYNAREC_WEAKBARRIER=2 + BOX64_DYNAREC_X87DOUBLE=1 in GameLauncher (reshapes the

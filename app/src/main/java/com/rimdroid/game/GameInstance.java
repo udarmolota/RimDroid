@@ -88,13 +88,6 @@ public class GameInstance {
             case ZINK_OSMESA:
                 paths.add(storage.getZinkLibsPath());
                 break;
-            case SOFTPIPE:
-                // libOSMesa.so (softpipe CPU renderer) lives in the deps dir alongside libzfa.so.
-                // This dir MUST be in the search path or rimdroid_ns can't resolve "libOSMesa.so"
-                // by soname → rimdroid_init_osmesa()'s namespace dlopen returns NULL.
-                paths.add(storage.getGl4esLibsPath());
-                paths.add(storage.getZinkLibsPath());   // same deps dir; harmless if duplicate
-                break;
         }
 
         return join(paths, ":");

@@ -248,10 +248,8 @@ In the cloud: %2$s
     <string name="gl4es_label">GL4ES (compatible, older GPUs)</string>
     <string name="zink_zfa_label">Zink ZFA (Vulkan, recommended)</string>
     <string name="zink_osmesa_label">Zink OSMesa (Vulkan, fallback)</string>
-    <string name="softpipe_label">Software (slow, any GPU — for Mali/PowerVR)</string>
     <string name="mobileglues_label">MobileGlues (GL over GLES — experimental, no Vulkan)</string>
     <string name="debug_mode">Debug mode (verbose log)</string>
-    <string name="strict_barriers">Interpreter mode (test — VERY slow, diagnostic for save corruption)</string>
     <string name="env_vars_title">Advanced: extra launch variables</string>
     <string name="env_vars_hint">KEY=VALUE pairs (space-separated), applied on launch and overriding the defaults. For diagnostics tests — leave empty unless you know what you\'re doing. </string>
     <string name="env_vars_hint_example">e.g. BOX64_DYNAREC_ALIGNED_ATOMICS=1</string>
@@ -269,7 +267,6 @@ In the cloud: %2$s
     <string name="sound_done">Sound pack ready! Turn on \"Game sound\" in Settings to use it.</string>
     <string name="sound_failed">Sound pack generation failed. See Download/_fmod_spike_result.txt.</string>
     <string name="env_section_header">Environment variables</string>
-    <string name="smoketest_label">Test software renderer (OSMesa)</string>
     <string name="steam_spike_label">Steam login spike (QR)</string>
     <string name="steam_dl_label">Steam download spike (RimWorld)</string>
     <string name="pick_zip">Pick ZIP file</string>

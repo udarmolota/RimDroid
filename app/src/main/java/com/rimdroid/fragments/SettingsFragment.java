@@ -57,21 +57,18 @@ public class SettingsFragment extends Fragment {
         requireActivity().setTitle(getString(R.string.nav_settings) + " — " + instName);
 
         Switch swDebug        = view.findViewById(R.id.sw_debug);
-        Switch swStrict       = view.findViewById(R.id.sw_strict_barriers);
         Switch swDragPan      = view.findViewById(R.id.sw_drag_pan);
         Switch swReverse      = view.findViewById(R.id.sw_reverse_landscape);
         Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
         Switch swShowFps      = view.findViewById(R.id.sw_show_fps);
-        final android.widget.Button btnSmoke = view.findViewById(R.id.btn_smoketest);
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
         final TextView tvSteamDlStatus = view.findViewById(R.id.tv_steam_dl_status);
 
         // Renderer chooser: ZINK_ZFA (GPU via Vulkan, default) or MOBILEGLUES (GPU via the phone's
         // own GLES driver — zero Vulkan; first full 1.5 session 2026-08-09, 62 fps on the S25).
-        // MobileGlues replaced the short-lived softpipe entry the same day: softpipe (CPU) proved
-        // the stack works on broken-Vulkan devices but is a 1-2 fps diagnostic tool, not a
-        // renderer — its code path stays, reachable via the RIMDROID_GLT/env harness only.
+        // MobileGlues replaced the short-lived softpipe (CPU, 1-2 fps) entry the same day; the
+        // softpipe path itself was removed later as it never became usable.
         // GL4ES / ZINK_OSMESA stay hidden; any instance set to a non-UI renderer migrates to ZFA.
         android.widget.RadioGroup rgRenderer = view.findViewById(R.id.rg_renderer);
         android.widget.RadioButton rbZinkZfa = view.findViewById(R.id.rb_zink_zfa);
@@ -94,7 +91,6 @@ public class SettingsFragment extends Fragment {
             }
         });
         swDebug.setChecked(inst.isDebug());
-        swStrict.setChecked(inst.isInterpreter());
         swDragPan.setChecked(inst.isDragPan());
         swDragPan.setOnCheckedChangeListener((btn, checked) -> inst.setDragPan(checked));
         // Mirrored landscape: opt-in for USB-C gamepad cradles that hold the phone the other way up.
@@ -161,18 +157,6 @@ public class SettingsFragment extends Fragment {
             advContent.setVisibility(show ? View.VISIBLE : View.GONE);
             advHeader.setCompoundDrawablesWithIntrinsicBounds(0, 0,
                     show ? android.R.drawable.arrow_up_float : android.R.drawable.arrow_down_float, 0);
-        });
-        // Interpreter mode (BOX64_DYNAREC=0) is FULLY HIDDEN: on a Mali/MediaTek device it took ~1.5h
-        // just to load the APP (not even the menu) — impractical to test, so we don't expose it. The
-        // code (toggle + InstanceSettings.interpreter + GameLauncher BOX64_DYNAREC=0) is KEPT for later.
-        swStrict.setVisibility(View.GONE);
-        // Software-renderer OSMesa smoke test — FULLY HIDDEN (software renderer not user-ready). Click logic kept.
-        btnSmoke.setVisibility(View.GONE);
-        btnSmoke.setOnClickListener(v -> {
-            android.content.Intent i = new android.content.Intent(requireContext(),
-                    com.rimdroid.GameActivity.class);
-            i.putExtra(com.rimdroid.GameActivity.EXTRA_SMOKETEST, true);
-            startActivity(i);
         });
 
         // (The old Steam auth-only spike + on-device sound-pack generator shared this button; both are
@@ -287,12 +271,10 @@ public class SettingsFragment extends Fragment {
 
         swDebug.setOnCheckedChangeListener((btn, checked) -> {
             inst.setDebug(checked);   // per-instance debug
-            // swStrict (Interpreter) stays fully hidden — impractical to test (1.5h app load on Mali).
-            // btnSmoke (OSMesa smoke), rbSoftpipe (software renderer), and the Steam spike buttons
+            // The Steam spike buttons
             // (btnSteamDl/btnSteamSpike — superseded by the Download screen) all stay fully hidden.
         });
 
-        swStrict.setOnCheckedChangeListener((btn, checked) -> inst.setInterpreter(checked));
 
         // --- Vulkan driver picker ---
         Spinner spDriver = view.findViewById(R.id.spinner_vulkan_driver);

@@ -17,12 +17,8 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
 
     private SurfaceView surfaceView;
 
-    // When launched with this extra = true, GameActivity does NOT start the game: it just
-    // provides a surface and runs the OSMesa software-renderer smoke test on it (dev/tester).
-    public static final String EXTRA_SMOKETEST = "rimdroid_osmesa_smoketest";
     /** Which instance is launching — selects its per-instance render scale + controls layout. */
     public static final String EXTRA_INSTANCE_NAME = "instance_name";
-    private boolean smokeTest;
 
     // Native input injection (rimdroid_jni.c → box64). action 0=move,1=Ldown,2=Lup.
     public static native void nativeTouch(int action, int x, int y);
@@ -263,7 +259,6 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        smokeTest = getIntent().getBooleanExtra(EXTRA_SMOKETEST, false);
         instanceName = getIntent().getStringExtra(EXTRA_INSTANCE_NAME);
 
         // adb-driven test runs (debug builds export this activity): "autolaunch" makes this
@@ -771,18 +766,6 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.i(TAG, "surfaceChanged: " + width + "x" + height);
         GameLauncher.setSurfaceTracked(holder.getSurface(), width, height);
-        if (smokeTest) {
-            // Software-renderer smoke test: render+blit one OSMesa frame, no game launch.
-            try {
-                String osmesa = com.rimdroid.AppStorage.requireSingleton().getGl4esLibsPath()
-                        + "/libOSMesa.so";
-                int rc = GameLauncher.nativeOsmesaSmokeTest(osmesa);
-                Log.i(TAG, "OSMesa smoke test rc=" + rc + " (" + osmesa + ")");
-            } catch (Throwable t) {
-                Log.w(TAG, "OSMesa smoke test failed: " + t.getMessage());
-            }
-            return;
-        }
         // Pin RimWorld's Prefs.xml to fullscreen at EXACTLY the buffer resolution we
         // pass the game here (= surface * render scale). RimWorld re-applies its saved
         // Prefs resolution shortly after launch, overriding -screen-width; if that saved

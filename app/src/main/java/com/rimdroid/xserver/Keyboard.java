@@ -13,7 +13,12 @@ public class Keyboard {
     public static final short KEYS_COUNT = 248;
     public static final short MAX_KEYCODE = 255;
     public static final short MIN_KEYCODE = 8;
-    public final int[] keysyms = new int[KEYS_COUNT];
+    // KEYS_COUNT keycodes (8..255) x KEYSYMS_PER_KEYCODE. Winlator sized this to KEYS_COUNT alone, so
+    // the table only reached keycode 131; GetKeyboardMapping zero-filled the rest.
+    public final int[] keysyms = new int[KEYS_COUNT * KEYSYMS_PER_KEYCODE];
+    // Spare keycodes that carry non-English letters from the start (see addExtraLetters).
+    private static final int EXTRA_FIRST_KEYCODE = 160;
+    private int extraLastKeycode = EXTRA_FIRST_KEYCODE - 1;
     private final Bitmask modifiersMask = new Bitmask();
     private final XKeycode[] keycodeMap = createKeycodeMap();
     private final ArraySet<Byte> pressedKeys = new ArraySet<>();
@@ -34,14 +39,15 @@ public class Keyboard {
         return modifiersMask;
     }
 
+    // Keycodes are unsigned on the wire; `& 0xFF` keeps 128..255 from going negative as a Java byte.
     public void setKeysyms(byte keycode, int minKeysym, int majKeysym) {
-        int index = keycode - MIN_KEYCODE;
+        int index = (keycode & 0xFF) - MIN_KEYCODE;
         keysyms[index*KEYSYMS_PER_KEYCODE+0] = minKeysym;
         keysyms[index*KEYSYMS_PER_KEYCODE+1] = majKeysym;
     }
 
     public boolean hasKeysym(byte keycode, int keysym) {
-        int index = keycode - MIN_KEYCODE;
+        int index = (keycode & 0xFF) - MIN_KEYCODE;
         return keysyms[index*KEYSYMS_PER_KEYCODE+0] == keysym || keysyms[index*KEYSYMS_PER_KEYCODE+1] == keysym;
     }
 
@@ -152,7 +158,21 @@ public class Keyboard {
             if (lower == cp) return new int[]{ xk.id & 0xFF, 0 };
             if (upper == cp && upper != lower && upper != 0) return new int[]{ xk.id & 0xFF, 1 };
         }
+        int ks = keysymFor(cp);
+        for (int kc = EXTRA_FIRST_KEYCODE; kc <= extraLastKeycode; kc++) {
+            int index = kc - MIN_KEYCODE;
+            int lower = keysyms[index * KEYSYMS_PER_KEYCODE + 0];
+            int upper = keysyms[index * KEYSYMS_PER_KEYCODE + 1];
+            if (lower == ks) return new int[]{ kc, 0 };
+            if (upper == ks && upper != 0) return new int[]{ kc, 1 };
+        }
         return null;
+    }
+
+    /** X keysym for a character: Latin-1 keysyms equal the code point, the rest use the Unicode
+     *  keysym range (0x01000000 | code point). */
+    public static int keysymFor(int cp) {
+        return cp <= 0xFF ? cp : 0x01000000 | cp;
     }
 
     private XKeycode getCustomXKeycodeForKeysym(int keysym) {
@@ -373,7 +393,34 @@ public class Keyboard {
         keyboard.setKeysyms(XKeycode.KEY_F10.id, 65479, 0);
         keyboard.setKeysyms(XKeycode.KEY_F11.id, 65480, 0);
         keyboard.setKeysyms(XKeycode.KEY_F12.id, 65481, 0);
+        keyboard.addExtraLetters();
         return keyboard;
+    }
+
+    /**
+     * Non-English letters on spare keycodes 160+, set up BEFORE the game connects: the game reads the
+     * keymap once at start and ignores later changes, so only a letter that is already here can be
+     * typed. EXPERIMENT (one device run answers both):
+     *  - Latin-1 (á ã ç ñ ü ß ¿ ¡ …): the game's X library can turn these into text without an
+     *    input method, which we cannot run (no X11 locale data) — expected to work.
+     *  - Cyrillic (Russian + і ї є ґ ў): Unicode keysyms; likely needs that input method, so
+     *    expected NOT to type yet — kept to find out for free.
+     */
+    private void addExtraLetters() {
+        int kc = EXTRA_FIRST_KEYCODE;
+        for (int lower = 0xE0; lower <= 0xFE; lower++) {
+            if (lower == 0xF7) continue;                      // ÷ (and × opposite) are not letters
+            setKeysyms((byte) kc++, lower, lower - 0x20);     // à/À … þ/Þ: upper = lower - 0x20
+        }
+        int[] singles = { 0xDF /* ß */, 0xFF /* ÿ */, 0xBF /* ¿ */, 0xA1 /* ¡ */, 0xAA /* ª */,
+                          0xBA /* º */, 0xAB /* « */, 0xBB /* » */, 0xB0 /* ° */ };
+        for (int s : singles) setKeysyms((byte) kc++, s, 0);
+        for (int lower = 0x430; lower <= 0x44F; lower++)     // а/А … я/Я: upper = lower - 0x20
+            setKeysyms((byte) kc++, keysymFor(lower), keysymFor(lower - 0x20));
+        int[][] pairs = { {0x451, 0x401} /* ё Ё */, {0x456, 0x406} /* і І */, {0x457, 0x407} /* ї Ї */,
+                          {0x454, 0x404} /* є Є */, {0x491, 0x490} /* ґ Ґ */, {0x45E, 0x40E} /* ў Ў */ };
+        for (int[] p : pairs) setKeysyms((byte) kc++, keysymFor(p[0]), keysymFor(p[1]));
+        extraLastKeycode = kc - 1;   // 236 — must stay <= MAX_KEYCODE (255)
     }
 
     public static boolean isModifier(byte keycode) {

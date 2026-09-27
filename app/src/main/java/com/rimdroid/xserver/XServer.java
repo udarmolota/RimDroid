@@ -357,11 +357,14 @@ public class XServer {
                 final byte keycode = (byte) res[0];
                 final boolean shift = res[1] != 0;
                 if (shift) injectHandler.postDelayed(() -> injectKeyPress(XKeycode.KEY_SHIFT_L), delay);
-                injectHandler.postDelayed(() -> injectKeyPressRaw(keycode, cp), delay + (shift ? 5 : 0));
+                // keysymFor, not cp: a Cyrillic key holds its Unicode keysym, and a keysym the key does
+                // not hold makes InputDeviceManager remap the key at runtime, which the game ignores.
+                injectHandler.postDelayed(() -> injectKeyPressRaw(keycode, Keyboard.keysymFor(cp)), delay + (shift ? 5 : 0));
                 injectHandler.postDelayed(() -> injectKeyReleaseRaw(keycode), delay + 20);
                 if (shift) injectHandler.postDelayed(() -> injectKeyRelease(XKeycode.KEY_SHIFT_L), delay + 25);
             } else {
-                // Non-ASCII (Cyrillic, Portuguese ã/ç, CJK…): NOT solved yet. SDL under box64 doesn't
+                // Beyond ASCII and the preloaded Latin-1/Cyrillic letters (Keyboard.addExtraLetters) — CJK
+                // and the rest: NOT solved yet. SDL under box64 doesn't
                 // pick up the runtime keymap change, so a custom-keycode press produces no text. Kept
                 // as a harmless best-effort (English above types via real keycodes and works). To
                 // revisit: preload full alphabets into fixed keycodes, or find why SDL ignores the

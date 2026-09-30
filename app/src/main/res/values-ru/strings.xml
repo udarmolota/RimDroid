@@ -134,7 +134,6 @@
     <string name="editor_reset">Сброс</string>
     <string name="editor_done">Готово</string>
     <string name="editor_delete">Удалить элемент</string>
-    <string name="editor_hint">Тап — выбрать • перетащить — двигать</string>
     <string name="editor_reset_confirm">Сбросить все экранные кнопки к раскладке по умолчанию?</string>
     <string name="nav_launcher">Лаунчер</string>
     <string name="nav_settings">Настройки</string>

@@ -137,7 +137,6 @@ En la nube: %2$s
     <string name="editor_reset">Restablecer</string>
     <string name="editor_done">Listo</string>
     <string name="editor_delete">Eliminar elemento</string>
-    <string name="editor_hint">Toca para seleccionar • arrastra para mover</string>
     <string name="editor_reset_confirm">¿Restablecer todos los controles en pantalla al diseño predeterminado?</string>
     <string name="nav_launcher">Lanzador</string>
     <string name="nav_settings">Ajustes</string>

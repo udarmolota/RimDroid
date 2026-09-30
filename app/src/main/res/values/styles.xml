@@ -65,4 +65,39 @@
     <style name="RimDroid.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
         <item name="android:textColor">?attr/colorPrimary</item>
     </style>
+
+    <!-- Controls editor toolbar (ported from ValDroid): separate outlined buttons floating over the
+         layout — white contour on a translucent dark fill, readable over any background — instead
+         of a full-width dark band. Primary = the filled "Done".
+         The Grid toggle uses @drawable/editor_toggle_bg (orange while checked). -->
+    <style name="AppTheme.EditorToolbarButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_marginStart">3dp</item>
+        <item name="android:layout_marginEnd">3dp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="backgroundTint">#99000000</item>
+        <item name="strokeColor">#E6FFFFFF</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+    <style name="AppTheme.EditorToolbarButton.Primary" parent="Widget.Material3.Button">
+        <item name="android:layout_marginStart">3dp</item>
+        <item name="android:layout_marginEnd">3dp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
 </resources>

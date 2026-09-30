@@ -55,11 +55,10 @@ public class InputControlsView extends View {
     private EditorListener editorListener;
     // Editor grid snapping: while on, a dragged element's CENTER lands on the nearest grid node, so
     // same-size buttons line up. The step is in dp, so the grid is the same physical size on every
-    // screen. dragRawX/Y follow the finger unsnapped — snapping from the element's own (already
-    // snapped) position would stick it to one node when the finger moves slowly.
+    // screen. The element follows the finger smoothly and snaps only when the finger lifts —
+    // snapping on every move made it jump from node to node (same fix as ValDroid).
     private static final float GRID_STEP_DP = 24f;
     private boolean snapToGrid = false;
-    private float dragRawX, dragRawY;
     private final Paint gridPaint = new Paint();
 
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -318,6 +317,16 @@ public class InputControlsView extends View {
     public boolean isEditMode() { return editMode; }
 
     public void setSnapToGrid(boolean on) { snapToGrid = on; invalidate(); }
+
+    /** Finger lifted: land the dragged element's centre on the nearest grid node. Only after a real
+     *  drag — a tap-and-hold that opens the settings panel must not nudge the element. */
+    private void snapDraggedToGrid() {
+        if (!snapToGrid || dragging == null || !editMoved) return;
+        float step = GRID_STEP_DP * density;
+        dragging.setCenterPx(Math.round(dragging.centerX() / step) * step,
+                             Math.round(dragging.centerY() / step) * step);
+        invalidate();
+    }
     public ControlElement getSelected() { return selected; }
     public List<ControlElement> getElements() { return elements; }
 
@@ -333,7 +342,6 @@ public class InputControlsView extends View {
                 if (hit != null) {
                     selectQuiet(hit);   // highlight for dragging — do NOT open the panel yet
                     dragging = hit;
-                    dragRawX = hit.centerX(); dragRawY = hit.centerY();
                 } else {
                     select(null);       // tap on empty space clears selection + closes the panel
                     dragging = null;
@@ -344,15 +352,7 @@ public class InputControlsView extends View {
                 if (dragging != null) {
                     if (Math.abs(e.getX() - editDownX) + Math.abs(e.getY() - editDownY) > 10 * density)
                         editMoved = true;
-                    float dx = e.getX() - lastTouchX, dy = e.getY() - lastTouchY;
-                    dragRawX += dx; dragRawY += dy;
-                    if (snapToGrid) {
-                        float step = GRID_STEP_DP * density;
-                        dragging.setCenterPx(Math.round(dragRawX / step) * step,
-                                             Math.round(dragRawY / step) * step);
-                    } else {
-                        dragging.moveCenterPx(dx, dy);
-                    }
+                    dragging.moveCenterPx(e.getX() - lastTouchX, e.getY() - lastTouchY);
                     lastTouchX = e.getX(); lastTouchY = e.getY();
                     invalidate();
                 }
@@ -366,9 +366,11 @@ public class InputControlsView extends View {
                         && editorListener != null) {
                     editorListener.onElementSelected(selected);
                 }
+                snapDraggedToGrid();
                 dragging = null;
                 break;
             case MotionEvent.ACTION_CANCEL:
+                snapDraggedToGrid();
                 dragging = null;
                 break;
         }

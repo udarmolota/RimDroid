@@ -259,14 +259,19 @@ public class LauncherPreferences {
         prefs.edit().putString("last_instance", name).apply();
     }
 
-    // --- FPS overlay (top-left "FPS: XX") — global. Off by default. ---
+    // --- In-game overlay — global. Off by default. Ported from ValDroid. ---
+    // FPS  = the classic green "FPS: XX" counter, top-left.
+    // FULL = the performance bar (PerfOverlayView): API, GPU, CPU, RAM, power, heat, FPS + graph.
+    public static final int HUD_OFF = 0, HUD_FPS = 1, HUD_FULL = 2;
 
-    public boolean isShowFps() {
-        return prefs.getBoolean("show_fps", false);
+    /** Falls back to the old boolean "show_fps", so a counter that was on stays on. */
+    public int getHudMode() {
+        if (prefs.contains("hud_mode")) return prefs.getInt("hud_mode", HUD_OFF);
+        return prefs.getBoolean("show_fps", false) ? HUD_FPS : HUD_OFF;
     }
 
-    public void setShowFps(boolean v) {
-        prefs.edit().putBoolean("show_fps", v).apply();
+    public void setHudMode(int mode) {
+        prefs.edit().putInt("hud_mode", mode).apply();
     }
 
     // --- Debug ---

@@ -77,7 +77,11 @@ Na nuvem: %2$s
     <string name="native_mono_crash_keep">Manter ativado</string>
     <string name="haptic_label">Vibrar ao tocar um botão</string>
     <string name="audio_label">Som do jogo</string>
-    <string name="show_fps_label">Mostrar contador de FPS (canto superior esquerdo)</string>
+    <string name="hud_label">Na tela durante o jogo</string>
+    <string name="hud_off">Desligado</string>
+    <string name="hud_fps">FPS</string>
+    <string name="hud_full">Info completa</string>
+    <string name="hud_hint">«Info completa» mostra uma barra no topo: carga de GPU e CPU, memória, consumo, temperatura e um gráfico de FPS. Ajuda a ver o que deixa o jogo lento.</string>
     <string name="fps_cap_label">Limite de FPS</string>
     <string name="fps_cap_hint">Limitar os FPS suaviza os solavancos e libera CPU para o jogo, o que pode aumentar a velocidade de simulação (TPS) em aparelhos mais fracos. Tente 60 ou 30 se o contador oscilar muito.</string>
     <string name="texq_label">Compressão de texturas</string>

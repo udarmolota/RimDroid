@@ -61,7 +61,6 @@ public class SettingsFragment extends Fragment {
         Switch swReverse      = view.findViewById(R.id.sw_reverse_landscape);
         Switch swCompat       = view.findViewById(R.id.sw_compat_mode);
         Switch swHaptic       = view.findViewById(R.id.sw_haptic);
-        Switch swShowFps      = view.findViewById(R.id.sw_show_fps);
         final android.widget.Button btnSteamDl = view.findViewById(R.id.btn_steam_dl);
         final TextView tvSteamDlStatus = view.findViewById(R.id.tv_steam_dl_status);
 
@@ -128,10 +127,19 @@ public class SettingsFragment extends Fragment {
         });
         swHaptic.setChecked(inst.isHapticFeedback());
         swHaptic.setOnCheckedChangeListener((btn, checked) -> inst.setHapticFeedback(checked));
-        // FPS overlay ("FPS: XX", top-left) — GLOBAL. Shows the true presented frame rate; helps
-        // compare devices / render scales (e.g. 720p vs native). Takes effect next game launch.
-        swShowFps.setChecked(prefs.isShowFps());
-        swShowFps.setOnCheckedChangeListener((btn, checked) -> prefs.setShowFps(checked));
+        // In-game overlay — GLOBAL: off / classic FPS counter / full performance bar (ported from
+        // ValDroid). Shows the true presented frame rate; the bar adds what it is up against.
+        // Takes effect next game launch.
+        android.widget.RadioGroup rgHud = view.findViewById(R.id.rg_hud);
+        switch (prefs.getHudMode()) {
+            case LauncherPreferences.HUD_FULL: rgHud.check(R.id.rb_hud_full); break;
+            case LauncherPreferences.HUD_FPS:  rgHud.check(R.id.rb_hud_fps);  break;
+            default:                           rgHud.check(R.id.rb_hud_off);  break;
+        }
+        rgHud.setOnCheckedChangeListener((group, checkedId) -> prefs.setHudMode(
+                checkedId == R.id.rb_hud_full ? LauncherPreferences.HUD_FULL
+              : checkedId == R.id.rb_hud_fps  ? LauncherPreferences.HUD_FPS
+              : LauncherPreferences.HUD_OFF));
         // Audio has no UI: it's always on. Raw Vorbis decodes clean since the box64 qsort_r fix, so the
         // launcher loads the libasound→AAudio shim on every launch (GameLauncher) — no toggle, no pack.
 

@@ -72,7 +72,11 @@
     <string name="native_mono_crash_keep">Оставить включённым</string>
     <string name="haptic_label">Вибрация при нажатии кнопок</string>
     <string name="audio_label">Звук в игре</string>
-    <string name="show_fps_label">Показывать счётчик FPS (слева вверху)</string>
+    <string name="hud_label">Показ в игре</string>
+    <string name="hud_off">Выкл</string>
+    <string name="hud_fps">FPS</string>
+    <string name="hud_full">Полная информация</string>
+    <string name="hud_hint">«Полная информация» — плашка сверху: загрузка видеочипа и процессора, память, потребление, температура и график FPS. Помогает понять, что тормозит игру.</string>
     <string name="fps_cap_label">Ограничение FPS</string>
     <string name="fps_cap_hint">Ограничивает FPS, чтобы сгладить скачки и освободить CPU под игру — это может поднять скорость игры (TPS) на слабых устройствах. Попробуй 60 или 30, если счётчик прыгает.</string>
     <string name="texq_label">Сжатие текстур</string>

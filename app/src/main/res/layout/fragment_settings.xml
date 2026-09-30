@@ -218,12 +218,47 @@
             android:text="@string/card_fps"
             android:layout_marginBottom="6dp" />
 
-        <Switch
-            android:id="@+id/sw_show_fps"
+        <!-- In-game overlay: off / the classic FPS counter / the full performance bar. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hud_label"
+            android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+        <RadioGroup
+            android:id="@+id/rg_hud"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:text="@string/show_fps_label" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <RadioButton
+                android:id="@+id/rb_hud_off"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/hud_off" />
+
+            <RadioButton
+                android:id="@+id/rb_hud_fps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                android:text="@string/hud_fps" />
+
+            <RadioButton
+                android:id="@+id/rb_hud_full"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hud_full" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/hud_hint"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="12dp" />
 
         <!-- FPS cap: even out the frame-rate swings and free CPU for the simulation. -->
         <TextView

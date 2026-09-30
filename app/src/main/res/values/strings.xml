@@ -73,7 +73,11 @@ In the cloud: %2$s
     <string name="native_mono_crash_keep">Keep it on</string>
     <string name="haptic_label">Vibrate on button press</string>
     <string name="audio_label">Game sound</string>
-    <string name="show_fps_label">Show FPS counter (top-left)</string>
+    <string name="hud_label">In-game display</string>
+    <string name="hud_off">Off</string>
+    <string name="hud_fps">FPS</string>
+    <string name="hud_full">Full info</string>
+    <string name="hud_hint">Full info shows a bar at the top: GPU and CPU load, memory, power draw, temperature and an FPS graph. Handy to see what slows the game down.</string>
     <string name="fps_cap_label">Frame rate limit</string>
     <string name="fps_cap_hint">Caps FPS to smooth out swings and free the CPU for the game — which can raise the game speed (TPS) on weaker devices. Try 60 or 30 if the counter jumps around.</string>
     <string name="texq_label">Texture compression</string>

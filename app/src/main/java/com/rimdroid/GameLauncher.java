@@ -112,8 +112,16 @@ public class GameLauncher {
                     ? "ON (ARM64 Mono, Burst off) " + Os.getenv("RIMDROID_NATIVE_MONO_PATH") : "off") + "\n"
             + "controller UI : " + ("1".equals(Os.getenv("RIMDROID_CONTROLLER_UI")) ? "ON" : "off")
                 + " (physical gamepad at launch: " + (gamepadPresentAtLaunch ? "yes" : "no") + ")\n"
-            + "box64         : DYNAREC=1"
-                + " STRONGMEM=4 BIGBLOCK=0 SAFEFLAGS=1 WEAKBARRIER=" + (s.isCompatibilityMode() ? "2 X87DOUBLE=1 MAXCPU=1" : "1") + "\n"
+            // The values actually in the environment (defaults, native-Mono set, env field, clamp),
+            // not a hard-coded string: this line used to say STRONGMEM=4 BIGBLOCK=0 no matter what.
+            + "box64         : DYNAREC=" + Os.getenv("BOX64_DYNAREC")
+                + " STRONGMEM=" + Os.getenv("BOX64_DYNAREC_STRONGMEM")
+                + " BIGBLOCK=" + Os.getenv("BOX64_DYNAREC_BIGBLOCK")
+                + " SAFEFLAGS=" + Os.getenv("BOX64_DYNAREC_SAFEFLAGS")
+                + " FASTNAN=" + Os.getenv("BOX64_DYNAREC_FASTNAN")
+                + " FASTROUND=" + Os.getenv("BOX64_DYNAREC_FASTROUND")
+                + " WEAKBARRIER=" + Os.getenv("BOX64_DYNAREC_WEAKBARRIER")
+                + (s.isCompatibilityMode() ? " X87DOUBLE=1 MAXCPU=1" : "") + "\n"
             + "extra env     : " + envFieldReport(s) + "\n"
             + "active mods   : " + readActiveMods(gi) + "\n"
             + "(GL_RENDERER / GL_VERSION appear below once GL initialises)\n"
@@ -710,6 +718,22 @@ public class GameLauncher {
             Os.unsetenv("RIMDROID_NATIVE_MONO_PATH");
         }
         com.rimdroid.game.NativeMono.noteLaunch(gameInstance.settings(), nativeMono);
+
+        // With native Mono the game's C# code and Mono's JIT/GC never pass through box64 — only
+        // UnityPlayer.so does, and it does not rewrite its own code. The strict values in the
+        // "Box64 tuning" block above exist to protect EMULATED Mono, so here box64 gets its own
+        // defaults back. Measured on the S25, same save, same build (2026-09-30): speed 3 went from
+        // 57 fps (strict set) to 116 with BIGBLOCK=1 + STRONGMEM=0 and ~130 with FASTNAN/FASTROUND=1
+        // too. The imprecise-FP pair was once suspected of save corruption, but that was with the
+        // game's own code emulated; now only the engine runs through box64. 1.5 and 1.6 with native
+        // Mono off keep the strict set, which that block re-applies on every launch. The env field
+        // below still overrides any of these.
+        if (nativeMono) {
+            Os.setenv("BOX64_DYNAREC_BIGBLOCK", "1", true);
+            Os.setenv("BOX64_DYNAREC_STRONGMEM", "0", true);
+            Os.setenv("BOX64_DYNAREC_FASTNAN", "1", true);
+            Os.setenv("BOX64_DYNAREC_FASTROUND", "1", true);
+        }
 
         // Custom env vars (KEY=VALUE pairs separated by spaces) — PER-INSTANCE (falls back to global).
         // MUST be applied after ALL defaults above — including the debug extras — so a power-user/

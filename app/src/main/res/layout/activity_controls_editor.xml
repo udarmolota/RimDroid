@@ -22,12 +22,13 @@
     <!-- Toolbar: a compact centred row of separate buttons floating over the layout, so it covers
          as little of it as possible (ported from ValDroid; was a full-width dark band). Explicit
          MaterialButton: this is a plain Activity, so a bare <Button> is not upgraded to one and the
-         outlined style would draw as bare text. -->
+         outlined style would draw as bare text. Bottom-centre, not top: the top row of on-screen
+         buttons lives up there, while the bottom centre of a layout is normally empty. -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="8dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="8dp"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
@@ -72,7 +73,7 @@
             android:background="@drawable/editor_toggle_bg"
             android:textAllCaps="false"
             android:textColor="#FFFFFFFF"
-            android:textSize="13sp"
+            android:textSize="11sp"
             android:textOn="@string/editor_grid_on"
             android:textOff="@string/editor_grid_off" />
 

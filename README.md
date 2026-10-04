@@ -6,8 +6,8 @@ rendering, touch controls, gamepad support, and mods.
 
 > [!NOTE]
 > RimDroid requires the Linux version of RimWorld and any DLC you want to use.
-> Steam users can install content available to their account through RimDroid's authenticated installer;
-> GOG users import their own game files.
+> Steam and GOG users can download the game and DLC they own right in the app; you can also import
+> your own game files as a ZIP.
 
 > [!WARNING]
 > **The app is still in beta.** All tested devices launch the game, but some need **Compatibility
@@ -16,21 +16,30 @@ rendering, touch controls, gamepad support, and mods.
 ## Features
 
 - ✔️ Runs **RimWorld 1.5** and **RimWorld 1.6** (the native Linux x86_64 build) on ARM64 phones
-- ✔️ **Editable on-screen touch controls** — move / resize / opacity, add buttons bound to any key or mouse action
-- ✔️ **In-app downloads** — get the game, DLC, and Workshop mods straight from Steam
+- ✔️ **Native ARM64 Mono** (RimWorld 1.6, on by default) — the game's own code runs natively instead
+  of through x86 emulation, noticeably faster at high game speed
+- ✔️ **Editable on-screen touch controls** — move / resize / opacity, grid snapping, add buttons bound
+  to any key or mouse action
+- ✔️ **In-app downloads** — get the game and DLC from Steam or GOG, and Workshop mods from Steam
+- ✔️ **Steam Cloud saves** — pull your PC saves onto the phone and send them back
 - ✔️ **Mods** — Harmony patching works (tested: RimHUD, Pick Up And Haul, Camera+)
 - ✔️ **Multiple instances** — each install is a card with its own settings (renderer, driver, controls)
-- ✔️ **Gamepad support** — version 1.0 with a button-remapping wizard for controllers with swapped buttons
+- ✔️ **Gamepad support** with a button-remapping wizard for controllers with swapped buttons
+- ✔️ **Physical keyboard and mouse**
 - ✔️ **Compatibility mode** — helps stubborn devices launch and lets mods load (Settings → Advanced)
-- ✔️ **On-screen FPS counter** (Settings → Frame rate)
+- ✔️ **In-game display: Off / FPS / Full info** — an FPS counter, or a bar with GPU and CPU load,
+  memory, power draw, temperature and an FPS graph; plus a frame rate limit (Settings → Frame rate)
+- ✔️ **Texture compression and render resolution** — less memory and more FPS on weaker phones
+- ✔️ **Custom Vulkan driver import** — a raw Turnip `.so` or an AdrenoTools `.zip`
 - ✔️ **Save / Settings / layout import & export**
+- ✔️ **In-app wiki** in English, Russian, Spanish and Portuguese
 - ✔️ Haptics, night mode, and Russian, Spanish and Portuguese translations
 - ✔️ **On-screen keyboard** for text fields — Latin letters, RimWorld 1.6 only
 
 ## Project status & what to expect
 
-RimDroid is young — about **two months old**, built by **one person**, and still in active
-development. That context matters if you're comparing it to more established Android launchers like
+RimDroid is young — **a few months old** (started in **May 2026**), built by **one person**, and
+still in active development. That context matters if you're comparing it to more established Android launchers like
 GameHub or GameNative: those comparisons are fair and interesting, but please keep the scale in mind.
 This is an early solo project, and it will keep getting better.
 
@@ -96,13 +105,20 @@ all speeds can look the same. That's expected: the simulation, not rendering, is
 - [x] In-game audio
 - [x] On-screen keyboard for text fields (Latin letters, RimWorld 1.6)
 - [x] Resolution / render-scale options for more FPS on weaker GPUs
+- [x] Native ARM64 Mono for RimWorld 1.6
+- [x] Game and DLC downloads from GOG
+- [x] Steam Cloud saves
+- [ ] Typing in more languages with the on-screen keyboard
+- [ ] Quality-of-life features
+- [ ] Stable release, out of beta — coming soon
 
 ## How it works
 
 RimWorld officially ships only for x86_64. RimDroid runs the **native Linux build** directly on
-ARM64: [box64](https://github.com/ptitSeb/box64) emulates the x86_64 engine + Mono in-process,
-graphics go through your phone's real GPU, and Android touch and gamepad input is injected straight
-into the game.
+ARM64: [box64](https://github.com/ptitSeb/box64) emulates the x86_64 Unity engine in-process. On
+RimWorld 1.6 the game's own code runs on a native ARM64 build of Unity's Mono by default (1.5, and 1.6
+with Native ARM64 Mono off, emulate Mono too). Graphics go through your phone's real GPU, and Android
+touch and gamepad input is injected straight into the game.
 
 There are two renderers, switchable per instance in Settings → Video. **Zink** (Mesa) turns the
 game's OpenGL into Vulkan and is the default. **[MobileGlues](https://github.com/MobileGL-Dev/MobileGlues)**
@@ -115,6 +131,7 @@ turns it into OpenGL ES instead and needs no Vulkan at all.
   `libzfa.so` (Mesa + Zink) is built via GitHub Actions
 - `libmobileglues.so` ships unmodified from [MobileGlues](https://github.com/MobileGL-Dev/MobileGlues)
   in the bundled libraries
+
 ## Supporting development
 
 This is an independent project. To help keep it going, contributions are welcome via
@@ -123,8 +140,8 @@ This is an independent project. To help keep it going, contributions are welcome
 ## Feedback
 
 Please report issues or request features via
-[GitHub Issues](https://github.com/udarmolota/RimDroid/issues). There's a one-tap **Export logs** in
-the in-app menu — attach the zip so we can see what your device is doing.
+[GitHub Issues](https://github.com/udarmolota/RimDroid/issues). Tap **Report a bug** in the app's
+side menu right after the problem happens — attach the zip so we can see what your device is doing.
 
 Running a big or long-lived colony? **Tell us how it holds up** — long-save reports are exactly the
 data we're missing, and they're how the device recommendations here will get more precise.
@@ -132,12 +149,11 @@ data we're missing, and they're how the device recommendations here will get mor
 ## Credits & Third-Party Sources
 
 - [box64](https://github.com/ptitSeb/box64) — x86_64→ARM64 emulation backend
-- [Mono (Unity fork)](https://github.com/Unity-Technologies/mono) — native ARM64 runtime behind the experimental "Native ARM64 Mono" switch (RimWorld 1.6)
+- [Mono (Unity fork)](https://github.com/Unity-Technologies/mono) — native ARM64 runtime behind the "Native ARM64 Mono" switch, on by default for RimWorld 1.6
 - [MobileGlues](https://github.com/MobileGL-Dev/MobileGlues) by [MobileGL-Dev](https://github.com/MobileGL-Dev)
   — the second renderer (OpenGL→OpenGL ES)
 - [Mesa / Zink](https://gitlab.freedesktop.org/mesa/mesa) — GPU rendering (OpenGL→Vulkan)
 - [Turnip / libvulkan_freedreno](https://gitlab.freedesktop.org/mesa/mesa) — Adreno Vulkan driver
-- [FMOD](https://www.fmod.com/) (proprietary, Firelight Technologies Pty Ltd.) — used for on-device decoding of audio from the user's RimWorld installation
 - [Winlator](https://github.com/brunodev85/winlator) by [BrunoSX](https://github.com/brunodev85) (LGPL-2.1) — the in-process X11 server used for RimWorld 1.6, ported from [winlator-app](https://github.com/brunodev85/winlator-app)
 - [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access
 - [Harmony](https://github.com/pardeike/Harmony) — required by mods

@@ -18,6 +18,7 @@
 #include <ucontext.h>
 #include <sys/sysinfo.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <asm-generic/fcntl.h>
 #include <bits/stdatomic.h>
@@ -1222,6 +1223,99 @@ static int load_linker_hook() {
 
 // ---- ELF launch via box64 ---------------------------------------------------
 
+// ---- Load timeline ------------------------------------------------------------
+// Player.log has no timestamps, so a report cannot say how long the game took to reach the menu or
+// to load a save. This thread follows Player.log while the game runs and logs, in rimdroid.log,
+// the seconds since launch at which the milestone lines appear, together with the running texture
+// transcode totals from box64 (MobileGlues only), so start-up cost can be split into its parts.
+typedef struct {
+    char path[1100];
+    struct timespec t0;
+    void (*texstats)(uint64_t out[4]);
+    int run;
+} rd_timeline_t;
+
+// Bumped when a game run ends; a follower thread whose run is over stops, so an in-process
+// relaunch from the launcher does not leave the previous one polling.
+static atomic_int g_timeline_run = 0;
+
+static const struct { const char* needle; const char* label; } rd_timeline_marks[] = {
+    { "RimWorld 1.",            "version line (engine and assemblies up)" },
+    { "unused Assets to reduce", "assets unloaded (scene change: menu or map ready)" },
+    { "Loading game from file", "save load started" },
+    { "Initializing new game",  "new game started" },
+    { "Caught fatal signal",    "game crash" },
+};
+
+static void rd_timeline_line(rd_timeline_t* tl, const char* line, int* marks_left) {
+    for (size_t i = 0; i < sizeof(rd_timeline_marks) / sizeof(rd_timeline_marks[0]); i++) {
+        if (!strstr(line, rd_timeline_marks[i].needle)) continue;
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        double s = (double)(now.tv_sec - tl->t0.tv_sec) + (double)(now.tv_nsec - tl->t0.tv_nsec) / 1e9;
+        uint64_t st[4] = {0, 0, 0, 0};
+        if (tl->texstats) tl->texstats(st);
+        if (st[0] || st[2])
+            LOGI("[timeline] +%.1fs %s | tex: s3tc decode %llu (%llu ms), etc2 encode %llu (%llu ms)",
+                 s, rd_timeline_marks[i].label, (unsigned long long)st[0], (unsigned long long)st[1],
+                 (unsigned long long)st[2], (unsigned long long)st[3]);
+        else
+            LOGI("[timeline] +%.1fs %s", s, rd_timeline_marks[i].label);
+        (*marks_left)--;
+        return;
+    }
+}
+
+static void* rd_timeline_thread(void* arg) {
+    rd_timeline_t* tl = (rd_timeline_t*)arg;
+    // Unity moves the previous Player.log to Player-prev.log at start-up and writes a new one:
+    // wait for a file that is not the one that was there when the game was launched.
+    struct stat st;
+    ino_t old_ino = stat(tl->path, &st) == 0 ? st.st_ino : 0;
+    int fd = -1;
+    for (int i = 0; i < 600 && fd < 0 && atomic_load(&g_timeline_run) == tl->run; i++) {   // up to 5 min
+        if (stat(tl->path, &st) == 0 && st.st_ino != old_ino) fd = open(tl->path, O_RDONLY);
+        else usleep(500 * 1000);
+    }
+    if (fd < 0) { LOGW("[timeline] Player.log never appeared, no timeline"); free(tl); return NULL; }
+    char buf[8192];
+    size_t have = 0;
+    int marks_left = 40;   // the unload line repeats on every map change; cap the log noise
+    while (marks_left > 0 && atomic_load(&g_timeline_run) == tl->run) {
+        ssize_t n = read(fd, buf + have, sizeof(buf) - 1 - have);
+        if (n <= 0) { usleep(250 * 1000); continue; }
+        have += (size_t)n;
+        buf[have] = 0;
+        char* start = buf;
+        char* nl;
+        while ((nl = strchr(start, '\n')) != NULL) {
+            *nl = 0;
+            rd_timeline_line(tl, start, &marks_left);
+            start = nl + 1;
+        }
+        have = (size_t)(buf + have - start);
+        if (have == sizeof(buf) - 1) have = 0;   // a line longer than the buffer: drop it
+        memmove(buf, start, have);
+    }
+    close(fd);
+    free(tl);
+    return NULL;
+}
+
+static void rd_timeline_start(const char* game_dir_path, void* linker) {
+    rd_timeline_t* tl = calloc(1, sizeof(*tl));
+    if (!tl) return;
+    snprintf(tl->path, sizeof(tl->path),
+             "%s/unity3d/Ludeon Studios/RimWorld by Ludeon Studios/Player.log", game_dir_path);
+    clock_gettime(CLOCK_MONOTONIC, &tl->t0);
+    tl->texstats = (void (*)(uint64_t*))dlsym(linker, "rimdroid_glt_texstats");
+    tl->run = atomic_load(&g_timeline_run);
+    pthread_t th;
+    if (pthread_create(&th, NULL, rd_timeline_thread, tl) != 0) { free(tl); return; }
+    pthread_detach(th);
+    LOGI("[timeline] +0.0s game launched (following Player.log)");
+}
+
 static void launch_rimworld_elf(const char* game_dir_path, int argc, const char** argv) {
     void* linker = dlopen("librimdroidlinker.so", RTLD_NOLOAD);
     if (!linker) {
@@ -1282,7 +1376,9 @@ static void launch_rimworld_elf(const char* game_dir_path, int argc, const char*
     for (int i = 0; i < extra_n; i++) full_argv[argc + 1 + i] = extra_argv[i];
 
     LOGI("Executing: %s (+ -screen-fullscreen 0 -screen-width 2340 -screen-height 1080)", binary_path);
+    rd_timeline_start(game_dir_path, linker);
     run_elf_file(binary_path, argc + extra_n + 1, full_argv);
+    atomic_fetch_add(&g_timeline_run, 1);
     free(full_argv);
 }
 

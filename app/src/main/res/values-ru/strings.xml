@@ -138,6 +138,13 @@
     <string name="nav_launcher">Лаунчер</string>
     <string name="nav_settings">Настройки</string>
     <string name="app_settings_theme">Тема</string>
+    <string name="etc2_cache_title">Кеш текстур (MobileGlues)</string>
+    <string name="etc2_cache_hint">На рендерере MobileGlues текстуры игры при каждом запуске переводятся в формат телефона, и это занимает 10–20 секунд загрузки. Кеш хранит уже переведённые текстуры на диске, поэтому со второго запуска игра доходит до меню быстрее. Общий для всех копий игры; после обновления игры первый запуск заполняет его заново.</string>
+    <string name="etc2_cache_switch">Хранить переведённые текстуры</string>
+    <string name="etc2_cache_size">Размер кеша: %1$s</string>
+    <string name="etc2_cache_clear">Очистить</string>
+    <string name="etc2_cache_cleared">Кеш текстур очищен</string>
+    <string name="etc2_cache_clear_failed">Не удалось удалить кеш текстур</string>
     <string name="app_settings_note">Игровые настройки (рендерер, драйвер, отладка, масштаб, управление) у каждого инстанса свои — откройте их по шестерёнке на карточке игры.</string>
     <string name="theme_system">Как в системе</string>
     <string name="theme_light">Светлая</string>

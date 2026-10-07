@@ -1231,7 +1231,7 @@ static int load_linker_hook() {
 typedef struct {
     char path[1100];
     struct timespec t0;
-    void (*texstats)(uint64_t out[4]);
+    void (*texstats)(uint64_t out[8]);
     int run;
 } rd_timeline_t;
 
@@ -1253,9 +1253,15 @@ static void rd_timeline_line(rd_timeline_t* tl, const char* line, int* marks_lef
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
         double s = (double)(now.tv_sec - tl->t0.tv_sec) + (double)(now.tv_nsec - tl->t0.tv_nsec) / 1e9;
-        uint64_t st[4] = {0, 0, 0, 0};
+        uint64_t st[8] = {0, 0, 0, 0, 0, 0, 0, 0};
         if (tl->texstats) tl->texstats(st);
-        if (st[0] || st[2])
+        if (st[4] || st[5])   // the ETC2 cache is on: say how much of the transcode it saved
+            LOGI("[timeline] +%.1fs %s | tex: s3tc decode %llu (%llu ms), etc2 encode %llu (%llu ms)"
+                 " | etc2 cache: %llu hits, %llu misses (opened with %llu entries, %llu MB)",
+                 s, rd_timeline_marks[i].label, (unsigned long long)st[0], (unsigned long long)st[1],
+                 (unsigned long long)st[2], (unsigned long long)st[3], (unsigned long long)st[4],
+                 (unsigned long long)st[5], (unsigned long long)st[6], (unsigned long long)st[7]);
+        else if (st[0] || st[2])
             LOGI("[timeline] +%.1fs %s | tex: s3tc decode %llu (%llu ms), etc2 encode %llu (%llu ms)",
                  s, rd_timeline_marks[i].label, (unsigned long long)st[0], (unsigned long long)st[1],
                  (unsigned long long)st[2], (unsigned long long)st[3]);

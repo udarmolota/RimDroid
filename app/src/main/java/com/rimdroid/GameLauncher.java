@@ -433,6 +433,10 @@ public class GameLauncher {
                 // escape hatch for A/B on any device.
                 Os.setenv("RIMDROID_GLT_DECODE_S3TC", "1", true);
                 Os.setenv("RIMDROID_GLT_ETC2", "1", true);
+                // The transcode's on-disk cache (app setting, default on): the encode above cost
+                // 10 of the 25 s to the menu on a Galaxy S25, 13-17 s on Dimensity 7300 phones.
+                Os.setenv("RIMDROID_GLT_ETC2_CACHE",
+                        LauncherPreferences.requireSingleton().isEtc2Cache() ? "1" : "0", true);
                 // Threaded rendering, ON BY DEFAULT for MobileGlues (her call after playing it,
                 // 2026-08-15) — roughly double the frame rate on 1.6, and the loss of sharpness at
                 // low zoom turned out not to be noticeable in play.
@@ -459,6 +463,7 @@ public class GameLauncher {
                 Os.unsetenv("RIMDROID_GLT");   // stale values from a previous launch must not leak
                 Os.unsetenv("RIMDROID_GLT_DECODE_S3TC");
                 Os.unsetenv("RIMDROID_GLT_ETC2");
+                Os.unsetenv("RIMDROID_GLT_ETC2_CACHE");
                 Os.unsetenv("RIMDROID_GLT_FONTFIX");
             }
         }

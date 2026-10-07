@@ -159,6 +159,13 @@ In the cloud: %2$s
     <string name="nav_launcher">Launcher</string>
     <string name="nav_settings">Settings</string>
     <string name="app_settings_theme">Theme</string>
+    <string name="etc2_cache_title">Texture cache (MobileGlues)</string>
+    <string name="etc2_cache_hint">On the MobileGlues renderer the game\'s textures are converted to the phone\'s format on every launch, which takes 10–20 seconds of loading. The cache keeps the converted textures on disk, so from the second launch on the game reaches the menu faster. Shared by all instances; the first launch after a game update fills it again.</string>
+    <string name="etc2_cache_switch">Keep converted textures</string>
+    <string name="etc2_cache_size">Cache size: %1$s</string>
+    <string name="etc2_cache_clear">Clear</string>
+    <string name="etc2_cache_cleared">Texture cache cleared</string>
+    <string name="etc2_cache_clear_failed">Could not delete the texture cache</string>
     <string name="app_settings_note">Game settings (renderer, driver, debug, render scale, controls) are per-instance — open them from a game card\'s gear icon.</string>
     <string name="theme_system">Follow system</string>
     <string name="theme_light">Light</string>

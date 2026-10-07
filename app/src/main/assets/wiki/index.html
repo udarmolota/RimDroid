@@ -232,6 +232,14 @@
         Experimental. Try it if Zink gives a black screen or a broken picture; it can help on
         phones without a Snapdragon (Adreno) GPU.
     </p>
+    <p>
+        On this renderer the game's textures are converted to the phone's format on every launch,
+        which takes 10–20 seconds of loading. <b>Texture cache (MobileGlues)</b> in the side menu,
+        <b>Settings</b>, keeps the converted textures on disk (<b>Keep converted textures</b>, on by
+        default), so from the second launch on the game reaches the menu faster. The cache is shared
+        by all instances and takes a few hundred MB with all DLC; <b>Clear</b> removes it, and the
+        next launch fills it again.
+    </p>
 
     <h3>Vulkan drivers (for Zink)</h3>
     <p>

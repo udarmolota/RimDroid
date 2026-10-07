@@ -249,6 +249,19 @@ public class LauncherPreferences {
         prefs.edit().putInt("theme_mode", mode).apply();
     }
 
+    // --- ETC2 texture cache (MobileGlues) ---
+    // App-wide, not per instance: the cache file is content-addressed and shared by every
+    // instance (RIMDROID_CACHE_DIR/etc2cache.bin, written by box64's rd_etc2cache.c). Default ON —
+    // it is what brings a MobileGlues launch level with Zink from the second start on.
+
+    public boolean isEtc2Cache() {
+        return prefs.getBoolean("etc2_cache", true);
+    }
+
+    public void setEtc2Cache(boolean on) {
+        prefs.edit().putBoolean("etc2_cache", on).apply();
+    }
+
     // --- Last instance ---
 
     public String getLastInstanceName() {

@@ -141,6 +141,13 @@ En la nube: %2$s
     <string name="nav_launcher">Lanzador</string>
     <string name="nav_settings">Ajustes</string>
     <string name="app_settings_theme">Tema</string>
+    <string name="etc2_cache_title">Caché de texturas (MobileGlues)</string>
+    <string name="etc2_cache_hint">Con el renderizador MobileGlues, las texturas del juego se convierten al formato del teléfono en cada inicio, lo que cuesta 10–20 segundos de carga. La caché guarda las texturas ya convertidas en el disco, así que a partir del segundo inicio el juego llega antes al menú. Es común a todas las instancias; tras una actualización del juego, el primer inicio la vuelve a llenar.</string>
+    <string name="etc2_cache_switch">Guardar las texturas convertidas</string>
+    <string name="etc2_cache_size">Tamaño de la caché: %1$s</string>
+    <string name="etc2_cache_clear">Borrar</string>
+    <string name="etc2_cache_cleared">Caché de texturas borrada</string>
+    <string name="etc2_cache_clear_failed">No se pudo eliminar la caché de texturas</string>
     <string name="app_settings_note">Los ajustes del juego (renderizador, controlador, depuración, escala de renderizado, controles) son de cada instancia: ábrelos desde el icono de engranaje de su tarjeta.</string>
     <string name="theme_system">Seguir el sistema</string>
     <string name="theme_light">Claro</string>

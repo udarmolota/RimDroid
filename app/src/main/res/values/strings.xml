@@ -301,15 +301,15 @@ In the cloud: %2$s
     <string name="gamepad_mapper_done">Mapping saved</string>
     <string name="gamepad_mapper_dup">Already assigned — press another button</string>
     <string-array name="gamepad_mapper_labels">
-        <item>A — F1</item>
-        <item>B — Escape</item>
-        <item>X — F2</item>
-        <item>Y — Q (rotate)</item>
+        <item>A — Enter (accept)</item>
+        <item>B — Escape (back)</item>
+        <item>X — Tab (architect menu)</item>
+        <item>Y — Space (pause)</item>
         <item>LB — Zoom out</item>
         <item>RB — Zoom in</item>
-        <item>Select — Tab</item>
-        <item>Start — Next colonist (.)</item>
-        <item>L3 — Shift (multi-select)</item>
-        <item>R3 — Right stick press (unused)</item>
+        <item>Select — Escape (back)</item>
+        <item>Start — Escape (back)</item>
+        <item>L3 — Q (rotate)</item>
+        <item>R3 — Shift (multi-select)</item>
     </string-array>
 </resources>

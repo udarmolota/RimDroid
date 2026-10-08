@@ -283,15 +283,15 @@ En la nube: %2$s
     <string name="gamepad_mapper_done">Asignación guardada</string>
     <string name="gamepad_mapper_dup">Ya está asignado: presiona otro botón</string>
     <string-array name="gamepad_mapper_labels">
-        <item>A — F1</item>
-        <item>B — Escape</item>
-        <item>X — F2</item>
-        <item>Y — Q (rotar)</item>
+        <item>A — Enter (aceptar)</item>
+        <item>B — Escape (atrás)</item>
+        <item>X — Tab (menú de arquitecto)</item>
+        <item>Y — Space (pausa)</item>
         <item>LB — Alejar</item>
         <item>RB — Acercar</item>
-        <item>Select — Tab</item>
-        <item>Start — Siguiente colono (.)</item>
-        <item>L3 — Shift (selección múltiple)</item>
-        <item>R3 — Pulsar stick derecho (sin uso)</item>
+        <item>Select — Escape (atrás)</item>
+        <item>Start — Escape (atrás)</item>
+        <item>L3 — Q (rotar)</item>
+        <item>R3 — Shift (selección múltiple)</item>
     </string-array>
 </resources>

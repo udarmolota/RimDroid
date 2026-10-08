@@ -278,15 +278,15 @@
     <string name="gamepad_mapper_done">Раскладка сохранена</string>
     <string name="gamepad_mapper_dup">Уже назначено — нажми другую кнопку</string>
     <string-array name="gamepad_mapper_labels">
-        <item>A — F1</item>
-        <item>B — Escape</item>
-        <item>X — F2</item>
-        <item>Y — Q (поворот)</item>
+        <item>A — Enter (принять)</item>
+        <item>B — Escape (назад)</item>
+        <item>X — Tab (меню архитектора)</item>
+        <item>Y — Space (пауза)</item>
         <item>LB — Отдалить</item>
         <item>RB — Приблизить</item>
-        <item>Select — Tab</item>
-        <item>Start — Следующий колонист (.)</item>
-        <item>L3 — Shift (множ. выделение)</item>
-        <item>R3 — нажатие правого стика (не исп.)</item>
+        <item>Select — Escape (назад)</item>
+        <item>Start — Escape (назад)</item>
+        <item>L3 — Q (поворот)</item>
+        <item>R3 — Shift (множ. выделение)</item>
     </string-array>
 </resources>

@@ -285,15 +285,15 @@ Na nuvem: %2$s
     <string name="gamepad_mapper_done">Mapeamento salvo</string>
     <string name="gamepad_mapper_dup">Já está mapeado: pressione outro botão</string>
     <string-array name="gamepad_mapper_labels">
-        <item>A — F1</item>
-        <item>B — Escape</item>
-        <item>X — F2</item>
-        <item>Y — Q (girar)</item>
+        <item>A — Enter (aceitar)</item>
+        <item>B — Escape (voltar)</item>
+        <item>X — Tab (menu do arquiteto)</item>
+        <item>Y — Space (pausa)</item>
         <item>LB — Afastar</item>
         <item>RB — Aproximar</item>
-        <item>Select — Tab</item>
-        <item>Start — Próximo colono (.)</item>
-        <item>L3 — Shift (seleção múltipla)</item>
-        <item>R3 — Pressionar analógico direito (sem uso)</item>
+        <item>Select — Escape (voltar)</item>
+        <item>Start — Escape (voltar)</item>
+        <item>L3 — Q (girar)</item>
+        <item>R3 — Shift (seleção múltipla)</item>
     </string-array>
 </resources>

@@ -84,7 +84,13 @@ public class InstallerService extends Service {
                         String zipPath      = intent.getStringExtra(EXTRA_ZIP_PATH);
                         String instanceName = intent.getStringExtra(EXTRA_INSTANCE_NAME);
                         String[] extras     = intent.getStringArrayExtra(EXTRA_EXTRA_INSTALLERS);
-                        installInstance(zipPath, instanceName, extras);
+                        busy = true;
+                        try {
+                            installInstance(zipPath, instanceName, extras);
+                        } finally {
+                            deleteCachedCopy(zipPath);
+                            busy = false;
+                        }
                         break;
                     }
                     case TASK_INSTALL_DEPS:
@@ -105,6 +111,34 @@ public class InstallerService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
+
+    /** An instance install is running (its copy of the game zip in the cache is in use). */
+    public static volatile boolean busy;
+
+    /**
+     * The install screen copies the picked game zip to cache/instance.zip (Android hands out a
+     * content link, the extractor needs a file); nothing removed it, so every install left a copy of
+     * the whole game behind, 400 MB and more (2026-10-26). Removed once the install ends, either way;
+     * a zip anywhere else is the player's and stays.
+     */
+    private void deleteCachedCopy(String zipPath) {
+        if (zipPath == null) return;
+        try {
+            File zip = new File(zipPath).getCanonicalFile();
+            File cache = getCacheDir().getCanonicalFile();
+            if (zip.getPath().startsWith(cache.getPath() + File.separator) && zip.delete())
+                Log.i(TAG, "removed the cached copy " + zip.getName());
+        } catch (IOException e) {
+            Log.w(TAG, "cannot remove the cached zip: " + e);
+        }
+    }
+
+    /** At launcher start: a copy left by an install of an older version (or a killed one). */
+    public static void deleteStaleCopy(Context ctx) {
+        if (busy) return;
+        File stale = new File(ctx.getCacheDir(), "instance.zip");
+        if (stale.isFile() && stale.delete()) Log.i(TAG, "removed a leftover cache/instance.zip");
+    }
 
     // =========================================================================
     // INSTALL INSTANCE FROM ZIP

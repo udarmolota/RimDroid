@@ -245,6 +245,7 @@ public class NewInstanceFragment extends Fragment {
         new Thread(() -> {
             try {
                 File cacheZip = new File(appCtx.getCacheDir(), "instance.zip");
+                com.rimdroid.InstallerService.busy = true;   // the launcher must not clear it while it is copied
                 try (InputStream in = appCtx.getContentResolver()
                         .openInputStream(selectedZipUri);
                      FileOutputStream out = new FileOutputStream(cacheZip)) {
@@ -255,6 +256,7 @@ public class NewInstanceFragment extends Fragment {
                 InstallerService.startInstallInstance(
                         appCtx, cacheZip.getAbsolutePath(), instanceName, extras);
             } catch (Exception e) {
+                com.rimdroid.InstallerService.busy = false;
                 mainHandler.post(() -> {
                     if (!isAdded() || getView() == null) return;
                     btnInstall.setEnabled(true);

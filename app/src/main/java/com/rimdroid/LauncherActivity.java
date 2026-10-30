@@ -101,6 +101,7 @@ public class LauncherActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
+        if (savedInstanceState == null) InstallerService.deleteStaleCopy(this);
         if (savedInstanceState != null)
             pendingLogInstanceName = savedInstanceState.getString(STATE_LOG_INSTANCE);
         else

@@ -2217,7 +2217,10 @@ static PFN_vkVoidFunction resolve_alias(const char* name, PFN_vkVoidFunction (*g
     size_t len = strlen(name);
     if (len + 4 >= sizeof alt) return NULL;
     for (int k = 0; k < 2; k++) {
-        if (len > 3 && !strcmp(name + len - 3, sufs[k])) return NULL;   /* already a suffixed name */
+        if (len > 3 && !strcmp(name + len - 3, sufs[k])) {   /* already a suffixed name */
+            PDIAG("Vulkan function %s missing in the driver", name);
+            return NULL;
+        }
         snprintf(alt, sizeof alt, "%s%s", name, sufs[k]);
         PFN_vkVoidFunction f = get(owner, alt);
         if (f) { PDIAG("Vulkan function %s missing in the driver: using %s", name, alt); return f; }
@@ -2237,6 +2240,16 @@ static void VKAPI_CALL dbg_queue_label(VkQueue q, const VkDebugUtilsLabelEXT* l)
 static void VKAPI_CALL dbg_queue_end(VkQueue q) { (void)q; }
 static VkResult VKAPI_CALL dbg_set_name(VkDevice d, const VkDebugUtilsObjectNameInfoEXT* i) { (void)d; (void)i; return VK_SUCCESS; }
 static VkResult VKAPI_CALL dbg_set_tag(VkDevice d, const VkDebugUtilsObjectTagInfoEXT* i) { (void)d; (void)i; return VK_SUCCESS; }
+// A driver can list VK_EXT_debug_utils for the instance and still return null for its functions
+// (Adreno 610, Honor, Android 14, 2024 driver): the engine then creates its message callback through a
+// null pointer at startup. Without a messenger the engine just gets no driver messages.
+static VkResult VKAPI_CALL dbg_create_messenger(VkInstance i, const VkDebugUtilsMessengerCreateInfoEXT* c, const VkAllocationCallbacks* a, VkDebugUtilsMessengerEXT* out) {
+    (void)i; (void)c; (void)a;
+    *out = (VkDebugUtilsMessengerEXT)(uintptr_t)1;
+    return VK_SUCCESS;
+}
+static void VKAPI_CALL dbg_destroy_messenger(VkInstance i, VkDebugUtilsMessengerEXT m, const VkAllocationCallbacks* a) { (void)i; (void)m; (void)a; }
+static void VKAPI_CALL dbg_submit_message(VkInstance i, VkDebugUtilsMessageSeverityFlagBitsEXT s, VkDebugUtilsMessageTypeFlagsEXT t, const VkDebugUtilsMessengerCallbackDataEXT* d) { (void)i; (void)s; (void)t; (void)d; }
 static PFN_vkVoidFunction debug_utils_stub(const char* name) {
     PFN_vkVoidFunction f = NULL;
     if (!strcmp(name, "vkCmdBeginDebugUtilsLabelEXT") || !strcmp(name, "vkCmdInsertDebugUtilsLabelEXT")) f = (PFN_vkVoidFunction)dbg_cmd_label;
@@ -2245,6 +2258,9 @@ static PFN_vkVoidFunction debug_utils_stub(const char* name) {
     else if (!strcmp(name, "vkQueueEndDebugUtilsLabelEXT")) f = (PFN_vkVoidFunction)dbg_queue_end;
     else if (!strcmp(name, "vkSetDebugUtilsObjectNameEXT")) f = (PFN_vkVoidFunction)dbg_set_name;
     else if (!strcmp(name, "vkSetDebugUtilsObjectTagEXT")) f = (PFN_vkVoidFunction)dbg_set_tag;
+    else if (!strcmp(name, "vkCreateDebugUtilsMessengerEXT")) f = (PFN_vkVoidFunction)dbg_create_messenger;
+    else if (!strcmp(name, "vkDestroyDebugUtilsMessengerEXT")) f = (PFN_vkVoidFunction)dbg_destroy_messenger;
+    else if (!strcmp(name, "vkSubmitDebugUtilsMessageEXT")) f = (PFN_vkVoidFunction)dbg_submit_message;
     if (f) PDIAG("Vulkan function %s missing in the driver: using a no-op stand-in", name);
     return f;
 }

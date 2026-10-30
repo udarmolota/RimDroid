@@ -219,10 +219,13 @@ final class DotnetPatcher {
             byte[] b = Files.readAllBytes(f.toPath());
             int changed = laxMetadata(b);
             byte[] granted = AccessChecks.grant(b);
+            byte[] inner = AccessChecks.grantEmbedded(granted != null ? granted : b);   // assemblies inside it
+            if (inner != null) granted = inner;
             if (changed > 0 || granted != null) {
                 Files.write(f.toPath(), granted != null ? granted : b);
                 Log.i(TAG, f.getPath() + ": " + changed + " static readonly fields made writable"
-                        + (granted != null ? "; may reach the game's private members" : ""));
+                        + (granted != null ? "; may reach the game's private members" : "")
+                        + (inner != null ? " (embedded assemblies too)" : ""));
             }
             return true;
         } catch (Exception e) {

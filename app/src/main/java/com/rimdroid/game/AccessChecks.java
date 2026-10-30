@@ -34,6 +34,13 @@ final class AccessChecks {
     static final String ATTRIBUTE = "IgnoresAccessChecksToAttribute";
     static final String NAMESPACE = "System.Runtime.CompilerServices";
     static final String GAME = "Assembly-CSharp";
+    /**
+     * The framework assemblies whose private members mods reach (List<T>._items, XmlElement's fields...):
+     * the game's runtime skips access checks for the framework too (Adaptive Storage's Fishery reading
+     * List<T> internals failed, 2026-10-25). The first one also marks a grant that already has them.
+     */
+    static final String[] FRAMEWORK = { "System.Private.CoreLib", "System.Private.Xml", "System.Private.Xml.Linq",
+            "System.Collections", "System.Linq", "System.Linq.Expressions" };
     /** Defines the attribute (tools/rimworld17/clrhooks/IgnoresAccessChecksTo.cs); loaded at startup. */
     static final String HOOKS = "RimDroidClrHooks";
 
@@ -88,13 +95,14 @@ final class AccessChecks {
             if (!ATTRIBUTE.equals(string(idx(o + scopeCol, si))) || !NAMESPACE.equals(string(idx(o + scopeCol + si, si))))
                 continue;
             int scope = idx(o, scopeCol);
-            if ((scope & 3) == 2 && HOOKS.equals(assemblyRefName(scope >> 2))) return null;
-            return regrant();
+            if ((scope & 3) == 2 && HOOKS.equals(assemblyRefName(scope >> 2)) && hasBlobString(FRAMEWORK[0])) return null;
+            return regrant();   // made before the framework names were granted: redone on the original
         }
 
         // The names to grant, and the hooks assembly's AssemblyRef (added if missing).
         Set<String> targets = new LinkedHashSet<>();
         targets.add(GAME);
+        java.util.Collections.addAll(targets, FRAMEWORK);
         boolean unity = false;
         int hooks = 0;
         for (int r = 1; r <= rows[0x23]; r++) {
@@ -209,7 +217,17 @@ final class AccessChecks {
         for (byte[] d : data) { root.write(d, 0, d.length); while ((root.size() & 3) != 0) root.write(0); }
         byte[] newMd = root.toByteArray();
 
-        // At the end of the last section.
+        int[] where = new int[1];
+        byte[] out = appendToLastSection(newMd, where);
+        if (out == null) return null;
+        put32(out, cli + 8, where[0]);
+        put32(out, cli + 12, newMd.length);
+        return out;
+    }
+
+    /** {@code data} at the end of the last section (16-aligned); its RVA in where[0]. Null if the
+     *  file is not laid out for it (the last section not last in memory, or data after it). */
+    private byte[] appendToLastSection(byte[] data, int[] where) {
         int last = -1;
         for (int i = 0; i < sections; i++) {
             int sh = sectionTable + i * 40;
@@ -221,18 +239,74 @@ final class AccessChecks {
         if (raw + rawSize != b.length) return null;                             // data after it (a signature)
         int fileAlign = u32(opt + 36), sectAlign = u32(opt + 32);
         int at = (Math.max(vsize, 0) + 15) & ~15;
-        int newVsize = at + newMd.length;
+        int newVsize = at + data.length;
         int newRawSize = (newVsize + fileAlign - 1) / fileAlign * fileAlign;
         byte[] out = Arrays.copyOf(b, raw + newRawSize);
-        System.arraycopy(newMd, 0, out, raw + at, newMd.length);
+        System.arraycopy(data, 0, out, raw + at, data.length);
         put32(out, last + 8, newVsize);
         put32(out, last + 16, newRawSize);
         int ch = u32(last + 36);
         put32(out, last + 36, (ch | 0x40000040) & ~0x02000000);                 // read, initialized data, kept
         int image = (va + newVsize + sectAlign - 1) / sectAlign * sectAlign;
         if (image > u32(opt + 56)) put32(out, opt + 56, image);
-        put32(out, cli + 8, va + at);
-        put32(out, cli + 12, newMd.length);
+        where[0] = va + at;
+        return out;
+    }
+
+    /**
+     * {@link #grant} for assemblies embedded as resources, as Brrainz's CrossPromotion keeps its real
+     * code (Brrainz.CrossPromotionSteam[Deck].dll) and loads it with Assembly.Load(bytes): the outer DLL
+     * had the grant, the inner one never did, and its prefix on the game's mod list failed on every
+     * frame (FieldAccessException on WorkshopItemHook.steamAuthor; Camera+, Achtung and the other
+     * Brrainz mods lost the right-hand panel of the in-game mod list, 2026-10-18). The resources are
+     * written anew, the PE ones granted, at the end of the last section; the CLI header and the
+     * ManifestResource offsets point there. Null when nothing changes.
+     */
+    static byte[] grantEmbedded(byte[] image) {
+        try {
+            return new AccessChecks(image).embedded();
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private byte[] embedded() {
+        parse();
+        int count = rows[0x28];
+        int resRva = u32(cli + 24);
+        if (count == 0 || resRva == 0) return null;
+        int res = offset(resRva);
+        int implCol = 8 + si, implWidth = width(IMPLEMENTATION, 2, rows);
+        java.util.List<int[]> list = new java.util.ArrayList<>();   // {row offset in file, data offset}
+        for (int r = 0; r < count; r++) {
+            int o = start[0x28] + r * size[0x28];
+            if (idx(o + implCol, implWidth) != 0) continue;            // in another file
+            list.add(new int[] { o, u32(o) });
+        }
+        list.sort((x, y) -> Integer.compare(x[1], y[1]));
+        ByteArrayOutputStream blob = new ByteArrayOutputStream();
+        int[] newOff = new int[list.size()];
+        boolean changed = false;
+        for (int i = 0; i < list.size(); i++) {
+            int at = res + list.get(i)[1], len = u32(at);
+            byte[] data = Arrays.copyOfRange(b, at + 4, at + 4 + len);
+            if (len > 2 && data[0] == 'M' && data[1] == 'Z') {
+                byte[] g = grant(data);
+                if (g != null) { data = g; changed = true; }
+            }
+            newOff[i] = blob.size();
+            le(blob, data.length, 4);
+            blob.write(data, 0, data.length);
+            while ((blob.size() & 7) != 0) blob.write(0);
+        }
+        if (!changed) return null;
+        byte[] bytes = blob.toByteArray();
+        int[] where = new int[1];
+        byte[] out = appendToLastSection(bytes, where);
+        if (out == null) return null;
+        put32(out, cli + 24, where[0]);
+        put32(out, cli + 28, bytes.length);
+        for (int i = 0; i < list.size(); i++) put32(out, list.get(i)[0], newOff[i]);
         return out;
     }
 
@@ -288,6 +362,18 @@ final class AccessChecks {
      * original metadata, which that build left in place ahead of its copy (the first "BSJB" in the
      * file that has no such TypeRef), then the grant again.
      */
+    /** The #Blob heap holds this attribute argument (a SerString: length byte, UTF-8). */
+    private boolean hasBlobString(String text) {
+        byte[] t = text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        outer:
+        for (int i = blob; i + 1 + t.length <= blob + blobSize; i++) {
+            if ((b[i] & 0xff) != t.length) continue;
+            for (int j = 0; j < t.length; j++) if (b[i + 1 + j] != t[j]) continue outer;
+            return true;
+        }
+        return false;
+    }
+
     private byte[] regrant() {
         for (int at = 0; at + 4 <= b.length; at++) {
             if (at == md || b[at] != 'B' || b[at + 1] != 'S' || b[at + 2] != 'J' || b[at + 3] != 'B') continue;

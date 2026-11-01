@@ -79,6 +79,11 @@ static double g_warpX, g_warpY;
 static int g_warpPending;
 static pthread_cond_t g_surface_cond = PTHREAD_COND_INITIALIZER;
 static ANativeWindow* g_native;          // the SurfaceView's surface, set from Java
+// The Android surface goes away in the background and the engine's VkSurfaceKHR dies with it. The
+// engine recovers by itself: on VK_ERROR_SURFACE_LOST it asks for a new surface once the window has a
+// size again. libvulkan.so tells it so through these two (vulkan_wrapper.c).
+static int g_surfaceGen;                 // counts lost surfaces
+static int g_vkSurfaceGen;               // g_surfaceGen when the engine's VkSurfaceKHR was made
 static Window* g_window;                 // the one window
 static Monitor g_monitor;
 static Monitor* g_monitors[1] = { &g_monitor };
@@ -128,13 +133,17 @@ JNIEXPORT jboolean JNICALL Java_com_rimdroid_ClrActivity_glfwTakeCursorWarp(JNIE
 JNIEXPORT void JNICALL Java_com_rimdroid_ClrActivity_glfwSurface(JNIEnv* env, jclass c, jobject surface, jint w, jint h) {
     (void)c;
     pthread_mutex_lock(&g_lock);
+    int had = g_native != NULL;
     if (g_native) { ANativeWindow_release(g_native); g_native = NULL; }
     if (surface) g_native = ANativeWindow_fromSurface(env, surface);
+    if (had && !g_native) g_surfaceGen++;
     if (w > 0 && h > 0) { g_mode.width = w; g_mode.height = h; }
     pthread_cond_broadcast(&g_surface_cond);
     pthread_mutex_unlock(&g_lock);
     LOGI("surface %s %dx%d", surface ? "set" : "cleared", w, h);
     if (surface && g_window) push((Event){ .type = EV_RESIZE, .a = w, .b = h });
+    // Out of focus the engine idles and pauses its audio; at 0x0 it stops rendering (see below).
+    if (g_window && had != (surface != NULL)) push((Event){ .type = EV_FOCUS, .a = surface != NULL });
 }
 
 JNIEXPORT void JNICALL Java_com_rimdroid_ClrActivity_glfwTouch(JNIEnv* env, jclass c, jint action, jfloat x, jfloat y) {
@@ -158,6 +167,22 @@ JNIEXPORT void JNICALL Java_com_rimdroid_ClrActivity_glfwDisplayMode(JNIEnv* env
 // Presented frames, for the FPS overlay: counted by the libvulkan.so wrapper at each vkQueuePresentKHR.
 static _Atomic unsigned long long g_frames;
 API void rd_frame_tick(void) { g_frames++; }
+
+// 1 and the window's size while there is an Android surface.
+API int rd_surface_size(int* w, int* h) {
+    pthread_mutex_lock(&g_lock);
+    int have = g_native != NULL;
+    if (have) { *w = ANativeWindow_getWidth(g_native); *h = ANativeWindow_getHeight(g_native); }
+    pthread_mutex_unlock(&g_lock);
+    return have;
+}
+
+API int rd_surface_stale(void) {
+    pthread_mutex_lock(&g_lock);
+    int stale = g_vkSurfaceGen != g_surfaceGen;
+    pthread_mutex_unlock(&g_lock);
+    return stale;
+}
 JNIEXPORT jlong JNICALL Java_com_rimdroid_ClrActivity_frameCount(JNIEnv* env, jclass c) {
     (void)env; (void)c;
     return (jlong)g_frames;
@@ -263,7 +288,11 @@ API void glfwSetWindowIcon(void* w, int n, const void* img) { (void)w; (void)n; 
 API void glfwGetWindowPos(void* w, int* x, int* y) { (void)w; if (x) *x = 0; if (y) *y = 0; }
 API void glfwSetWindowPos(void* w, int x, int y) { (void)w; (void)x; (void)y; }
 API void glfwGetWindowSize(void* w, int* x, int* y) { Window* win = w; if (x) *x = win ? win->width : 0; if (y) *y = win ? win->height : 0; }
-API void glfwGetFramebufferSize(void* w, int* x, int* y) { glfwGetWindowSize(w, x, y); }
+API void glfwGetFramebufferSize(void* w, int* x, int* y) {
+    int sw, sh;
+    if (rd_surface_size(&sw, &sh)) glfwGetWindowSize(w, x, y);   // 0x0 = "minimized" to the engine
+    else { if (x) *x = 0; if (y) *y = 0; }
+}
 API void glfwSetWindowSize(void* w, int x, int y) { (void)w; (void)x; (void)y; }
 API void glfwSetWindowSizeLimits(void* w, int a, int b, int c, int d) { (void)w; (void)a; (void)b; (void)c; (void)d; }
 API void glfwSetWindowAspectRatio(void* w, int n, int d) { (void)w; (void)n; (void)d; }
@@ -357,6 +386,9 @@ static void dispatch(Event* e) {
             break;
         case EV_SCROLL:
             if (w->scrollCb) w->scrollCb(w, e->x, e->y);
+            break;
+        case EV_FOCUS:
+            if (w->focusCb) w->focusCb(w, e->a);
             break;
         case EV_RESIZE:
             w->width = e->a; w->height = e->b;
@@ -459,15 +491,30 @@ API int glfwCreateWindowSurface(void* instance, void* window, const void* alloca
     (void)window;
     PFN_getproc gp = get_proc();
     PFN_vkCreateAndroidSurfaceKHR create = gp ? (PFN_vkCreateAndroidSurfaceKHR)gp(instance, "vkCreateAndroidSurfaceKHR") : NULL;
+    struct timespec until;
+    clock_gettime(CLOCK_REALTIME, &until);
+    until.tv_sec += 5;
     pthread_mutex_lock(&g_lock);
+    // The engine comes here when the window has a size again, and it may be gone a moment later.
+    while (!g_native && pthread_cond_timedwait(&g_surface_cond, &g_lock, &until) == 0) {}
     ANativeWindow* native = g_native;
+    if (native) ANativeWindow_acquire(native);
+    int gen = g_surfaceGen;
     pthread_mutex_unlock(&g_lock);
     if (!create || !native) {
         LOGW("glfwCreateWindowSurface: %s", create ? "no surface" : "no vkCreateAndroidSurfaceKHR");
+        if (native) ANativeWindow_release(native);
+        *surface = 0;
         return -7;   // VK_ERROR_EXTENSION_NOT_PRESENT
     }
     VkAndroidSurfaceCreateInfoKHR info = { 1000008000, NULL, 0, native };   // VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR
     int r = create(instance, &info, allocator, surface);
+    ANativeWindow_release(native);
+    if (r == 0) {
+        pthread_mutex_lock(&g_lock);
+        g_vkSurfaceGen = gen;
+        pthread_mutex_unlock(&g_lock);
+    }
     LOGI("glfwCreateWindowSurface -> %d", r);
     return r;
 }

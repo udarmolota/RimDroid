@@ -97,10 +97,31 @@ jobs:
           path: app/build/outputs/apk/debug/rimdroid-debug-${{ steps.app_version.outputs.name }}.apk
           retention-days: 30
 
-      - name: Build Release APK (unsigned)
+      - name: Build Release APK
         run: ./gradlew assembleRelease
         env:
           ANDROID_NDK_HOME: ${{ env.NDK_HOME }}
+
+      # The release key, with the lineage from the old AOSP test key, so a release installs over any
+      # earlier one (Android 9+, hence rotation from SDK 28). Pull requests get no secrets: unsigned.
+      - name: Sign Release APK
+        if: github.event_name != 'pull_request'
+        env:
+          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          APK: app/build/outputs/apk/release/rimdroid-release-${{ steps.app_version.outputs.name }}.apk
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          KEY="$RUNNER_TEMP/release.p12"
+          echo "$SIGNING_KEY_BASE64" | base64 -d > "$KEY"
+          "$BT/apksigner" sign --ks "$KEY" --ks-type PKCS12 --ks-key-alias "$SIGNING_KEY_ALIAS" \
+            --ks-pass env:SIGNING_STORE_PASSWORD --key-pass env:SIGNING_KEY_PASSWORD \
+            --lineage tools/signing/rimdroid.lineage --rotation-min-sdk-version 28 \
+            --v1-signing-enabled false --v2-signing-enabled false --v3-signing-enabled true "$APK"
+          rm -f "$KEY"
+          "$BT/apksigner" verify --print-certs --min-sdk-version 30 "$APK"
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4

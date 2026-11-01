@@ -12,6 +12,7 @@
 //    sits in a load context of its own and does not see other mods' assemblies; a reference is
 //    answered with an already loaded assembly of the same simple name, whatever its version.
 //  - WaylithClr.LaxPrivateFieldNames: see LaxFieldNames.cs (Harmony's field lookups).
+//  - WaylithClr.FieldInjection: see WaylithClrStubs.cs (reported as unsupported).
 //  - MonoMod inside Harmony P/Invokes glibc's "libc" (and "libdl.so.2"); Android's libc is bionic.
 //    Those go to librdglibc.so, which translates the few calls whose ABI differs.
 using System;

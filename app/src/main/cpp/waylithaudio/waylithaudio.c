@@ -222,6 +222,10 @@ API void wa_shutdown(void) {
 }
 
 API int wa_last_error(void) { return g_error; }
+// 1.7.4995 polls these each frame to log a lost or restarted output device; miniaudio's AAudio
+// backend reroutes on its own here.
+API uint32_t wa_device_recoveries(void) { return 0; }
+API uint32_t wa_device_lost(void) { return 0; }
 API uint32_t wa_channels(void) { return g_ready ? ma_engine_get_channels(&g_engine) : 0; }
 API uint32_t wa_sample_rate(void) { return g_ready ? ma_engine_get_sample_rate(&g_engine) : 0; }
 API uint32_t wa_period_frames(void) {

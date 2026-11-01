@@ -131,6 +131,7 @@ public final class DotnetEngine {
         // the other, comparing ordinally, so every folder of textures came back empty.
         File fw = frameworkDir(context).getCanonicalFile();
         File game = new File(gi.getGamePath()).getCanonicalFile();
+        File hooks = hooksFile(context);
         Set<String> names = new HashSet<>();
         StringBuilder tpa = new StringBuilder();
         File[] fwFiles = fw.listFiles();
@@ -138,7 +139,10 @@ public final class DotnetEngine {
             if (!f.getName().endsWith(".dll")) continue;
             names.add(f.getName().toLowerCase(Locale.ROOT));
             if (tpa.length() > 0) tpa.append(':');
-            tpa.append(f.getAbsolutePath());
+            // A file of the same name among the hooks replaces the framework's own
+            // (System.Runtime.dll, tools/rimworld17/build_runtime_facade.sh).
+            File ours = hooks == null ? null : new File(hooks.getParentFile(), f.getName());
+            tpa.append((ours != null && ours.isFile() ? ours.getCanonicalFile() : f).getAbsolutePath());
         }
         int gameCount = 0;
         retargetX64Assemblies(game);
@@ -154,7 +158,6 @@ public final class DotnetEngine {
             gameCount++;
         }
         // The startup hook in the TPA too: mods refer to it (AccessChecks' attribute type).
-        File hooks = hooksFile(context);
         if (hooks != null) tpa.append(':').append(hooks.getCanonicalPath());
         Log.i(TAG, "TPA: " + names.size() + " framework + " + gameCount + " game assemblies");
         String nativeDirs = context.getApplicationInfo().nativeLibraryDir + ":" + game.getAbsolutePath();

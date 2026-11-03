@@ -27,9 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Dedicated "Install mod / DLC" page: pick a .zip from anywhere on the phone (SAF), choose the target
- * instance and the MODS/DLC tab, then Install. A persistent page (not a dialog-from-callback) so the
- * selection survives the file-picker round trip reliably. Install itself reuses {@link ContentInstaller}.
+ * Dedicated "Install mod / DLC" page: pick one or multiple .zip files from anywhere on the phone (SAF),
+ * choose the target instance and the MODS/DLC tab, then Install. A persistent page (not a dialog-from-callback)
+ * so the selection survives the file-picker round trip reliably. Install itself reuses {@link ContentInstaller}.
  */
 public class InstallContentFragment extends Fragment {
 
@@ -47,15 +47,16 @@ public class InstallContentFragment extends Fragment {
     private TabLayout tabsType;
     private TextView tvFile;
     private List<GameInstance> instances = new ArrayList<>();
-    private Uri selectedZip;
+    private final List<Uri> selectedZips = new ArrayList<>();
     /** True while the spinner carries the "choose an instance" prompt at index 0. */
     private boolean hasInstancePrompt;
 
     private final ActivityResultLauncher<String[]> picker =
-            registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
-                if (uri == null) return;
-                selectedZip = uri;
-                tvFile.setText(displayName(uri));
+            registerForActivityResult(new ActivityResultContracts.OpenMultipleDocuments(), uris -> {
+                if (uris == null || uris.isEmpty()) return;
+                selectedZips.clear();
+                selectedZips.addAll(uris);
+                updateFileText();
             });
 
     @Override
@@ -82,8 +83,9 @@ public class InstallContentFragment extends Fragment {
         if (preselected != null && !preselected.isEmpty()) {
             java.io.File chosen = new java.io.File(preselected);
             if (chosen.isFile()) {
-                selectedZip = Uri.fromFile(chosen);
-                tvFile.setText(chosen.getName());
+                selectedZips.clear();
+                selectedZips.add(Uri.fromFile(chosen));
+                updateFileText();
                 tabsType.selectTab(tabsType.getTabAt(TAB_DLC));
             }
         }
@@ -115,8 +117,8 @@ public class InstallContentFragment extends Fragment {
 
         btnGo.setOnClickListener(x -> {
             if (instances.isEmpty()) return;
-            if (selectedZip == null) {
-                Toast.makeText(requireContext(), "Choose a file first", Toast.LENGTH_SHORT).show();
+            if (selectedZips.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.install_content_no_file, Toast.LENGTH_SHORT).show();
                 return;
             }
             // The prompt, when present, shifts every real instance one place down. Nothing chosen →
@@ -128,8 +130,23 @@ public class InstallContentFragment extends Fragment {
             }
             GameInstance inst = instances.get(idx);
             boolean intoData = tabsType.getSelectedTabPosition() == TAB_DLC;
-            ContentInstaller.install(requireActivity(), selectedZip, inst, intoData);
+            ContentInstaller.install(requireActivity(), selectedZips, inst, intoData);
         });
+    }
+
+    private void updateFileText() {
+        if (selectedZips.isEmpty()) {
+            tvFile.setText(R.string.install_content_no_file);
+        } else if (selectedZips.size() == 1) {
+            tvFile.setText(displayName(selectedZips.get(0)));
+        } else {
+            StringBuilder sb = new StringBuilder();
+            sb.append(getString(R.string.install_content_files_selected, selectedZips.size())).append("\n");
+            for (Uri uri : selectedZips) {
+                sb.append("• ").append(displayName(uri)).append("\n");
+            }
+            tvFile.setText(sb.toString().trim());
+        }
     }
 
     private String displayName(Uri uri) {

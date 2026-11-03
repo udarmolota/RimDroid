@@ -1,13 +1,14 @@
 package com.rimdroid;
 
 import android.app.Activity;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -16,6 +17,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.rimdroid.game.GameInstance;
 import com.rimdroid.game.GameInstanceManager;
 
@@ -23,12 +25,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
- * Installs a picked file (mod or DLC) into a chosen instance. One unified flow: the user picks the
- * file from anywhere on the phone (SAF — no storage permission needed, works for the /Download/RimDroid
- * zips too), then picks the target instance and Mod/DLC.
+ * Installs picked files (mods or DLC) into a chosen instance. One unified flow: the user picks
+ * one or multiple files from anywhere on the phone (SAF — no storage permission needed, works
+ * for the /Download/RimDroid zips too), then picks the target instance and Mod/DLC.
  *   • Mod zip → instance/Mods/&lt;folder&gt;
  *   • DLC zip → instance/Data/&lt;folder&gt;   (where RimWorld expects official expansions)
  * Both reuse {@link ModImporter} (finds the About/About.xml root and strips wrappers like the depot's
@@ -45,6 +48,12 @@ public final class ContentInstaller {
 
     /** After the user has picked a zip (SAF), choose target instance + Mod/DLC, then install. */
     public static void showTargetDialog(Activity act, Uri zipUri) {
+        showTargetDialog(act, Collections.singletonList(zipUri));
+    }
+
+    /** After the user has picked zip file(s) (SAF), choose target instance + Mod/DLC, then install. */
+    public static void showTargetDialog(Activity act, List<Uri> zipUris) {
+        if (zipUris == null || zipUris.isEmpty()) return;
         final List<GameInstance> instances = GameInstanceManager.requireSingleton().getInstances();
         if (instances.isEmpty()) {
             Toast.makeText(act, "No instances yet — download or install the game first.",
@@ -58,9 +67,9 @@ public final class ContentInstaller {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(pad, pad, pad, 0);
 
-        box.addView(label(act, "File"));
+        box.addView(label(act, zipUris.size() > 1 ? "Files" : "File"));
         TextView fileTv = new TextView(act);
-        fileTv.setText(displayName(act, zipUri));
+        fileTv.setText(displayNames(act, zipUris));
         box.addView(fileTv);
 
         box.addView(label(act, "Install into instance"));
@@ -72,9 +81,19 @@ public final class ContentInstaller {
 
         box.addView(label(act, "Type"));
         final RadioGroup rg = new RadioGroup(act);
-        final RadioButton rbMod = new RadioButton(act); rbMod.setText("Mod → Mods/"); rbMod.setId(1);
-        final RadioButton rbDlc = new RadioButton(act); rbDlc.setText("DLC → Data/"); rbDlc.setId(2);
-        rg.addView(rbMod); rg.addView(rbDlc); rg.check(1);
+
+        final RadioButton rbMod = new RadioButton(act);
+        rbMod.setId(View.generateViewId());
+        rbMod.setText("Mod → Mods/");
+
+        final RadioButton rbDlc = new RadioButton(act);
+        rbDlc.setId(View.generateViewId());
+        rbDlc.setText("DLC → Data/");
+
+        rg.addView(rbMod);
+        rg.addView(rbDlc);
+        rg.check(rbMod.getId());
+
         box.addView(rg);
 
         // A zipped GOG installer places its own content (Data/<Expansion>), so the choice above is
@@ -91,55 +110,86 @@ public final class ContentInstaller {
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Install", (d, w) -> {
                     GameInstance inst = instances.get(spInst.getSelectedItemPosition());
-                    boolean intoData = rg.getCheckedRadioButtonId() == 2;
-                    install(act, zipUri, inst, intoData);
+                    boolean intoData = rg.getCheckedRadioButtonId() == rbDlc.getId();
+                    install(act, zipUris, inst, intoData);
                 })
                 .show();
     }
 
     /** Copy the picked zip to cache, then import it into the instance's Mods or Data folder. */
     public static void install(Activity act, Uri zipUri, GameInstance instance, boolean intoData) {
+        install(act, Collections.singletonList(zipUri), instance, intoData);
+    }
+
+    /** Copy the picked zip file(s) to cache, then import them into the instance's Mods or Data folder. */
+    public static void install(Activity act, List<Uri> zipUris, GameInstance instance, boolean intoData) {
+        if (zipUris == null || zipUris.isEmpty()) return;
         final Handler main = new Handler(Looper.getMainLooper());
         final File destDir = new File(instance.getGamePath(), intoData ? "Data" : "Mods");
-        final String fallback = stripExt(displayName(act, zipUri));
-        Toast.makeText(act, "Installing…", Toast.LENGTH_SHORT).show();
+        final int totalFiles = zipUris.size();
+        Toast.makeText(act, totalFiles > 1 ? "Installing " + totalFiles + " files…" : "Installing…", Toast.LENGTH_SHORT).show();
 
         new Thread(() -> {
-            File cache = new File(act.getCacheDir(), "import_content.zip");
-            try (InputStream in = act.getContentResolver().openInputStream(zipUri);
-                 FileOutputStream out = new FileOutputStream(cache)) {
-                byte[] b = new byte[65536];
-                int n;
-                // Stop only on EOF (-1) — read() may return 0 without EOF, and ">0" would truncate
-                // the cached copy of a large pack (caused a patch file to land as 0 bytes).
-                while ((n = in.read(b)) != -1) out.write(b, 0, n);
-            } catch (Exception e) {
-                main.post(() -> Toast.makeText(act, "Read failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
-                return;
-            }
-            // A GOG .sh installer is NOT a mod zip: it has no About/About.xml (ModImporter would fail
-            // with "missing About/About.xml"), and its payload is already game-root-relative — a DLC
-            // installer carries a ready-made Data/<Expansion>. So extract it into the instance ROOT
-            // and let its own layout place the content; the Mod/DLC choice doesn't apply.
-            if (GogInstallerExtractor.looksLikeGogBundle(cache)) {
-                installGogInstaller(act, cache, instance, main);
-                return;
+            final List<String> allImported = new ArrayList<>();
+            final List<String> allErrors = new ArrayList<>();
+
+            int index = 0;
+            for (Uri zipUri : zipUris) {
+                String fileName = displayName(act, zipUri);
+                String fallback = stripExt(fileName);
+                File cache = new File(act.getCacheDir(), "import_content_" + (index++) + ".zip");
+                try (InputStream in = act.getContentResolver().openInputStream(zipUri);
+                     FileOutputStream out = new FileOutputStream(cache)) {
+                    if (in == null) throw new java.io.IOException("Unable to open input stream");
+                    byte[] b = new byte[65536];
+                    int n;
+                    // Stop only on EOF (-1) — read() may return 0 without EOF, and ">0" would truncate
+                    // the cached copy of a large pack (caused a patch file to land as 0 bytes).
+                    while ((n = in.read(b)) != -1) out.write(b, 0, n);
+                } catch (Exception e) {
+                    allErrors.add(fileName + ": Read failed - " + e.getMessage());
+                    //noinspection ResultOfMethodCallIgnored
+                    cache.delete();
+                    continue;
+                }
+
+                if (GogInstallerExtractor.looksLikeGogBundle(cache)) {
+                    installGogInstaller(act, cache, instance, fileName, allImported, allErrors);
+                    continue;
+                }
+
+                ModImporter.Result r = ModImporter.importZip(cache, destDir, fallback);
+                //noinspection ResultOfMethodCallIgnored
+                cache.delete();
+
+                if (r.ok()) {
+                    allImported.addAll(r.imported);
+                } else {
+                    if (!r.imported.isEmpty()) {
+                        allImported.addAll(r.imported);
+                    }
+                    for (String err : r.errors) {
+                        allErrors.add(totalFiles > 1 ? fileName + ": " + err : err);
+                    }
+                }
             }
 
-            ModImporter.Result r = ModImporter.importZip(cache, destDir, fallback);
-            //noinspection ResultOfMethodCallIgnored
-            cache.delete();
             main.post(() -> {
                 String msg;
-                if (r.ok()) {
-                    msg = "Installed: " + String.join(", ", r.imported)
+                if (allErrors.isEmpty() && !allImported.isEmpty()) {
+                    msg = "Installed: " + String.join(", ", allImported)
                             + " → " + (intoData ? "Data" : "Mods") + " of " + instance.getName();
-                } else if (!r.imported.isEmpty()) {
-                    msg = "Installed " + r.imported + ", with errors: " + String.join("; ", r.errors);
+                } else if (!allImported.isEmpty()) {
+                    msg = "Installed " + String.join(", ", allImported)
+                            + "\n\nErrors:\n" + String.join("\n", allErrors);
                 } else {
-                    msg = "Install failed: " + String.join("; ", r.errors);
+                    msg = "Install failed:\n" + String.join("\n", allErrors.isEmpty() ? Collections.singletonList("Unknown error") : allErrors);
                 }
-                new MaterialAlertDialogBuilder(act).setMessage(msg).setPositiveButton("OK", null).show();
+                new MaterialAlertDialogBuilder(act)
+                        .setTitle(totalFiles > 1 ? "Installation Complete" : "Install mod / DLC")
+                        .setMessage(msg)
+                        .setPositiveButton("OK", null)
+                        .show();
             });
         }, "rd-content-install").start();
     }
@@ -148,7 +198,8 @@ public final class ContentInstaller {
      *  {@code instance}: extract into the game root — its payload is game-relative, so a DLC's
      *  Data/&lt;Expansion&gt; lands where RimWorld expects it — and report the folders that appeared.
      *  Runs on the caller's worker thread. */
-    private static void installGogInstaller(Activity act, File src, GameInstance instance, Handler main) {
+    private static void installGogInstaller(Activity act, File src, GameInstance instance,
+                                           String fileName, List<String> allImported, List<String> allErrors) {
         File gameRoot = new File(instance.getGamePath());
         File dataDir  = new File(gameRoot, "Data");
         try {
@@ -156,13 +207,14 @@ public final class ContentInstaller {
             GogInstallerExtractor.extract(src, gameRoot, act.getCacheDir(), m -> Log.i(TAG, m));
             java.util.Set<String> added = listNames(dataDir);
             added.removeAll(before);
-            String what = added.isEmpty()
-                    ? "existing files updated (no new expansion folder)"
-                    : String.join(", ", added);
-            alert(act, main, "Installed: " + what + " → Data of " + instance.getName());
+            if (added.isEmpty()) {
+                allImported.add(fileName + " (updated files)");
+            } else {
+                allImported.addAll(added);
+            }
         } catch (Exception e) {
             Log.e(TAG, "GOG install failed", e);
-            alert(act, main, "Install failed: " + e.getMessage());
+            allErrors.add(fileName + ": GOG install failed - " + e.getMessage());
         } finally {
             //noinspection ResultOfMethodCallIgnored
             src.delete();
@@ -177,13 +229,8 @@ public final class ContentInstaller {
         return names;
     }
 
-    private static void alert(Activity act, Handler main, String msg) {
-        main.post(() -> new MaterialAlertDialogBuilder(act)
-                .setMessage(msg).setPositiveButton("OK", null).show());
-    }
-
-    private static String displayName(Activity act, Uri uri) {
-        try (Cursor c = act.getContentResolver().query(uri,
+    private static String displayName(Context context, Uri uri) {
+        try (Cursor c = context.getContentResolver().query(uri,
                 new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
             if (c != null && c.moveToFirst()) {
                 String n = c.getString(0);
@@ -192,6 +239,16 @@ public final class ContentInstaller {
         } catch (Exception ignored) {}
         String seg = uri.getLastPathSegment();
         return seg != null ? seg : "mod.zip";
+    }
+
+    private static String displayNames(Context context, List<Uri> zipUris) {
+        if (zipUris.size() == 1) return displayName(context, zipUris.get(0));
+        StringBuilder sb = new StringBuilder();
+        sb.append(zipUris.size()).append(" files selected:\n");
+        for (Uri uri : zipUris) {
+            sb.append("• ").append(displayName(context, uri)).append("\n");
+        }
+        return sb.toString().trim();
     }
 
     private static TextView label(Activity act, String text) {

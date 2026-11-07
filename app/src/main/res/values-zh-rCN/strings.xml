@@ -227,6 +227,7 @@
     <string name="install_content_dlc">DLC</string>
     <string name="install_content_pick">选择 ZIP 文件</string>
     <string name="install_content_no_file">未选择文件</string>
+    <string name="install_content_files_selected">已选择 %1$d 个文件：</string>
     <string name="install_content_go">安装</string>
 
     <!-- Download screen -->

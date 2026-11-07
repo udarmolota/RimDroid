@@ -228,6 +228,7 @@ Na nuvem: %2$s
     <string name="install_content_dlc">DLC</string>
     <string name="install_content_pick">Escolher arquivo ZIP</string>
     <string name="install_content_no_file">Nenhum arquivo selecionado</string>
+    <string name="install_content_files_selected">%1$d arquivos selecionados:</string>
     <string name="install_content_go">Instalar</string>
 
     <!-- Download screen -->

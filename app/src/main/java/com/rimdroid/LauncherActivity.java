@@ -86,8 +86,8 @@ public class LauncherActivity extends AppCompatActivity {
     }
 
     private final ActivityResultLauncher<String[]> modZipPicker =
-            registerForActivityResult(new ActivityResultContracts.OpenDocument(),
-                    uri -> { if (uri != null) ContentInstaller.showTargetDialog(this, uri); });
+            registerForActivityResult(new ActivityResultContracts.OpenMultipleDocuments(),
+                    uris -> { if (uris != null && !uris.isEmpty()) ContentInstaller.showTargetDialog(this, uris); });
 
     private final ActivityResultLauncher<String> exportLogsLauncher =
             registerForActivityResult(new ActivityResultContracts.CreateDocument("application/zip"),

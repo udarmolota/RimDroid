@@ -7,9 +7,11 @@
 // failed in a static constructor that way (ImperialForcesSizePatches), so the whole mod did not load.
 //
 // A dynamic method is always static and its access attributes mean nothing at run time, so when
-// 0Harmony loads, DynamicMethod.Init (where every constructor ends up and the check is made) gets a
-// prefix: a static method asked for with other access or flags becomes Public | Static. Anything
-// else (an instance method, odd calling conventions) is left to fail as before.
+// 0Harmony loads, the DynamicMethod constructors that take attributes get a prefix: a static method
+// asked for with other access or flags becomes Public | Static. Anything else (an instance method,
+// odd calling conventions) is left to fail as before. Patching only DynamicMethod.Init, where the
+// check is made, did not work (2026-11-07): CoreLib is precompiled and its constructors call Init
+// directly, past Harmony's detour. Init keeps the prefix for callers that do reach it.
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -45,12 +47,22 @@ public static class RimDroidLaxDynamicMethods
             if (patch == null) { log(5, "lax dynamic methods: Harmony.Patch not found"); return; }
             object instance = Activator.CreateInstance(harmonyType, "rimdroid.laxdynamicmethods");
             object prefix = Activator.CreateInstance(harmonyMethod, typeof(RimDroidLaxDynamicMethods).GetMethod(nameof(Prefix)));
-            object[] args = new object[patch.GetParameters().Length];
-            args[0] = init;
-            args[1] = prefix;   // (original, prefix, postfix, ...)
-            patch.Invoke(instance, args);
+            var targets = new System.Collections.Generic.List<MethodBase> { init };
+            foreach (ConstructorInfo c in typeof(DynamicMethod).GetConstructors(BindingFlags.Public | BindingFlags.Instance))
+            {
+                ParameterInfo[] p = c.GetParameters();
+                if (p.Length > 2 && p[0].ParameterType == typeof(string) && p[1].ParameterType == typeof(MethodAttributes)) targets.Add(c);
+            }
+            foreach (MethodBase target in targets)
+            {
+                object[] args = new object[patch.GetParameters().Length];
+                args[0] = target;
+                args[1] = prefix;   // (original, prefix, postfix, ...)
+                patch.Invoke(instance, args);
+            }
             patched = true;
-            log(4, "lax dynamic methods: DynamicMethod.Init patched (Harmony " + harmony.GetName().Version + ")");
+            log(4, "lax dynamic methods: DynamicMethod.Init and " + (targets.Count - 1) + " constructors patched (Harmony "
+                   + harmony.GetName().Version + ")");
         }
         catch (Exception e)
         {
@@ -58,7 +70,7 @@ public static class RimDroidLaxDynamicMethods
         }
     }
 
-    // Prefix on DynamicMethod.Init: __1 is "attributes", by position (the name is not part of the API).
+    // Prefix on DynamicMethod.Init and the constructors: __1 is "attributes", by position.
     public static void Prefix(string __0, ref MethodAttributes __1)
     {
         const MethodAttributes Wanted = MethodAttributes.Public | MethodAttributes.Static;

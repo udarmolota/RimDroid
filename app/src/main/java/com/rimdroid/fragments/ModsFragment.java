@@ -124,6 +124,8 @@ public class ModsFragment extends Fragment {
     public void onResume() {
         super.onResume();
         refresh();   // mods may have been installed or downloaded in the meantime
+        // A fresher copy of the players' load-order rules for the next sort, at most once a day.
+        com.rimdroid.mods.CommunityRules.refreshInBackground(requireContext().getApplicationContext());
     }
 
     @Nullable
@@ -260,7 +262,8 @@ public class ModsFragment extends Fragment {
         if (order == null) return;
         List<ModList.Mod> mods = ModList.installed(dir);
         Map<String, ModList.Mod> byId = ModList.byId(mods);
-        com.rimdroid.mods.ModSorter.Result r = com.rimdroid.mods.ModSorter.sort(order, byId);
+        com.rimdroid.mods.ModSorter.Result r = com.rimdroid.mods.ModSorter.sort(order, byId,
+                com.rimdroid.mods.CommunityRules.load(requireContext()));
 
         StringBuilder sb = new StringBuilder();
         sb.append(r.moved == 0 ? getString(R.string.mods_sort_nochange) : getString(R.string.mods_sort_moved, r.moved));

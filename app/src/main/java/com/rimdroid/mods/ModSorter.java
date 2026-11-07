@@ -12,11 +12,18 @@ import java.util.Set;
 /**
  * Load-order sort from the rules mod authors declare in About.xml — the same rules RimWorld's own
  * auto-sort and RimSort start from: modDependencies (the dependency loads first), loadBefore /
- * loadAfter and their force- and ByVersion variants. Core and the DLC come right after anything
- * that asks to load before them (Harmony does), in their release order, ahead of every other mod.
+ * loadAfter and their force- and ByVersion variants. On top of those come the rules players
+ * collected for mods that do not declare them ({@link CommunityRules}, RimSort's database): more
+ * loadBefore / loadAfter / incompatibleWith, and "load as early / as late as possible" (performance
+ * mods such as RocketMan go last). Core and the DLC come right after anything that asks to load
+ * before them (Harmony does), in their release order, ahead of every other mod.
  *
  * The sort is stable: among mods free to go next it always takes the one that stood earliest, so a
  * mod moves only when a rule makes it, and a list that is already right comes back unchanged.
+ * "Early" and "late" mods are only preferred among the ready ones, so they never contradict a rule.
+ * The database contradicts itself in places (XML Extensions, HugsLib and Vanilla Expanded Framework
+ * form a loop), so a collected rule is skipped when it would contradict the rules already taken —
+ * the authors' own rules always win and only their contradictions are reported.
  * Contradicting rules (A before B, B before A) cannot all hold: they are reported, and the mod that
  * stood earliest goes first. Rules naming mods that are not active are ignored for the order.
  */
@@ -37,7 +44,8 @@ public final class ModSorter {
         public final List<String> incompatible = new ArrayList<>();
     }
 
-    public static Result sort(List<String> current, Map<String, ModList.Mod> installed) {
+    public static Result sort(List<String> current, Map<String, ModList.Mod> installed,
+                              Map<String, CommunityRules.Rule> community) {
         Result r = new Result();
         List<String> ids = new ArrayList<>(new LinkedHashSet<>(current));
         Map<String, Integer> pos = new HashMap<>();
@@ -58,6 +66,13 @@ public final class ModSorter {
             for (String a : m.loadAfter) edge(a, id, after, incoming);
             for (ModList.Dependency d : m.dependencies) edge(d.packageId, id, after, incoming);
         }
+        Map<String, Integer> tier = new HashMap<>();   // 0 as early as possible, 1 normal, 2 as late as possible
+        for (String id : ids) {
+            CommunityRules.Rule c = community.get(id);
+            tier.put(id, c == null ? 1 : c.loadBottom ? 2 : c.loadTop ? 0 : 1);
+            if (c == null || installed.get(id) != null && installed.get(id).official) continue;
+            for (String b : c.loadBefore) for (String o : OFFICIAL) if (o.equals(b)) beforeOfficial.add(id);
+        }
         // Core, then the DLC in release order, ahead of every other mod not asking otherwise.
         String prev = null;
         for (String o : OFFICIAL) {
@@ -73,8 +88,19 @@ public final class ModSorter {
             }
         }
 
-        // Kahn's algorithm, always taking the earliest-standing ready mod.
-        PriorityQueue<String> ready = new PriorityQueue<>((a, b) -> pos.get(a) - pos.get(b));
+        // The collected rules last, each only if it keeps the order possible.
+        for (String id : ids) {
+            CommunityRules.Rule c = community.get(id);
+            if (c == null) continue;
+            for (String b : c.loadBefore) softEdge(id, b, after, incoming);
+            for (String a : c.loadAfter) softEdge(a, id, after, incoming);
+        }
+
+        // Kahn's algorithm, always taking the earliest-standing ready mod of the earliest tier.
+        PriorityQueue<String> ready = new PriorityQueue<>((a, b) -> {
+            int t = tier.get(a) - tier.get(b);
+            return t != 0 ? t : pos.get(a) - pos.get(b);
+        });
         for (String id : ids) if (incoming.get(id) == 0) ready.add(id);
         Set<String> placed = new HashSet<>();
         while (placed.size() < ids.size()) {
@@ -101,6 +127,7 @@ public final class ModSorter {
 
         // Warnings: what the active mods need, and incompatible pairs.
         Set<String> active = new HashSet<>(ids), seenMissing = new HashSet<>(), seenInactive = new HashSet<>();
+        Set<String> seenPairs = new HashSet<>();
         for (String id : ids) {
             ModList.Mod m = installed.get(id);
             if (m == null) continue;
@@ -110,17 +137,48 @@ public final class ModSorter {
                 if (dep == null) { if (seenMissing.add(d.packageId)) r.missing.add(d); }
                 else if (seenInactive.add(d.packageId)) r.inactive.add(dep);
             }
-            for (String other : m.incompatibleWith)
-                if (active.contains(other)) {
-                    ModList.Mod o = installed.get(other);
-                    r.incompatible.add(m.name + " \u2194 " + (o != null ? o.name : other));
-                }
+            for (String other : m.incompatibleWith) incompatible(m, other, installed, active, seenPairs, r);
+        }
+        for (String id : ids) {
+            ModList.Mod m = installed.get(id);
+            CommunityRules.Rule c = community.get(id);
+            if (m == null || c == null) continue;
+            for (String other : c.incompatibleWith) incompatible(m, other, installed, active, seenPairs, r);
         }
         return r;
     }
 
+    /** Reports "m \u2194 other" once per pair, when both are on. */
+    private static void incompatible(ModList.Mod m, String other, Map<String, ModList.Mod> installed,
+                                     Set<String> active, Set<String> seenPairs, Result r) {
+        if (!active.contains(other)) return;
+        String a = m.packageId, b = other;
+        if (!seenPairs.add(a.compareTo(b) < 0 ? a + "|" + b : b + "|" + a)) return;
+        ModList.Mod o = installed.get(other);
+        r.incompatible.add(m.name + " \u2194 " + (o != null ? o.name : other));
+    }
+
     private static boolean isOfficialId(String id) {
         for (String o : OFFICIAL) if (o.equals(id)) return true;
+        return false;
+    }
+
+    /** {@link #edge}, unless second already has to load before first. */
+    private static void softEdge(String first, String second, Map<String, Set<String>> after, Map<String, Integer> incoming) {
+        if (first.equals(second) || !after.containsKey(first) || !after.containsKey(second)) return;
+        if (!reaches(second, first, after)) edge(first, second, after, incoming);
+    }
+
+    /** True when "from" must load before "to" through the rules so far. */
+    private static boolean reaches(String from, String to, Map<String, Set<String>> after) {
+        java.util.ArrayDeque<String> stack = new java.util.ArrayDeque<>();
+        Set<String> seen = new HashSet<>();
+        stack.push(from);
+        while (!stack.isEmpty()) {
+            String id = stack.pop();
+            if (id.equals(to)) return true;
+            if (seen.add(id)) for (String next : after.get(id)) if (!seen.contains(next)) stack.push(next);
+        }
         return false;
     }
 

@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define STB_VORBIS_HEADER_ONLY
 #include "miniaudio/stb_vorbis.c"
@@ -112,7 +113,9 @@ typedef struct Voice {
 
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static ma_engine g_engine;
-static int g_ready, g_error;
+static ma_context g_context;   // the engine's, made here so its log reaches logcat
+static ma_log g_log;
+static int g_ready, g_error, g_haveContext, g_haveLog;
 static Table g_sounds, g_voices, g_groups;
 
 static void lock(void) { pthread_mutex_lock(&g_lock); }
@@ -183,18 +186,61 @@ static const ma_data_source_vtable g_userVtable = { us_read, us_seek, us_format,
 
 API void wa_set_allocator(void* alloc, void* realloc_, void* free_) { (void)alloc; (void)realloc_; (void)free_; }
 
-API int wa_init(uint32_t sampleRate, uint32_t channels, int periodFrames) {
-    lock();
-    if (g_ready) { unlock(); return 0; }
+static void on_ma_log(void* user, ma_uint32 level, const char* message) {
+    (void)user;
+    if (level <= MA_LOG_LEVEL_WARNING) LOGW("miniaudio: %s", message);
+    else if (level == MA_LOG_LEVEL_INFO) LOGI("miniaudio: %s", message);
+}
+
+static ma_result engine_on(const ma_backend* backends, ma_uint32 count, uint32_t sampleRate, uint32_t channels,
+                           int periodFrames) {
+    if (!g_haveLog && ma_log_init(NULL, &g_log) == MA_SUCCESS) {
+        ma_log_register_callback(&g_log, ma_log_callback_init(on_ma_log, NULL));
+        g_haveLog = 1;
+    }
+    ma_context_config cc = ma_context_config_init();
+    if (g_haveLog) cc.pLog = &g_log;
+    ma_result r = ma_context_init(backends, count, &cc, &g_context);
+    if (r != MA_SUCCESS) { LOGW("ma_context_init failed: %d", r); return r; }
+    g_haveContext = 1;
     ma_engine_config c = ma_engine_config_init();
+    c.pContext = &g_context;
     c.sampleRate = sampleRate;
     c.channels = channels;
     if (periodFrames > 0) c.periodSizeInFrames = (ma_uint32)periodFrames;
-    ma_result r = ma_engine_init(&c, &g_engine);
+    r = ma_engine_init(&c, &g_engine);
+    if (r != MA_SUCCESS) {
+        LOGW("ma_engine_init failed: %d (%s)", r, ma_result_description(r));
+        ma_context_uninit(&g_context);
+        g_haveContext = 0;
+    }
+    return r;
+}
+
+// The output sometimes refused to open on a game's first start and worked on the next one (Android 17
+// player, 2026-11-02), and a failure here ends the game. So: a few tries, then OpenSL ES alone, and at
+// last miniaudio's null device, which takes the sound at playback speed and plays nothing.
+API int wa_init(uint32_t sampleRate, uint32_t channels, int periodFrames) {
+    lock();
+    if (g_ready) { unlock(); return 0; }
+    static const ma_backend opensl[] = { ma_backend_opensl };
+    static const ma_backend silent[] = { ma_backend_null };
+    ma_result r = MA_ERROR;
+    for (int i = 0; i < 3 && r != MA_SUCCESS; i++) {
+        if (i > 0) { LOGW("audio output did not open, try %d", i + 1); usleep(300 * 1000); }
+        r = engine_on(NULL, 0, sampleRate, channels, periodFrames);
+    }
+    if (r != MA_SUCCESS) {
+        LOGW("audio output did not open, trying OpenSL ES");
+        r = engine_on(opensl, 1, sampleRate, channels, periodFrames);
+    }
+    if (r != MA_SUCCESS) {
+        LOGW("no audio output, the game runs without sound");
+        r = engine_on(silent, 1, sampleRate, channels, periodFrames);
+    }
     if (r != MA_SUCCESS) {
         g_error = r;
         unlock();
-        LOGW("ma_engine_init failed: %d", r);
         return r;
     }
     g_ready = 1;
@@ -217,6 +263,7 @@ API void wa_shutdown(void) {
         g_groups.items[i] = NULL;
     }
     ma_engine_uninit(&g_engine);
+    if (g_haveContext) { ma_context_uninit(&g_context); g_haveContext = 0; }
     g_ready = 0;
     unlock();
 }

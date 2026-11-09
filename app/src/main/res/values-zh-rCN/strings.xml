@@ -103,7 +103,6 @@
     <string name="driver_auto_set_title">已设置推荐驱动</string>
     <string name="driver_auto_set">检测到 GPU：%1$s。\n\n已为此实例设置推荐的 Vulkan 驱动：%2$s。\n\n如果出现黑屏或画面异常，请在实例设置（实例卡片上的齿轮图标）里更换驱动。</string>
     <string name="nav_import_mods">导入模组（ZIP）…</string>
-    <string name="nav_export_logs">导出日志（ZIP）</string>
     <string name="nav_updates">新版本（GitHub）</string>
     <string name="nav_bug_report">报告问题</string>
     <string name="nav_wiki">Wiki</string>
@@ -123,7 +122,6 @@
     <string name="zomdroid_dialog_message">Zomdroid 可以在 Android 上运行 Project Zomboid，方式和这个启动器运行 RimWorld 一样。同一作者，同一思路。\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
     <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
     <string name="bug_report_body">你好，我要报告一个新问题。\n\n描述：\n\n\n---\n%1$s</string>
-    <string name="bug_report_no_mail">此设备上没有找到邮件应用。</string>
     <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
     <string name="donate_title">支持开发</string>
     <string name="donate_message">喜欢 RimDroid，想支持一下？\n\n作者与维护者：ko-fi.com/udarmolota\n\n每一份支持都能让项目继续走下去。谢谢！❤</string>
@@ -433,4 +431,51 @@
     <string name="transfer_imported">已恢复：%1$s → %2$s</string>
     <string name="transfer_import_failed">导入失败：%1$s</string>
     <string name="news_title">RimWorld 新闻</string>
+
+    <!-- Steam Workshop screen and copying mods to another instance (2026-11) -->
+    <string name="workshop_menu">Steam 创意工坊</string>
+    <string name="workshop_open_a_mod">点击模组上的 ↓ 将其加入队列。</string>
+    <string name="workshop_add_to_queue">加入队列</string>
+    <string name="workshop_remove_from_queue">移除</string>
+    <string name="workshop_item_id">创意工坊物品 %1$d</string>
+    <string name="workshop_download_queue">下载</string>
+    <string name="workshop_download_n">下载（%1$d）</string>
+    <string name="workshop_download_busy">已有 Steam 下载正在进行，请等待其完成。</string>
+    <string name="workshop_download_title">下载 %1$d 个物品？</string>
+    <string name="workshop_download_message">%1$s\n\n它们会依次下载，无需登录 Steam。每个模组都会以 .zip 保存到 Download/RimDroid；可通过“安装模组／DLC（ZIP）”一次安装多个。</string>
+    <string name="workshop_download_many">⚠ 共 %1$d 个模组。它们逐个下载，可能需要很长时间，且每个大约占用其两倍大小的空间（Download 中的 ZIP 副本加上已安装的模组）。</string>
+    <string name="workshop_download_go">下载</string>
+    <string name="workshop_clear_queue">清空队列</string>
+    <string name="workshop_text_smaller">缩小文字</string>
+    <string name="workshop_text_larger">放大文字</string>
+    <string name="mods_copy">将模组复制到另一个实例</string>
+    <string name="mods_copy_no_target">没有可复制到的其他实例。</string>
+    <string name="mods_copy_title">将 %1$s 的模组复制到：</string>
+    <string name="mods_copy_order">同时以相同顺序启用相同的模组</string>
+    <string name="mods_copy_order_hint">会替换另一个实例的模组列表。对方没有的 DLC 会被跳过。</string>
+    <string name="mods_copy_go">复制</string>
+    <string name="mods_copy_game_running">请先关闭游戏：游戏退出时会重写模组列表。</string>
+    <string name="mods_copy_running">正在复制模组到 %1$s</string>
+    <string name="mods_copy_done">已复制：%1$d。已存在、保持不变：%2$d。</string>
+    <string name="mods_copy_order_done">模组列表及加载顺序也已复制。</string>
+    <string name="mods_copy_order_failed">无法复制模组列表。</string>
+    <string name="mods_copy_failed">无法复制：</string>
+
+    <!-- Report a bug screen (2026-11) -->
+    <string name="bug_report_intro">出问题了？请给我们发一份报告。报告里有游戏日志，我们能据此看到发生了什么。</string>
+    <string name="bug_report_group_instance">游戏</string>
+    <string name="bug_report_pick_instance">选择游戏…</string>
+    <string name="bug_report_preparing">正在准备报告…</string>
+    <string name="bug_report_group_email">通过邮件发送</string>
+    <string name="bug_report_steps">1. 在上方选择游戏。\n2. 点击“通过邮件发送”。\n3. 在打开的列表中选择邮件应用（Gmail、Outlook…）。\n4. 简单写几句发生了什么，然后发送。</string>
+    <string name="bug_report_send_email">通过邮件发送</string>
+    <string name="bug_report_pick_mail">发送方式</string>
+    <string name="bug_report_no_email_title">设备上没有邮件应用？</string>
+    <string name="bug_report_no_email_text">将报告保存为文件，然后从任意设备发送到这个地址。附上文件，并简单写几句发生了什么。</string>
+    <string name="bug_report_copy">复制</string>
+    <string name="bug_report_copied">地址已复制</string>
+    <string name="bug_report_save_file">将报告保存为文件</string>
+    <string name="bug_report_saved">报告已保存</string>
+    <string name="bug_report_save_failed">无法保存报告：%1$s</string>
+    <string name="bug_report_no_mail_use_file">此设备上没有找到邮件应用。请将报告保存为文件，然后从其他设备发送。</string>
 </resources>

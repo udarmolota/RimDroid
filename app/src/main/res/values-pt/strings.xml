@@ -107,7 +107,6 @@ Na nuvem: %2$s
     <string name="driver_auto_set_title">Driver recomendado aplicado</string>
     <string name="driver_auto_set">GPU detectada: %1$s.\n\nO driver Vulkan recomendado foi aplicado a esta instância: %2$s.\n\nSe aparecer tela preta ou artefatos, troque nas configurações da instância (o ícone de engrenagem no cartão dela).</string>
     <string name="nav_import_mods">Importar mods (ZIP)…</string>
-    <string name="nav_export_logs">Exportar registros (ZIP)</string>
     <string name="nav_updates">Novas versões (GitHub)</string>
     <string name="nav_bug_report">Relatar um problema</string>
     <string name="nav_wiki">Wiki</string>
@@ -124,7 +123,6 @@ Na nuvem: %2$s
     <string name="link_soon">Em breve</string>
     <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
     <string name="bug_report_body">Olá, tenho um novo relato de problema.\n\nDescrição: \n\n\n---\n%1$s</string>
-    <string name="bug_report_no_mail">Nenhum app de e-mail encontrado neste aparelho.</string>
     <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
     <string name="donate_title">Apoiar o desenvolvimento</string>
     <string name="donate_message">Gostou do RimDroid e quer apoiar o projeto?\n\nCriado e mantido por: ko-fi.com/udarmolota\n\nCada contribuição ajuda o trabalho a continuar. Obrigado! ❤</string>
@@ -429,4 +427,51 @@ Na nuvem: %2$s
     <string name="transfer_imported">Restaurado: %1$s → %2$s</string>
     <string name="transfer_import_failed">Falha ao importar: %1$s</string>
     <string name="news_title">Notícias do RimWorld</string>
+
+    <!-- Steam Workshop screen and copying mods to another instance (2026-11) -->
+    <string name="workshop_menu">Steam Workshop</string>
+    <string name="workshop_open_a_mod">Toque ↓ em um mod para adicioná-lo à fila.</string>
+    <string name="workshop_add_to_queue">Para a fila</string>
+    <string name="workshop_remove_from_queue">Remover</string>
+    <string name="workshop_item_id">Item do Workshop %1$d</string>
+    <string name="workshop_download_queue">Baixar</string>
+    <string name="workshop_download_n">Baixar (%1$d)</string>
+    <string name="workshop_download_busy">Já há um download da Steam em andamento. Aguarde terminar.</string>
+    <string name="workshop_download_title">Baixar %1$d item(ns)?</string>
+    <string name="workshop_download_message">%1$s\n\nEles são baixados um após o outro, sem login na Steam. Cada mod é salvo como .zip em Download/RimDroid; instale-os com “Instalar mod / DLC (ZIP)”, vários de uma vez.</string>
+    <string name="workshop_download_many">⚠ São %1$d mods. Eles são baixados um por vez, o que pode demorar bastante, e cada um ocupa cerca do dobro do seu tamanho (a cópia ZIP em Download mais o mod instalado).</string>
+    <string name="workshop_download_go">Baixar</string>
+    <string name="workshop_clear_queue">Limpar a fila</string>
+    <string name="workshop_text_smaller">Texto menor</string>
+    <string name="workshop_text_larger">Texto maior</string>
+    <string name="mods_copy">Copiar os mods para outra instância</string>
+    <string name="mods_copy_no_target">Não há outra instância para onde copiar.</string>
+    <string name="mods_copy_title">Copiar os mods de %1$s para:</string>
+    <string name="mods_copy_order">Ativar também os mesmos mods, na mesma ordem</string>
+    <string name="mods_copy_order_hint">Substitui a lista de mods da outra instância. Um DLC que ela não tem fica de fora.</string>
+    <string name="mods_copy_go">Copiar</string>
+    <string name="mods_copy_game_running">Feche o jogo antes: ao sair ele reescreve a lista de mods.</string>
+    <string name="mods_copy_running">Copiando mods para %1$s</string>
+    <string name="mods_copy_done">Copiados: %1$d. Já estavam lá, mantidos como estavam: %2$d.</string>
+    <string name="mods_copy_order_done">A lista de mods e a ordem também foram copiadas.</string>
+    <string name="mods_copy_order_failed">Não foi possível copiar a lista de mods.</string>
+    <string name="mods_copy_failed">Não foi possível copiar:</string>
+
+    <!-- Report a bug screen (2026-11) -->
+    <string name="bug_report_intro">Algo deu errado? Envie-nos um relato. Ele leva os registros do jogo, assim vemos o que aconteceu.</string>
+    <string name="bug_report_group_instance">Jogo</string>
+    <string name="bug_report_pick_instance">Escolha o jogo…</string>
+    <string name="bug_report_preparing">Preparando o relato…</string>
+    <string name="bug_report_group_email">Enviar por e-mail</string>
+    <string name="bug_report_steps">1. Escolha o jogo acima.\n2. Toque em Enviar por e-mail.\n3. Na lista que abrir, escolha seu app de e-mail (Gmail, Outlook…).\n4. Escreva algumas palavras sobre o que aconteceu e envie.</string>
+    <string name="bug_report_send_email">Enviar por e-mail</string>
+    <string name="bug_report_pick_mail">Enviar com</string>
+    <string name="bug_report_no_email_title">Sem app de e-mail neste aparelho?</string>
+    <string name="bug_report_no_email_text">Salve o relato em um arquivo e envie-o de qualquer aparelho para este endereço. Anexe o arquivo e escreva algumas palavras sobre o que aconteceu.</string>
+    <string name="bug_report_copy">Copiar</string>
+    <string name="bug_report_copied">Endereço copiado</string>
+    <string name="bug_report_save_file">Salvar o relato em um arquivo</string>
+    <string name="bug_report_saved">Relato salvo</string>
+    <string name="bug_report_save_failed">Não foi possível salvar o relato: %1$s</string>
+    <string name="bug_report_no_mail_use_file">Nenhum app de e-mail encontrado neste aparelho. Salve o relato em um arquivo e envie de outro aparelho.</string>
 </resources>

@@ -40,6 +40,8 @@ import java.util.concurrent.CompletableFuture;
  * Login is sent to Steam (like DepotDownloader) and never stored; the token lives only in memory.
  */
 public class DownloadFragment extends Fragment implements SteamDownloadState.View {
+    /** Workshop ids to download right away, space-separated (from the Steam Workshop screen). */
+    public static final String ARG_MOD_IDS = "mod_ids";
 
     private final Handler mainH = new Handler(Looper.getMainLooper());
 
@@ -118,6 +120,13 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
             btnInstallContent.setVisibility(game ? View.GONE : View.VISIBLE);
         });
         toggle.check(R.id.btn_type_game);   // default to Game
+        String queued = getArguments() == null ? null : getArguments().getString(ARG_MOD_IDS);
+        if (queued != null && !queued.trim().isEmpty()) {
+            toggle.check(R.id.btn_type_mods);
+            etModsIds.setText(queued);
+            getArguments().remove(ARG_MOD_IDS);   // once: coming back here must not start it again
+            if (!SteamDownloadState.get().isDownloading()) v.post(this::startMods);
+        }
 
         // 1.7 only in APKs that carry its .NET engine; its note says where the build comes from.
         View rb17 = v.findViewById(R.id.rb_dl_17), note17 = v.findViewById(R.id.tv_dl_17_note);

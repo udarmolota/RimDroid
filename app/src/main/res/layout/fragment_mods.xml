@@ -89,6 +89,16 @@
                     android:contentDescription="@string/mods_disable_all"
                     android:tooltipText="@string/mods_disable_all"
                     app:icon="@drawable/ic_mods_disable_all" />
+
+                <!-- Copy this instance's mods (and, if asked, its load order) into another instance. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_mods_copy"
+                    style="@style/Widget.Material3.Button.IconButton.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/mods_copy"
+                    android:tooltipText="@string/mods_copy"
+                    app:icon="@drawable/ic_mods_copy" />
             </LinearLayout>
 
             <TextView

@@ -101,6 +101,20 @@
     <action android:id="@+id/action_install_instance"
         app:destination="@id/new_instance_fragment" />
 
+    <action android:id="@+id/action_open_bug_report"
+        app:destination="@id/bug_report_fragment" />
+    <fragment
+        android:id="@+id/bug_report_fragment"
+        android:name="com.rimdroid.fragments.BugReportFragment"
+        android:label="@string/nav_bug_report" />
+
+    <action android:id="@+id/action_open_workshop"
+        app:destination="@id/workshop_fragment" />
+    <fragment
+        android:id="@+id/workshop_fragment"
+        android:name="com.rimdroid.fragments.WorkshopFragment"
+        android:label="@string/workshop_menu" />
+
     <action android:id="@+id/action_download_game"
         app:destination="@id/download_fragment" />
 

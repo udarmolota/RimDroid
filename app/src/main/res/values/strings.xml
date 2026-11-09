@@ -111,7 +111,6 @@ In the cloud: %2$s
     <string name="driver_auto_set_title">Recommended driver set</string>
     <string name="driver_auto_set">Detected GPU: %1$s.\n\nThe recommended Vulkan driver was set for this instance: %2$s.\n\nIf you get a black screen or artifacts, change it in the instance settings (the gear icon on the instance card).</string>
     <string name="nav_import_mods">Import Mods (ZIP)…</string>
-    <string name="nav_export_logs">Export logs (ZIP)</string>
     <string name="nav_updates">New versions (GitHub)</string>
     <string name="nav_bug_report">Report a bug</string>
     <string name="nav_wiki">Wiki</string>
@@ -144,7 +143,6 @@ In the cloud: %2$s
     <string name="bug_report_email" translatable="false">210478@mail.ru</string>
     <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
     <string name="bug_report_body">Hi, I have a new bug report.\n\nDescription: \n\n\n---\n%1$s</string>
-    <string name="bug_report_no_mail">No email app found on this device.</string>
     <!-- Support dialog (heart icon). ko-fi link is made clickable at runtime. -->
     <string name="donate_title">Support development</string>
     <string name="donate_message">Enjoying RimDroid and want to support it?\n\nMade and maintained by: ko-fi.com/udarmolota\n\nEvery bit helps keep the work going. Thank you! ❤</string>
@@ -450,4 +448,51 @@ In the cloud: %2$s
     <string name="transfer_imported">Restored %1$s → %2$s</string>
     <string name="transfer_import_failed">Import failed: %1$s</string>
     <string name="news_title">RimWorld news</string>
+
+    <!-- Steam Workshop screen and copying mods to another instance (2026-11) -->
+    <string name="workshop_menu">Steam Workshop</string>
+    <string name="workshop_open_a_mod">Tap ↓ on a mod to add it to the queue.</string>
+    <string name="workshop_add_to_queue">Add to queue</string>
+    <string name="workshop_remove_from_queue">Remove</string>
+    <string name="workshop_item_id">Workshop item %1$d</string>
+    <string name="workshop_download_queue">Download</string>
+    <string name="workshop_download_n">Download (%1$d)</string>
+    <string name="workshop_download_busy">A Steam download is already running. Wait for it to finish.</string>
+    <string name="workshop_download_title">Download %1$d item(s)?</string>
+    <string name="workshop_download_message">%1$s\n\nThey are downloaded one after another, no Steam login needed. Each mod is saved as a .zip in Download/RimDroid; install them with “Install mod / DLC (ZIP)”, several at once.</string>
+    <string name="workshop_download_many">⚠ That is %1$d mods. They download one at a time, so this can take a long while, and each one takes about twice its size on storage (a ZIP copy in Download plus the installed mod).</string>
+    <string name="workshop_download_go">Download</string>
+    <string name="workshop_clear_queue">Clear queue</string>
+    <string name="workshop_text_smaller">Smaller text</string>
+    <string name="workshop_text_larger">Larger text</string>
+    <string name="mods_copy">Copy the mods to another instance</string>
+    <string name="mods_copy_no_target">There is no other instance to copy to.</string>
+    <string name="mods_copy_title">Copy the mods of %1$s to:</string>
+    <string name="mods_copy_order">Also switch on the same mods, in the same order</string>
+    <string name="mods_copy_order_hint">Replaces the other instance\'s mod list. A DLC it doesn\'t have is left out.</string>
+    <string name="mods_copy_go">Copy</string>
+    <string name="mods_copy_game_running">Close the game first: it rewrites the mod list when it exits.</string>
+    <string name="mods_copy_running">Copying mods to %1$s</string>
+    <string name="mods_copy_done">Copied: %1$d. Already there, left as they were: %2$d.</string>
+    <string name="mods_copy_order_done">The mod list and load order were copied too.</string>
+    <string name="mods_copy_order_failed">The mod list could not be copied.</string>
+    <string name="mods_copy_failed">Could not copy:</string>
+
+    <!-- Report a bug screen (2026-11) -->
+    <string name="bug_report_intro">Something went wrong? Send us a report. It carries the game\'s logs, so we can see what happened.</string>
+    <string name="bug_report_group_instance">Game</string>
+    <string name="bug_report_pick_instance">Choose the game…</string>
+    <string name="bug_report_preparing">Preparing the report…</string>
+    <string name="bug_report_group_email">Send by email</string>
+    <string name="bug_report_steps">1. Choose the game above.\n2. Tap Send by email.\n3. In the list that opens, pick your mail app (Gmail, Outlook…).\n4. Write a few words about what happened and send.</string>
+    <string name="bug_report_send_email">Send by email</string>
+    <string name="bug_report_pick_mail">Send with</string>
+    <string name="bug_report_no_email_title">No email app on this device?</string>
+    <string name="bug_report_no_email_text">Save the report to a file, then send it from any device to this address. Attach the file and write a few words about what happened.</string>
+    <string name="bug_report_copy">Copy</string>
+    <string name="bug_report_copied">Address copied</string>
+    <string name="bug_report_save_file">Save report to a file</string>
+    <string name="bug_report_saved">Report saved</string>
+    <string name="bug_report_save_failed">Could not save the report: %1$s</string>
+    <string name="bug_report_no_mail_use_file">No email app found on this device. Save the report to a file and send it from another device.</string>
 </resources>

@@ -110,7 +110,6 @@
     <string name="driver_auto_set_title">Драйвер выставлен</string>
     <string name="driver_auto_set">Обнаружен GPU: %1$s.\n\nДля этого инстанса выставлен рекомендуемый Vulkan-драйвер: %2$s.\n\nЕсли получите чёрный экран или артефакты — смените его в настройках инстанса (шестерёнка на карточке).</string>
     <string name="nav_import_mods">Импорт модов (ZIP)…</string>
-    <string name="nav_export_logs">Экспорт логов (ZIP)</string>
     <string name="nav_updates">Новые версии (GitHub)</string>
     <string name="nav_bug_report">Сообщить об ошибке</string>
     <string name="nav_wiki">Вики</string>
@@ -128,7 +127,6 @@
     <string name="zomdroid_dialog_message">Zomdroid запускает Project Zomboid на Android — так же, как этот лаунчер запускает RimWorld. Тот же автор, тот же подход.\n\nhttps://github.com/udarmolota/Zomdroid/releases</string>
     <string name="bug_report_subject">RIMDROID REPORT %1$s</string>
     <string name="bug_report_body">Hi, I have a new bug report.\n\nDescription: \n\n\n---\n%1$s</string>
-    <string name="bug_report_no_mail">На устройстве нет почтового приложения.</string>
     <string name="donate_title">Поддержать разработку</string>
     <string name="donate_message">Нравится RimDroid и хочешь поддержать?\n\nДелаю и поддерживаю: ko-fi.com/udarmolota\n\nЛюбая помощь помогает продолжать работу. Спасибо! ❤</string>
     <string name="on_screen_controls">Экранное управление</string>
@@ -429,4 +427,51 @@
     <string name="transfer_imported">Восстановлено: %1$s → %2$s</string>
     <string name="transfer_import_failed">Не удалось загрузить: %1$s</string>
     <string name="news_title">Новости RimWorld</string>
+
+    <!-- Steam Workshop screen and copying mods to another instance (2026-11) -->
+    <string name="workshop_menu">Steam Workshop</string>
+    <string name="workshop_open_a_mod">Нажмите ↓ на моде, чтобы добавить его в очередь.</string>
+    <string name="workshop_add_to_queue">В очередь</string>
+    <string name="workshop_remove_from_queue">Убрать</string>
+    <string name="workshop_item_id">Предмет Workshop %1$d</string>
+    <string name="workshop_download_queue">Скачать</string>
+    <string name="workshop_download_n">Скачать (%1$d)</string>
+    <string name="workshop_download_busy">Загрузка из Steam уже идёт. Дождитесь её окончания.</string>
+    <string name="workshop_download_title">Скачать: %1$d шт.?</string>
+    <string name="workshop_download_message">%1$s\n\nОни скачиваются по очереди, вход в Steam не нужен. Каждый мод сохраняется как .zip в Download/RimDroid; установите их через «Установить мод / DLC (ZIP)», можно сразу несколько.</string>
+    <string name="workshop_download_many">⚠ Это %1$d модов. Они качаются по одному, это может занять много времени, и каждый займёт примерно вдвое больше своего размера (ZIP-копия в Download плюс установленный мод).</string>
+    <string name="workshop_download_go">Скачать</string>
+    <string name="workshop_clear_queue">Очистить очередь</string>
+    <string name="workshop_text_smaller">Мельче текст</string>
+    <string name="workshop_text_larger">Крупнее текст</string>
+    <string name="mods_copy">Скопировать моды в другой экземпляр</string>
+    <string name="mods_copy_no_target">Нет другого экземпляра, куда можно скопировать.</string>
+    <string name="mods_copy_title">Скопировать моды %1$s в:</string>
+    <string name="mods_copy_order">Ещё и включить те же моды в том же порядке</string>
+    <string name="mods_copy_order_hint">Заменяет список модов другого экземпляра. DLC, которого там нет, пропускается.</string>
+    <string name="mods_copy_go">Скопировать</string>
+    <string name="mods_copy_game_running">Сначала закройте игру: при выходе она перезаписывает список модов.</string>
+    <string name="mods_copy_running">Копирую моды в %1$s</string>
+    <string name="mods_copy_done">Скопировано: %1$d. Уже были, оставлены как есть: %2$d.</string>
+    <string name="mods_copy_order_done">Список модов и их порядок тоже скопированы.</string>
+    <string name="mods_copy_order_failed">Не удалось скопировать список модов.</string>
+    <string name="mods_copy_failed">Не удалось скопировать:</string>
+
+    <!-- Report a bug screen (2026-11) -->
+    <string name="bug_report_intro">Что-то пошло не так? Пришлите нам отчёт. В нём логи игры, по ним мы увидим, что случилось.</string>
+    <string name="bug_report_group_instance">Игра</string>
+    <string name="bug_report_pick_instance">Выберите игру…</string>
+    <string name="bug_report_preparing">Готовлю отчёт…</string>
+    <string name="bug_report_group_email">Отправить по почте</string>
+    <string name="bug_report_steps">1. Выберите игру выше.\n2. Нажмите «Отправить по почте».\n3. В открывшемся списке выберите почтовое приложение (Gmail, Outlook…).\n4. Напишите пару слов о том, что случилось, и отправьте.</string>
+    <string name="bug_report_send_email">Отправить по почте</string>
+    <string name="bug_report_pick_mail">Отправить через</string>
+    <string name="bug_report_no_email_title">На устройстве нет почты?</string>
+    <string name="bug_report_no_email_text">Сохраните отчёт в файл и отправьте его с любого устройства на этот адрес. Приложите файл и напишите пару слов о том, что случилось.</string>
+    <string name="bug_report_copy">Копировать</string>
+    <string name="bug_report_copied">Адрес скопирован</string>
+    <string name="bug_report_save_file">Сохранить отчёт в файл</string>
+    <string name="bug_report_saved">Отчёт сохранён</string>
+    <string name="bug_report_save_failed">Не удалось сохранить отчёт: %1$s</string>
+    <string name="bug_report_no_mail_use_file">На устройстве нет почтового приложения. Сохраните отчёт в файл и отправьте с другого устройства.</string>
 </resources>

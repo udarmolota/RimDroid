@@ -45,6 +45,10 @@
             android:icon="@drawable/ic_steam"
             android:title="@string/nav_download_game" />
         <item
+            android:id="@+id/action_open_workshop"
+            android:icon="@drawable/ic_steam"
+            android:title="@string/workshop_menu" />
+        <item
             android:id="@+id/action_cloud_saves"
             android:icon="@drawable/mt_icon_save"
             android:title="@string/nav_cloud_saves" />
@@ -74,10 +78,6 @@
     <group android:id="@+id/group_files" android:checkableBehavior="none">
         <!-- "Manage storage" lives on each instance card's own menu (menu_game_instance.xml), where
              it acts on that instance — a global duplicate only made this drawer longer. -->
-        <item
-            android:id="@+id/action_export_logs"
-            android:icon="@drawable/mt_icon_logfile"
-            android:title="@string/nav_export_logs" />
         <item
             android:id="@+id/action_bug_report"
             android:icon="@drawable/ic_bug_report"

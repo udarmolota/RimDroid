@@ -22,6 +22,16 @@
             android:layout_height="wrap_content"
             android:text="@string/custom_driver_note"
             android:textAppearance="?attr/textAppearanceBodySmall"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Which engines take the driver at all (2026-11-11): the native ones use the phone's own. -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/custom_driver_engines"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorPrimary"
+            android:textStyle="bold"
             android:layout_marginBottom="12dp" />
 
         <TextView

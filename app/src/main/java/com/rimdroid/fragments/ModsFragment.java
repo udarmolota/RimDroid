@@ -262,15 +262,75 @@ public class ModsFragment extends Fragment {
         list.setItemChecked(0, true);
         list.setOnItemClickListener((p, view, pos, id) -> picked[0] = pos);
         android.widget.CheckBox withOrder = box.findViewById(R.id.cb_mods_copy_order);
-        new MaterialAlertDialogBuilder(requireContext())
+        new MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_RimDroid_ButtonDialog)
                 .setTitle(getString(R.string.mods_copy_title, from.getName()))
                 .setView(box)
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.mods_copy_go, (d, w) -> copyMods(from, targets.get(picked[0]), withOrder.isChecked()))
+                .setPositiveButton(R.string.mods_copy_next, (d, w) -> chooseModsToCopy(from, targets.get(picked[0]), withOrder.isChecked()))
                 .show();
     }
 
-    private void copyMods(GameInstance from, GameInstance to, boolean withOrder) {
+    /**
+     * Ticks for each mod of the source (as in Zomdroid): all ticked, except those the target already
+     * has (copying them would change nothing, they stay as they are), which are marked as such.
+     */
+    private void chooseModsToCopy(GameInstance from, GameInstance to, boolean withOrder) {
+        List<ModList.Mod> mods = com.rimdroid.mods.ModCopier.listCopyable(new File(from.getGamePath()));
+        if (mods.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.mods_copy_nothing, Toast.LENGTH_LONG).show();
+            return;
+        }
+        Set<String> there = com.rimdroid.mods.ModCopier.installedIds(new File(to.getGamePath()));
+        String[] labels = new String[mods.size()];
+        boolean[] checked = new boolean[mods.size()];
+        for (int i = 0; i < labels.length; i++) {
+            boolean has = there.contains(mods.get(i).packageId);
+            labels[i] = has ? getString(R.string.mods_copy_already_there, mods.get(i).name) : mods.get(i).name;
+            checked[i] = !has;
+        }
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_RimDroid_ButtonDialog)
+                .setTitle(getString(R.string.mods_copy_pick_title, to.getName()))
+                .setMultiChoiceItems(labels, checked, (d, which, isChecked) -> {
+                    checked[which] = isChecked;
+                    updateSelectAllButton((androidx.appcompat.app.AlertDialog) d, checked);
+                })
+                // Set up below: the default handler would close the dialog.
+                .setNeutralButton(R.string.mods_copy_uncheck_all, null)
+                .setPositiveButton(R.string.mods_copy_go, (d, w) -> {
+                    List<String> picked = new ArrayList<>();
+                    for (int i = 0; i < checked.length; i++) if (checked[i]) picked.add(mods.get(i).packageId);
+                    // Nothing ticked is fine when only the load order is wanted.
+                    if (picked.isEmpty() && !withOrder) {
+                        Toast.makeText(requireContext(), R.string.mods_copy_none_picked, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    copyMods(from, to, picked, withOrder);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+        // One button for both ways: "Uncheck all" while everything is ticked, "Check all" otherwise,
+        // so picking 3 mods out of 100 is not 97 taps.
+        updateSelectAllButton(dialog, checked);
+        dialog.getButton(android.content.DialogInterface.BUTTON_NEUTRAL).setOnClickListener(v -> {
+            boolean all = true;
+            for (boolean c : checked) all &= c;
+            for (int i = 0; i < checked.length; i++) {
+                checked[i] = !all;
+                dialog.getListView().setItemChecked(i, !all);
+            }
+            updateSelectAllButton(dialog, checked);
+        });
+    }
+
+    private void updateSelectAllButton(androidx.appcompat.app.AlertDialog dialog, boolean[] checked) {
+        android.widget.Button b = dialog.getButton(android.content.DialogInterface.BUTTON_NEUTRAL);
+        if (b == null) return;
+        boolean all = true;
+        for (boolean c : checked) all &= c;
+        b.setText(all ? R.string.mods_copy_uncheck_all : R.string.mods_copy_check_all);
+    }
+
+    private void copyMods(GameInstance from, GameInstance to, List<String> picked, boolean withOrder) {
         if (InstanceShortcuts.isGameRunning(requireContext())) {
             Toast.makeText(requireContext(), R.string.mods_copy_game_running, Toast.LENGTH_LONG).show();
             return;
@@ -284,7 +344,7 @@ public class ModsFragment extends Fragment {
         android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
         new Thread(() -> {
             com.rimdroid.mods.ModCopier.Result r = com.rimdroid.mods.ModCopier.copy(
-                    new File(from.getGamePath()), new File(to.getGamePath()), withOrder,
+                    new File(from.getGamePath()), new File(to.getGamePath()), picked, withOrder,
                     (name, i, total) -> main.post(() -> wait.setMessage(i + " / " + total + "\n" + name)));
             main.post(() -> {
                 wait.dismiss();
@@ -299,7 +359,7 @@ public class ModsFragment extends Fragment {
                     sb.append("\n\n").append(getString(R.string.mods_copy_failed));
                     for (String name : r.failed) sb.append("\n• ").append(name);
                 }
-                new MaterialAlertDialogBuilder(requireContext())
+                new MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_RimDroid_ButtonDialog)
                         .setTitle(getString(R.string.mods_copy_running, to.getName()))
                         .setMessage(sb.toString())
                         .setPositiveButton(android.R.string.ok, null)

@@ -1,0 +1,89 @@
+{
+  "reddit": "https://www.reddit.com/r/UdarMolotaDev",
+  "projects": [
+    {
+      "name": "XDroid360",
+      "description": {
+        "en": "A launcher that runs Dragon Age: Origins and State of Decay on Android.",
+        "ru": "Лаунчер, который запускает Dragon Age: Origins и State of Decay на Android.",
+        "zh": "在 Android 上运行 Dragon Age: Origins 和 State of Decay 的启动器。",
+        "pt": "Um launcher que roda Dragon Age: Origins e State of Decay no Android.",
+        "in": "Launcher yang menjalankan Dragon Age: Origins dan State of Decay di Android."
+      },
+      "icon": "https://raw.githubusercontent.com/udarmolota/projects/main/icons/project_xdroid360.png",
+      "github": "udarmolota/XDroid360"
+    },
+    {
+      "name": "StormDroid",
+      "description": {
+        "en": "A launcher that runs Against the Storm on Android.",
+        "ru": "Лаунчер, который запускает Against the Storm на Android.",
+        "zh": "在 Android 上运行 Against the Storm 的启动器。",
+        "pt": "Um launcher que roda Against the Storm no Android.",
+        "in": "Launcher yang menjalankan Against the Storm di Android."
+      },
+      "icon": "https://raw.githubusercontent.com/udarmolota/projects/main/icons/project_stormdroid.png",
+      "github": "udarmolota/StormDroid"
+    },
+    {
+      "name": "ValDroid",
+      "description": {
+        "en": "A launcher that runs Valheim on Android.",
+        "ru": "Лаунчер, который запускает Valheim на Android.",
+        "zh": "在 Android 上运行 Valheim 的启动器。",
+        "pt": "Um launcher que roda Valheim no Android.",
+        "in": "Launcher yang menjalankan Valheim di Android."
+      },
+      "icon": "https://raw.githubusercontent.com/udarmolota/projects/main/icons/project_valdroid.png",
+      "github": "udarmolota/ValDroid"
+    },
+    {
+      "name": "RimDroid",
+      "description": {
+        "en": "A launcher that runs RimWorld on Android.",
+        "ru": "Лаунчер, который запускает RimWorld на Android.",
+        "zh": "在 Android 上运行 RimWorld 的启动器。",
+        "pt": "Um launcher que roda RimWorld no Android.",
+        "in": "Launcher yang menjalankan RimWorld di Android."
+      },
+      "icon": "https://raw.githubusercontent.com/udarmolota/projects/main/icons/project_rimdroid.png",
+      "github": "udarmolota/RimDroid"
+    },
+    {
+      "name": "PriDroid",
+      "description": {
+        "en": "A launcher that runs Prison Architect on Android.",
+        "ru": "Лаунчер, который запускает Prison Architect на Android.",
+        "zh": "在 Android 上运行 Prison Architect 的启动器。",
+        "pt": "Um launcher que roda Prison Architect no Android.",
+        "in": "Launcher yang menjalankan Prison Architect di Android."
+      },
+      "icon": "https://raw.githubusercontent.com/udarmolota/projects/main/icons/project_pridroid.png",
+      "github": "udarmolota/pridroid"
+    },
+    {
+      "name": "Zomdroid",
+      "description": {
+        "en": "A launcher that runs Project Zomboid on Android.",
+        "ru": "Лаунчер, который запускает Project Zomboid на Android.",
+        "zh": "在 Android 上运行 Project Zomboid 的启动器。",
+        "pt": "Um launcher que roda Project Zomboid no Android.",
+        "in": "Launcher yang menjalankan Project Zomboid di Android."
+      },
+      "icon": "https://raw.githubusercontent.com/udarmolota/projects/main/icons/project_zomdroid.png",
+      "github": "udarmolota/zomdroid"
+    },
+    {
+      "name": "Deephall",
+      "description": {
+        "en": "A mobile game.",
+        "ru": "Мобильная игра.",
+        "zh": "一款手机游戏。",
+        "pt": "Um jogo para celular.",
+        "in": "Game seluler."
+      },
+      "icon": "https://raw.githubusercontent.com/udarmolota/projects/main/icons/project_deephall.png",
+      "github": "udarmolota/deephall"
+    }
+  ]
+}

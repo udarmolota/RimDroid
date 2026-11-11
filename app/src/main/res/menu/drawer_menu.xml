@@ -32,10 +32,6 @@
             android:id="@+id/action_icon_packs"
             android:icon="@drawable/mt_icon_stack"
             android:title="@string/nav_icon_packs" />
-        <item
-            android:id="@+id/action_controls_transfer"
-            android:icon="@drawable/mt_icon_folder_open"
-            android:title="@string/nav_controls_transfer" />
     </group>
 
     <!-- 3) Get the game from a store you own it on (Steam, GOG) -->
@@ -65,13 +61,9 @@
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/nav_settings" />
         <item
-            android:id="@+id/action_saves_transfer"
-            android:icon="@drawable/mt_icon_save"
-            android:title="@string/nav_saves_transfer" />
-        <item
-            android:id="@+id/action_settings_transfer"
-            android:icon="@drawable/mt_icon_folder_open"
-            android:title="@string/nav_settings_transfer" />
+            android:id="@+id/action_open_transfer"
+            android:icon="@drawable/ic_nav_transfer"
+            android:title="@string/transfer_title" />
     </group>
 
     <!-- 5) Diagnostics -->

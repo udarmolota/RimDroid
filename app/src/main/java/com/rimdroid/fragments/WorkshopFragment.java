@@ -64,6 +64,9 @@ public class WorkshopFragment extends Fragment {
     private Button btnQueue;
     private Button btnDownload;
     private long currentId = -1;
+    /** The "no connection" panel over the page, and whether the page now loading has failed. */
+    private View offline;
+    private boolean pageFailed;
     private String currentTitle;
 
     @Override
@@ -80,6 +83,13 @@ public class WorkshopFragment extends Fragment {
         tvItem = v.findViewById(R.id.tv_workshop_item);
         btnQueue = v.findViewById(R.id.btn_workshop_queue);
         btnDownload = v.findViewById(R.id.btn_workshop_download);
+        offline = v.findViewById(R.id.ll_workshop_offline);
+        v.findViewById(R.id.btn_workshop_retry).setOnClickListener(x -> {
+            offline.setVisibility(View.GONE);
+            String url = web.getUrl();
+            if (url == null || url.startsWith("data:") || url.startsWith("about:")) web.loadUrl(START_URL);
+            else web.reload();
+        });
 
         WebSettings ws = web.getSettings();
         ws.setJavaScriptEnabled(true);
@@ -120,7 +130,19 @@ public class WorkshopFragment extends Fragment {
                 onUrl(url, view.getTitle());
                 injectButtons();   // Steam changes pages without reloading them
             }
+            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                pageFailed = false;
+            }
+            @Override public void onReceivedError(WebView view, WebResourceRequest request,
+                                                  android.webkit.WebResourceError error) {
+                // Only the page itself: a failed picture or script inside a page is not "offline".
+                if (request.isForMainFrame()) {
+                    pageFailed = true;
+                    offline.setVisibility(View.VISIBLE);
+                }
+            }
             @Override public void onPageFinished(WebView view, String url) {
+                offline.setVisibility(pageFailed ? View.VISIBLE : View.GONE);
                 injectButtons();
             }
         });

@@ -40,7 +40,23 @@ public final class ModCopier {
         void onMod(String name, int index, int total);
     }
 
-    public static Result copy(File fromInstance, File toInstance, boolean withOrder, Progress progress) {
+    /** The source's downloaded mods, by name: what the copy dialog lists. */
+    public static List<ModList.Mod> listCopyable(File fromInstance) {
+        List<ModList.Mod> mods = new ArrayList<>();
+        for (ModList.Mod m : ModList.installed(fromInstance)) if (!m.official) mods.add(m);
+        return mods;
+    }
+
+    /** The packageIds an instance has: copying one of them again would change nothing. */
+    public static Set<String> installedIds(File instance) {
+        Set<String> ids = new HashSet<>();
+        for (ModList.Mod m : ModList.installed(instance)) ids.add(m.packageId);
+        return ids;
+    }
+
+    /** Copies the mods whose packageIds are in {@code only} (every mod when null). */
+    public static Result copy(File fromInstance, File toInstance, java.util.Collection<String> only,
+                              boolean withOrder, Progress progress) {
         Result result = new Result();
         File toMods = new File(toInstance, "Mods");
         //noinspection ResultOfMethodCallIgnored
@@ -49,7 +65,7 @@ public final class ModCopier {
         for (ModList.Mod m : ModList.installed(toInstance)) have.add(m.packageId);
 
         List<ModList.Mod> mods = new ArrayList<>();
-        for (ModList.Mod m : ModList.installed(fromInstance)) if (!m.official) mods.add(m);
+        for (ModList.Mod m : listCopyable(fromInstance)) if (only == null || only.contains(m.packageId)) mods.add(m);
         for (int i = 0; i < mods.size(); i++) {
             ModList.Mod mod = mods.get(i);
             if (progress != null) progress.onMod(mod.name, i + 1, mods.size());

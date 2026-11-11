@@ -204,6 +204,7 @@ En la nube: %2$s
     <string name="theme_dark">Oscuro</string>
     <string name="custom_driver_title">Controlador Vulkan personalizado</string>
     <string name="custom_driver_note">Importa un controlador Vulkan/Turnip (un archivo .so o un .zip de AdrenoTools). Luego, en el engranaje de una tarjeta → Controlador Vulkan, elige \"Custom driver (imported)\". El controlador lo comparten todas las instancias de este dispositivo.</string>
+    <string name="custom_driver_engines">Solo funciona en RimWorld 1.5 y 1.6 con el motor box64 + Mono nativo o Emulación completa (box64). El motor nativo (y RimWorld 1.7) siempre usa el controlador propio del teléfono.</string>
     <string name="custom_driver_import">Importar controlador (.so / .zip)</string>
     <string name="custom_driver_remove">Quitar</string>
     <string name="custom_driver_status_none">No hay ningún controlador personalizado importado.</string>
@@ -442,6 +443,8 @@ En la nube: %2$s
     <string name="workshop_clear_queue">Vaciar la cola</string>
     <string name="workshop_text_smaller">Texto más pequeño</string>
     <string name="workshop_text_larger">Texto más grande</string>
+    <string name="workshop_offline">Sin conexión con Steam. El Workshop solo funciona en línea.</string>
+    <string name="workshop_retry">Reintentar</string>
     <string name="mods_copy">Copiar los mods a otra instancia</string>
     <string name="mods_copy_no_target">No hay otra instancia a la que copiar.</string>
     <string name="mods_copy_title">Copiar los mods de %1$s a:</string>
@@ -454,6 +457,13 @@ En la nube: %2$s
     <string name="mods_copy_order_done">También se copiaron la lista de mods y su orden.</string>
     <string name="mods_copy_order_failed">No se pudo copiar la lista de mods.</string>
     <string name="mods_copy_failed">No se pudo copiar:</string>
+    <string name="mods_copy_next">Siguiente</string>
+    <string name="mods_copy_pick_title">Mods que copiar a %1$s</string>
+    <string name="mods_copy_already_there">%1$s (ya está)</string>
+    <string name="mods_copy_none_picked">No hay ningún mod elegido.</string>
+    <string name="mods_copy_nothing">Esta instancia no tiene mods descargados que copiar.</string>
+    <string name="mods_copy_uncheck_all">Desmarcar todo</string>
+    <string name="mods_copy_check_all">Marcar todo</string>
 
     <!-- Report a bug screen (2026-11) -->
     <string name="bug_report_intro">¿Algo salió mal? Envíanos un reporte. Lleva los registros del juego, así veremos qué pasó.</string>
@@ -490,4 +500,34 @@ En la nube: %2$s
     <string name="update_confirm_message">Una compilación nueva de RimWorld 1.7 puede no funcionar todavía en el teléfono (1.7.4995 fallaba a todos al principio). Se guardan la compilación actual y una copia de las partidas, y puedes volver desde esta pantalla. Solo se guarda el último respaldo.</string>
     <string name="update_preparing">Preparando el archivo…</string>
     <string name="update_game_running">Cierra antes el juego.</string>
+
+    <!-- Bottom bar, Import / export and Projects screens (2026-11) -->
+    <string name="bottom_nav_home">Inicio</string>
+    <string name="bottom_nav_game">Juego</string>
+    <string name="bottom_nav_workshop">Workshop</string>
+    <string name="bottom_nav_transfer">Importar</string>
+    <string name="bottom_nav_projects">Proyectos</string>
+    <string name="transfer_title">Importar / exportar</string>
+    <string name="transfer_instance">Instancia</string>
+    <string name="transfer_import">Importar</string>
+    <string name="transfer_export">Exportar</string>
+    <string name="transfer_saves">Partidas</string>
+    <string name="transfer_saves_hint">Un zip con las partidas de esta instancia: para guardarlas o pasarlas a otra instancia o teléfono. Al importar se sustituyen las partidas con el mismo nombre.</string>
+    <string name="transfer_mods">Mods</string>
+    <string name="transfer_mods_hint">Importar: uno o varios .zip de mods. Exportar: todos los mods descargados de esta instancia en un .zip, que se instala entero aquí o en otro teléfono.</string>
+    <string name="transfer_mods_exported">Mods exportados: %1$d</string>
+    <string name="transfer_settings">Ajustes del juego</string>
+    <string name="transfer_settings_hint">Opciones, teclas, la lista de mods y los ajustes de mods. Importar sustituye los actuales de la instancia.</string>
+    <string name="transfer_controls">Controles en pantalla</string>
+    <string name="transfer_controls_hint">La disposición de controles de la instancia como .json. Los iconos no se incluyen: en otro teléfono los botones muestran texto hasta que se aplique allí un paquete de iconos.</string>
+    <string name="transfer_device">Para todo el teléfono</string>
+    <string name="transfer_device_hint">El controlador Vulkan propio y los paquetes de iconos de botones son del teléfono, no de una instancia.</string>
+    <string name="transfer_driver_button">Controlador propio</string>
+    <string name="transfer_icons_button">Iconos</string>
+    <string name="projects_title">Otros proyectos</string>
+    <string name="projects_reddit_hint">Novedades de todos mis proyectos</string>
+    <string name="projects_download">Descargar</string>
+    <string name="projects_page">Página</string>
+    <string name="projects_latest_version">Última versión: %1$s</string>
+    <string name="projects_here">Estás aquí</string>
 </resources>

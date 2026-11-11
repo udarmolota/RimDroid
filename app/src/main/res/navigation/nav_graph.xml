@@ -59,29 +59,14 @@
         android:name="com.rimdroid.fragments.IconPacksFragment"
         android:label="@string/nav_icon_packs" />
 
-    <fragment
-        android:id="@+id/controls_transfer_fragment"
-        android:name="com.rimdroid.fragments.ControlsTransferFragment"
-        android:label="@string/nav_controls_transfer" />
 
     <fragment
         android:id="@+id/mods_fragment"
         android:name="com.rimdroid.fragments.ModsFragment"
         android:label="@string/nav_mods" />
 
-    <fragment
-        android:id="@+id/data_transfer_fragment"
-        android:name="com.rimdroid.fragments.DataTransferFragment" />
 
-    <action android:id="@+id/action_saves_transfer"
-        app:destination="@id/data_transfer_fragment">
-        <argument android:name="kind" android:defaultValue="saves" />
-    </action>
 
-    <action android:id="@+id/action_settings_transfer"
-        app:destination="@id/data_transfer_fragment">
-        <argument android:name="kind" android:defaultValue="settings" />
-    </action>
 
     <action android:id="@+id/action_open_mods"
         app:destination="@id/mods_fragment" />
@@ -89,8 +74,6 @@
     <action android:id="@+id/action_open_icon_packs"
         app:destination="@id/icon_packs_fragment" />
 
-    <action android:id="@+id/action_open_controls_transfer"
-        app:destination="@id/controls_transfer_fragment" />
 
     <action android:id="@+id/action_settings"
         app:destination="@id/settings_fragment" />
@@ -107,6 +90,18 @@
         android:id="@+id/update_instance_fragment"
         android:name="com.rimdroid.fragments.UpdateInstanceFragment"
         android:label="@string/update_menu" />
+
+    <action android:id="@+id/action_open_transfer"
+        app:destination="@id/transfer_fragment" />
+    <fragment
+        android:id="@+id/transfer_fragment"
+        android:name="com.rimdroid.fragments.TransferFragment"
+        android:label="@string/transfer_title" />
+
+    <fragment
+        android:id="@+id/projects_fragment"
+        android:name="com.rimdroid.fragments.ProjectsFragment"
+        android:label="@string/projects_title" />
 
     <action android:id="@+id/action_open_bug_report"
         app:destination="@id/bug_report_fragment" />

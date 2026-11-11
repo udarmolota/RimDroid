@@ -41,6 +41,10 @@ public class LauncherActivity extends AppCompatActivity {
     private ActivityLauncherBinding binding;
     private NavController navController;
     private AppBarConfiguration appBarConfiguration;
+    /** The screens of the bottom bar (menu_bottom_nav.xml); the bar is shown on these only. */
+    private static final int[] BOTTOM_NAV_DESTINATIONS = {
+            R.id.launcher_fragment, R.id.download_fragment, R.id.workshop_fragment,
+            R.id.transfer_fragment, R.id.projects_fragment};
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     /**
@@ -108,13 +112,21 @@ public class LauncherActivity extends AppCompatActivity {
 
         setSupportActionBar(binding.appbar);
 
-        appBarConfiguration = new AppBarConfiguration.Builder(R.id.launcher_fragment)
+        // The bottom bar's screens are top level: the drawer button, not a back arrow.
+        appBarConfiguration = new AppBarConfiguration.Builder(BOTTOM_NAV_DESTINATIONS)
                 .setOpenableLayout(binding.drawerLayout)
                 .build();
 
         navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(binding.launcherNv, navController);
+        NavigationUI.setupWithNavController(binding.bottomNav, navController);
+        // The bottom bar only on its own screens (as in Zomdroid): elsewhere it would eat height.
+        navController.addOnDestinationChangedListener((c, dest, args) -> {
+            boolean main = false;
+            for (int d : BOTTOM_NAV_DESTINATIONS) if (d == dest.getId()) main = true;
+            binding.bottomNav.setVisibility(main ? View.VISIBLE : View.GONE);
+        });
         // Refresh the toolbar menu on navigation so the "+" (add instance) shows only on the main screen.
         navController.addOnDestinationChangedListener((c, dest, args) -> invalidateOptionsMenu());
 
@@ -147,11 +159,8 @@ public class LauncherActivity extends AppCompatActivity {
             } else if (id == R.id.action_custom_driver) {
                 navController.navigate(R.id.action_open_custom_driver);   // device-global custom Vulkan driver import
                 return true;
-            } else if (id == R.id.action_saves_transfer) {
-                navController.navigate(R.id.action_saves_transfer);   // import + export of saves, one screen
-                return true;
-            } else if (id == R.id.action_settings_transfer) {
-                navController.navigate(R.id.action_settings_transfer);   // import + export of game settings
+            } else if (id == R.id.action_open_transfer) {
+                navController.navigate(R.id.action_open_transfer);   // every import and export, one screen
                 return true;
             } else if (id == R.id.action_edit_controls) {
                 // Controls are per instance: the editor asks which one when there are several.
@@ -163,9 +172,6 @@ public class LauncherActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.action_icon_packs) {
                 navController.navigate(R.id.action_open_icon_packs);   // button icon packs, applied per instance
-                return true;
-            } else if (id == R.id.action_controls_transfer) {
-                navController.navigate(R.id.action_open_controls_transfer);   // import / export, one screen
                 return true;
             } else if (id == R.id.action_bug_report) {
                 navController.navigate(R.id.action_open_bug_report);   // one screen: email or save to a file
@@ -279,12 +285,11 @@ public class LauncherActivity extends AppCompatActivity {
                 || destinationId == R.id.mods_fragment
                 || destinationId == R.id.workshop_fragment) return "mods";
         if (destinationId == R.id.cloud_saves_fragment
-                || destinationId == R.id.data_transfer_fragment) return "saves";
+                || destinationId == R.id.transfer_fragment)  return "saves";
         if (destinationId == R.id.settings_fragment)        return "engine";
         if (destinationId == R.id.bug_report_fragment)      return "report";
         if (destinationId == R.id.driver_fragment)          return "renderers";
-        if (destinationId == R.id.icon_packs_fragment
-                || destinationId == R.id.controls_transfer_fragment) return "controls";
+        if (destinationId == R.id.icon_packs_fragment)      return "controls";
         return "quick-start";   // the main screen, app settings, and any screen added later
     }
 

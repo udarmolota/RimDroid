@@ -230,6 +230,7 @@ In the cloud: %2$s
     <string name="theme_dark">Dark</string>
     <string name="custom_driver_title">Custom Vulkan driver</string>
     <string name="custom_driver_note">Import a Vulkan/Turnip driver (a raw .so or an AdrenoTools .zip). Then, in a game card\'s gear → Vulkan driver, pick \"Custom driver (imported)\". The driver is shared by all instances on this device.</string>
+    <string name="custom_driver_engines">Works only in RimWorld 1.5 and 1.6 with the box64 + native Mono or Full emulation (box64) engine. The native engine (and RimWorld 1.7) always uses the phone\'s own driver.</string>
     <string name="custom_driver_import">Import driver (.so / .zip)</string>
     <string name="custom_driver_remove">Remove</string>
     <string name="custom_driver_status_none">No custom driver imported.</string>
@@ -465,6 +466,8 @@ In the cloud: %2$s
     <string name="workshop_clear_queue">Clear queue</string>
     <string name="workshop_text_smaller">Smaller text</string>
     <string name="workshop_text_larger">Larger text</string>
+    <string name="workshop_offline">No connection to Steam. The Workshop works only online.</string>
+    <string name="workshop_retry">Try again</string>
     <string name="mods_copy">Copy the mods to another instance</string>
     <string name="mods_copy_no_target">There is no other instance to copy to.</string>
     <string name="mods_copy_title">Copy the mods of %1$s to:</string>
@@ -477,6 +480,13 @@ In the cloud: %2$s
     <string name="mods_copy_order_done">The mod list and load order were copied too.</string>
     <string name="mods_copy_order_failed">The mod list could not be copied.</string>
     <string name="mods_copy_failed">Could not copy:</string>
+    <string name="mods_copy_next">Next</string>
+    <string name="mods_copy_pick_title">Mods to copy to %1$s</string>
+    <string name="mods_copy_already_there">%1$s (already there)</string>
+    <string name="mods_copy_none_picked">No mod selected.</string>
+    <string name="mods_copy_nothing">This instance has no downloaded mods to copy.</string>
+    <string name="mods_copy_uncheck_all">Uncheck all</string>
+    <string name="mods_copy_check_all">Check all</string>
 
     <!-- Report a bug screen (2026-11) -->
     <string name="bug_report_intro">Something went wrong? Send us a report. It carries the game\'s logs, so we can see what happened.</string>
@@ -513,4 +523,35 @@ In the cloud: %2$s
     <string name="update_confirm_message">A new RimWorld 1.7 build may not work on the phone yet (1.7.4995 crashed for everyone at first). The current build and a copy of the saves are kept, and you can go back from this screen. Only the latest backup is kept.</string>
     <string name="update_preparing">Preparing the file…</string>
     <string name="update_game_running">Close the game first.</string>
+
+    <!-- Bottom bar, Import / export and Projects screens (2026-11) -->
+    <string name="bottom_nav_home">Home</string>
+    <string name="bottom_nav_game">Game</string>
+    <string name="bottom_nav_workshop">Workshop</string>
+    <string name="bottom_nav_transfer">Import</string>
+    <string name="bottom_nav_projects">Projects</string>
+    <string name="transfer_title">Import / export</string>
+    <string name="transfer_instance">Instance</string>
+    <string name="transfer_import">Import</string>
+    <string name="transfer_export">Export</string>
+    <string name="transfer_saves">Saves</string>
+    <string name="transfer_saves_hint">A zip of this instance\'s saves: to keep, or to move to another instance or phone. Saves with the same names are replaced on import.</string>
+    <string name="transfer_mods">Mods</string>
+    <string name="transfer_mods_hint">Import: one or more mod .zip files. Export: every downloaded mod of this instance in one .zip, which installs whole here or on another phone.</string>
+    <string name="transfer_mods_exported">Mods exported: %1$d</string>
+    <string name="transfer_settings">Game settings</string>
+    <string name="transfer_settings_hint">Options, keys, the mod list and mod settings. Import replaces the instance\'s current ones.</string>
+    <string name="transfer_controls">On-screen controls</string>
+    <string name="transfer_controls_hint">The instance\'s controls layout as a .json. Icons are not included: on another phone the buttons show labels until an icon pack is applied there.</string>
+    <string name="transfer_device">For the whole phone</string>
+    <string name="transfer_device_hint">The custom Vulkan driver and the button icon packs belong to the phone, not to an instance.</string>
+    <string name="transfer_driver_button">Custom driver</string>
+    <string name="transfer_icons_button">Icons</string>
+    <string name="projects_title">Other projects</string>
+    <string name="projects_reddit_title" translatable="false">r/UdarMolotaDev</string>
+    <string name="projects_reddit_hint">News of all my projects</string>
+    <string name="projects_download">Download</string>
+    <string name="projects_page">Page</string>
+    <string name="projects_latest_version">Latest version: %1$s</string>
+    <string name="projects_here">You are here</string>
 </resources>

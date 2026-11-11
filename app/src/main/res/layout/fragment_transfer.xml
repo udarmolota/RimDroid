@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Import / export (TransferFragment, as in Zomdroid): the instance once at the top, then a card
+     each for saves, mods, game settings and controls, then the device-wide driver and icon packs. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
+
+        <!-- The instance -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppTheme.TransferCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AppTheme.TransferCardTitle"
+                    android:text="@string/transfer_instance" />
+
+                <Spinner
+                    android:id="@+id/sp_transfer_instance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Saves -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppTheme.TransferCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AppTheme.TransferCardTitle"
+                    android:text="@string/transfer_saves" />
+
+                <TextView
+                    style="@style/AppTheme.TransferCardHint"
+                    android:text="@string/transfer_saves_hint" />
+
+                <LinearLayout style="@style/AppTheme.TransferButtonRow">
+
+                    <Button
+                        android:id="@+id/btn_transfer_saves_import"
+                        style="@style/AppTheme.TransferButton"
+                        android:text="@string/transfer_import" />
+
+                    <Button
+                        android:id="@+id/btn_transfer_saves_export"
+                        style="@style/AppTheme.TransferButton.Outlined"
+                        android:text="@string/transfer_export" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Mods -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppTheme.TransferCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AppTheme.TransferCardTitle"
+                    android:text="@string/transfer_mods" />
+
+                <TextView
+                    style="@style/AppTheme.TransferCardHint"
+                    android:text="@string/transfer_mods_hint" />
+
+                <LinearLayout style="@style/AppTheme.TransferButtonRow">
+
+                    <Button
+                        android:id="@+id/btn_transfer_mods_import"
+                        style="@style/AppTheme.TransferButton"
+                        android:text="@string/transfer_import" />
+
+                    <Button
+                        android:id="@+id/btn_transfer_mods_export"
+                        style="@style/AppTheme.TransferButton.Outlined"
+                        android:text="@string/transfer_export" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Game settings -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppTheme.TransferCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AppTheme.TransferCardTitle"
+                    android:text="@string/transfer_settings" />
+
+                <TextView
+                    style="@style/AppTheme.TransferCardHint"
+                    android:text="@string/transfer_settings_hint" />
+
+                <LinearLayout style="@style/AppTheme.TransferButtonRow">
+
+                    <Button
+                        android:id="@+id/btn_transfer_settings_import"
+                        style="@style/AppTheme.TransferButton"
+                        android:text="@string/transfer_import" />
+
+                    <Button
+                        android:id="@+id/btn_transfer_settings_export"
+                        style="@style/AppTheme.TransferButton.Outlined"
+                        android:text="@string/transfer_export" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Controls -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppTheme.TransferCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AppTheme.TransferCardTitle"
+                    android:text="@string/transfer_controls" />
+
+                <TextView
+                    style="@style/AppTheme.TransferCardHint"
+                    android:text="@string/transfer_controls_hint" />
+
+                <LinearLayout style="@style/AppTheme.TransferButtonRow">
+
+                    <Button
+                        android:id="@+id/btn_transfer_controls_import"
+                        style="@style/AppTheme.TransferButton"
+                        android:text="@string/transfer_import" />
+
+                    <Button
+                        android:id="@+id/btn_transfer_controls_export"
+                        style="@style/AppTheme.TransferButton.Outlined"
+                        android:text="@string/transfer_export" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Device-wide: the custom Vulkan driver and the button icon packs have screens of their own -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/AppTheme.TransferCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/AppTheme.TransferCardTitle"
+                    android:text="@string/transfer_device" />
+
+                <TextView
+                    style="@style/AppTheme.TransferCardHint"
+                    android:text="@string/transfer_device_hint" />
+
+                <LinearLayout style="@style/AppTheme.TransferButtonRow">
+
+                    <Button
+                        android:id="@+id/btn_transfer_driver"
+                        style="@style/AppTheme.TransferButton.Outlined"
+                        android:layout_marginStart="0dp"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/transfer_driver_button" />
+
+                    <Button
+                        android:id="@+id/btn_transfer_icon_packs"
+                        style="@style/AppTheme.TransferButton.Outlined"
+                        android:text="@string/transfer_icons_button" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</ScrollView>

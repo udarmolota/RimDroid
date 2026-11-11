@@ -209,6 +209,7 @@
     <string name="theme_dark">Тёмная</string>
     <string name="custom_driver_title">Свой Vulkan-драйвер</string>
     <string name="custom_driver_note">Импортируйте Vulkan/Turnip-драйвер (файл .so или AdrenoTools .zip). Затем на карточке игры → шестерёнка → Vulkan-драйвер выберите \"Custom driver (imported)\". Драйвер общий для всех инстансов на этом устройстве.</string>
+    <string name="custom_driver_engines">Работает только в RimWorld 1.5 и 1.6 с движком «box64 + нативный Mono» или «Полная эмуляция (box64)». Нативный движок (и RimWorld 1.7) всегда использует системный драйвер телефона.</string>
     <string name="custom_driver_import">Импорт драйвера (.so / .zip)</string>
     <string name="custom_driver_remove">Удалить</string>
     <string name="custom_driver_status_none">Свой драйвер не импортирован.</string>
@@ -444,6 +445,8 @@
     <string name="workshop_clear_queue">Очистить очередь</string>
     <string name="workshop_text_smaller">Мельче текст</string>
     <string name="workshop_text_larger">Крупнее текст</string>
+    <string name="workshop_offline">Нет подключения к Steam. Воркшоп работает только онлайн.</string>
+    <string name="workshop_retry">Повторить</string>
     <string name="mods_copy">Скопировать моды в другой экземпляр</string>
     <string name="mods_copy_no_target">Нет другого экземпляра, куда можно скопировать.</string>
     <string name="mods_copy_title">Скопировать моды %1$s в:</string>
@@ -456,6 +459,13 @@
     <string name="mods_copy_order_done">Список модов и их порядок тоже скопированы.</string>
     <string name="mods_copy_order_failed">Не удалось скопировать список модов.</string>
     <string name="mods_copy_failed">Не удалось скопировать:</string>
+    <string name="mods_copy_next">Далее</string>
+    <string name="mods_copy_pick_title">Какие моды скопировать в %1$s</string>
+    <string name="mods_copy_already_there">%1$s (уже есть)</string>
+    <string name="mods_copy_none_picked">Не выбрано ни одного мода.</string>
+    <string name="mods_copy_nothing">В этом экземпляре нет скачанных модов для копирования.</string>
+    <string name="mods_copy_uncheck_all">Снять все</string>
+    <string name="mods_copy_check_all">Отметить все</string>
 
     <!-- Report a bug screen (2026-11) -->
     <string name="bug_report_intro">Что-то пошло не так? Пришлите нам отчёт. В нём логи игры, по ним мы увидим, что случилось.</string>
@@ -492,4 +502,34 @@
     <string name="update_confirm_message">Новая сборка RimWorld 1.7 может пока не работать на телефоне (1.7.4995 поначалу падала у всех). Текущая сборка и копия сохранений сохранятся, вернуться можно с этого экрана. Хранится только последняя резервная копия.</string>
     <string name="update_preparing">Готовлю файл…</string>
     <string name="update_game_running">Сначала закройте игру.</string>
+
+    <!-- Bottom bar, Import / export and Projects screens (2026-11) -->
+    <string name="bottom_nav_home">Главная</string>
+    <string name="bottom_nav_game">Игра</string>
+    <string name="bottom_nav_workshop">Воркшоп</string>
+    <string name="bottom_nav_transfer">Импорт</string>
+    <string name="bottom_nav_projects">Проекты</string>
+    <string name="transfer_title">Импорт / экспорт</string>
+    <string name="transfer_instance">Экземпляр</string>
+    <string name="transfer_import">Импорт</string>
+    <string name="transfer_export">Экспорт</string>
+    <string name="transfer_saves">Сохранения</string>
+    <string name="transfer_saves_hint">Zip с сохранениями экземпляра: для резервной копии или чтобы перенести в другой экземпляр или на другой телефон. При импорте сохранения с такими же именами заменяются.</string>
+    <string name="transfer_mods">Моды</string>
+    <string name="transfer_mods_hint">Импорт: один или несколько .zip с модами. Экспорт: все скачанные моды экземпляра в одном .zip, который целиком ставится здесь или на другом телефоне.</string>
+    <string name="transfer_mods_exported">Экспортировано модов: %1$d</string>
+    <string name="transfer_settings">Настройки игры</string>
+    <string name="transfer_settings_hint">Параметры, клавиши, список модов и настройки модов. Импорт заменяет текущие настройки экземпляра.</string>
+    <string name="transfer_controls">Экранное управление</string>
+    <string name="transfer_controls_hint">Раскладка управления экземпляра в .json. Иконки не входят: на другом телефоне кнопки покажут подписи, пока там не применят пакет иконок.</string>
+    <string name="transfer_device">Для всего телефона</string>
+    <string name="transfer_device_hint">Свой драйвер Vulkan и пакеты иконок кнопок относятся к телефону, а не к экземпляру.</string>
+    <string name="transfer_driver_button">Свой драйвер</string>
+    <string name="transfer_icons_button">Иконки</string>
+    <string name="projects_title">Другие проекты</string>
+    <string name="projects_reddit_hint">Новости всех моих проектов</string>
+    <string name="projects_download">Скачать</string>
+    <string name="projects_page">Страница</string>
+    <string name="projects_latest_version">Последняя версия: %1$s</string>
+    <string name="projects_here">Вы здесь</string>
 </resources>

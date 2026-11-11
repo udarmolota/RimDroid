@@ -472,4 +472,22 @@ En la nube: %2$s
     <string name="bug_report_saved">Reporte guardado</string>
     <string name="bug_report_save_failed">No se pudo guardar el reporte: %1$s</string>
     <string name="bug_report_no_mail_use_file">No se encontró una app de correo en este dispositivo. Guarda el reporte en un archivo y envíalo desde otro dispositivo.</string>
+
+    <!-- Update the game in place, with a backup (2026-11) -->
+    <string name="update_menu">Actualizar el juego</string>
+    <string name="update_current">%1$s: %2$s</string>
+    <string name="update_intro">Pone en esta instancia una compilación más nueva de RimWorld 1.7. Los mods, las partidas y los ajustes se quedan. La compilación anterior y una copia de las partidas se guardan como respaldo, para volver si la nueva no te funciona.</string>
+    <string name="update_group_new">Compilación nueva</string>
+    <string name="update_no_file">Ningún archivo elegido</string>
+    <string name="update_pick">Elegir el ZIP del juego</string>
+    <string name="update_go">Actualizar</string>
+    <string name="update_group_backup">Respaldo</string>
+    <string name="update_backup_info">%1$s, guardado el %2$s, con las partidas de ese momento.</string>
+    <string name="update_restore">Volver a %1$s</string>
+    <string name="update_restore_message">El juego vuelve al respaldo junto con sus partidas. %1$s y sus partidas actuales pasan a ser el respaldo, así que no se pierde nada y puedes volver a cambiar.</string>
+    <string name="update_restore_go">Volver</string>
+    <string name="update_confirm_title">¿Actualizar el juego?</string>
+    <string name="update_confirm_message">Una compilación nueva de RimWorld 1.7 puede no funcionar todavía en el teléfono (1.7.4995 fallaba a todos al principio). Se guardan la compilación actual y una copia de las partidas, y puedes volver desde esta pantalla. Solo se guarda el último respaldo.</string>
+    <string name="update_preparing">Preparando el archivo…</string>
+    <string name="update_game_running">Cierra antes el juego.</string>
 </resources>

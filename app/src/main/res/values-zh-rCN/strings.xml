@@ -478,4 +478,22 @@
     <string name="bug_report_saved">报告已保存</string>
     <string name="bug_report_save_failed">无法保存报告：%1$s</string>
     <string name="bug_report_no_mail_use_file">此设备上没有找到邮件应用。请将报告保存为文件，然后从其他设备发送。</string>
+
+    <!-- Update the game in place, with a backup (2026-11) -->
+    <string name="update_menu">更新游戏</string>
+    <string name="update_current">%1$s：%2$s</string>
+    <string name="update_intro">把更新的 RimWorld 1.7 版本装进这个实例。模组、存档和设置保持不变。旧版本和存档副本会作为备份保留，如果新版本不能用，可以回退。</string>
+    <string name="update_group_new">新版本</string>
+    <string name="update_no_file">未选择文件</string>
+    <string name="update_pick">选择游戏 ZIP</string>
+    <string name="update_go">更新</string>
+    <string name="update_group_backup">备份</string>
+    <string name="update_backup_info">%1$s，保存于 %2$s，含当时的存档。</string>
+    <string name="update_restore">回到 %1$s</string>
+    <string name="update_restore_message">游戏会连同存档一起回到备份。%1$s 和当前存档会成为备份，所以不会丢失任何东西，之后还能再切换。</string>
+    <string name="update_restore_go">回退</string>
+    <string name="update_confirm_title">更新游戏？</string>
+    <string name="update_confirm_message">新的 RimWorld 1.7 版本可能暂时无法在手机上运行（1.7.4995 起初对所有人都会崩溃）。当前版本和存档副本会被保留，可以在此界面回退。只保留最近一次备份。</string>
+    <string name="update_preparing">正在准备文件…</string>
+    <string name="update_game_running">请先关闭游戏。</string>
 </resources>

@@ -4,6 +4,9 @@
         android:id="@+id/action_instance_storage"
         android:title="@string/nav_manage_storage" />
     <item
+        android:id="@+id/action_instance_update"
+        android:title="@string/update_menu" />
+    <item
         android:id="@+id/action_instance_shortcut"
         android:title="@string/instance_shortcut" />
     <item

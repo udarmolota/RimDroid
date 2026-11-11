@@ -474,4 +474,22 @@ Na nuvem: %2$s
     <string name="bug_report_saved">Relato salvo</string>
     <string name="bug_report_save_failed">Não foi possível salvar o relato: %1$s</string>
     <string name="bug_report_no_mail_use_file">Nenhum app de e-mail encontrado neste aparelho. Salve o relato em um arquivo e envie de outro aparelho.</string>
+
+    <!-- Update the game in place, with a backup (2026-11) -->
+    <string name="update_menu">Atualizar o jogo</string>
+    <string name="update_current">%1$s: %2$s</string>
+    <string name="update_intro">Coloca nesta instância uma versão mais nova do RimWorld 1.7. Mods, saves e configurações ficam. A versão anterior e uma cópia dos saves são guardadas como backup, para voltar se a nova não funcionar para você.</string>
+    <string name="update_group_new">Versão nova</string>
+    <string name="update_no_file">Nenhum arquivo escolhido</string>
+    <string name="update_pick">Escolher o ZIP do jogo</string>
+    <string name="update_go">Atualizar</string>
+    <string name="update_group_backup">Backup</string>
+    <string name="update_backup_info">%1$s, salvo em %2$s, com os saves daquele momento.</string>
+    <string name="update_restore">Voltar para %1$s</string>
+    <string name="update_restore_message">O jogo volta ao backup junto com os saves dele. %1$s e os saves atuais viram o backup, então nada se perde e dá para trocar de novo.</string>
+    <string name="update_restore_go">Voltar</string>
+    <string name="update_confirm_title">Atualizar o jogo?</string>
+    <string name="update_confirm_message">Uma versão nova do RimWorld 1.7 pode ainda não funcionar no celular (a 1.7.4995 travava para todos no começo). A versão atual e uma cópia dos saves são guardadas, e dá para voltar por esta tela. Só o último backup é guardado.</string>
+    <string name="update_preparing">Preparando o arquivo…</string>
+    <string name="update_game_running">Feche o jogo antes.</string>
 </resources>

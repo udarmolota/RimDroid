@@ -272,7 +272,8 @@ public class LauncherActivity extends AppCompatActivity {
     /** The wiki section that explains the screen the "?" was pressed on. */
     private static String wikiSectionFor(int destinationId) {
         if (destinationId == R.id.new_instance_fragment)    return "zip-archive";
-        if (destinationId == R.id.download_fragment)        return "steam-in-app";
+        if (destinationId == R.id.download_fragment
+                || destinationId == R.id.update_instance_fragment) return "steam-in-app";
         if (destinationId == R.id.gog_login_fragment)       return "gog";
         if (destinationId == R.id.install_content_fragment
                 || destinationId == R.id.mods_fragment

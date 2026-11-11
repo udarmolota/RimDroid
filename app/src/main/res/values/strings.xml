@@ -495,4 +495,22 @@ In the cloud: %2$s
     <string name="bug_report_saved">Report saved</string>
     <string name="bug_report_save_failed">Could not save the report: %1$s</string>
     <string name="bug_report_no_mail_use_file">No email app found on this device. Save the report to a file and send it from another device.</string>
+
+    <!-- Update the game in place, with a backup (2026-11) -->
+    <string name="update_menu">Update the game</string>
+    <string name="update_current">%1$s: %2$s</string>
+    <string name="update_intro">Puts a newer RimWorld 1.7 build into this instance. Mods, saves and settings stay. The previous build and a copy of the saves are kept as a backup, so you can go back if the new build doesn\'t work for you.</string>
+    <string name="update_group_new">New build</string>
+    <string name="update_no_file">No file chosen</string>
+    <string name="update_pick">Choose the game ZIP</string>
+    <string name="update_go">Update</string>
+    <string name="update_group_backup">Backup</string>
+    <string name="update_backup_info">%1$s, saved %2$s, with the saves of that time.</string>
+    <string name="update_restore">Back to %1$s</string>
+    <string name="update_restore_message">The game goes back to the backup together with its saves. %1$s and its current saves become the backup, so nothing is lost and you can switch again.</string>
+    <string name="update_restore_go">Go back</string>
+    <string name="update_confirm_title">Update the game?</string>
+    <string name="update_confirm_message">A new RimWorld 1.7 build may not work on the phone yet (1.7.4995 crashed for everyone at first). The current build and a copy of the saves are kept, and you can go back from this screen. Only the latest backup is kept.</string>
+    <string name="update_preparing">Preparing the file…</string>
+    <string name="update_game_running">Close the game first.</string>
 </resources>

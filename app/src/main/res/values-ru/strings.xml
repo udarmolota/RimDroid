@@ -474,4 +474,22 @@
     <string name="bug_report_saved">Отчёт сохранён</string>
     <string name="bug_report_save_failed">Не удалось сохранить отчёт: %1$s</string>
     <string name="bug_report_no_mail_use_file">На устройстве нет почтового приложения. Сохраните отчёт в файл и отправьте с другого устройства.</string>
+
+    <!-- Update the game in place, with a backup (2026-11) -->
+    <string name="update_menu">Обновить игру</string>
+    <string name="update_current">%1$s: %2$s</string>
+    <string name="update_intro">Ставит в этот экземпляр более новую сборку RimWorld 1.7. Моды, сохранения и настройки остаются. Прежняя сборка и копия сохранений хранятся как резервная копия, чтобы можно было вернуться, если новая не заработает.</string>
+    <string name="update_group_new">Новая сборка</string>
+    <string name="update_no_file">Файл не выбран</string>
+    <string name="update_pick">Выбрать ZIP с игрой</string>
+    <string name="update_go">Обновить</string>
+    <string name="update_group_backup">Резервная копия</string>
+    <string name="update_backup_info">%1$s, сохранена %2$s, вместе с сохранениями того времени.</string>
+    <string name="update_restore">Вернуться на %1$s</string>
+    <string name="update_restore_message">Игра вернётся к резервной копии вместе с её сохранениями. %1$s и текущие сохранения станут резервной копией, так что ничего не пропадёт, и можно будет переключиться обратно.</string>
+    <string name="update_restore_go">Вернуться</string>
+    <string name="update_confirm_title">Обновить игру?</string>
+    <string name="update_confirm_message">Новая сборка RimWorld 1.7 может пока не работать на телефоне (1.7.4995 поначалу падала у всех). Текущая сборка и копия сохранений сохранятся, вернуться можно с этого экрана. Хранится только последняя резервная копия.</string>
+    <string name="update_preparing">Готовлю файл…</string>
+    <string name="update_game_running">Сначала закройте игру.</string>
 </resources>

@@ -274,14 +274,24 @@ public class LauncherFragment extends Fragment {
     private void showInstanceMenu(View anchor, GameInstance gi) {
         android.widget.PopupMenu pm = new android.widget.PopupMenu(requireContext(), anchor);
         pm.getMenuInflater().inflate(R.menu.menu_game_instance, pm.getMenu());
+        // Updating in place is for RimWorld 1.7 only (InstanceUpdater).
+        pm.getMenu().findItem(R.id.action_instance_update)
+                .setVisible(com.rimdroid.InstanceUpdater.canUpdate(new File(gi.getGamePath())));
         pm.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
             if (id == R.id.action_instance_storage)  { openInstanceStorage(gi); return true; }
+            if (id == R.id.action_instance_update)   { openUpdate(gi); return true; }
             if (id == R.id.action_instance_shortcut) { InstanceShortcuts.pin(requireContext(), gi); return true; }
             if (id == R.id.action_instance_delete)   { confirmDeleteInstance(gi); return true; }
             return false;
         });
         pm.show();
+    }
+
+    private void openUpdate(GameInstance gi) {
+        Bundle b = new Bundle();
+        b.putString(UpdateInstanceFragment.ARG_INSTANCE, gi.getName());
+        Navigation.findNavController(requireView()).navigate(R.id.action_update_instance, b);
     }
 
     private void openInstanceSettings(GameInstance gi) {
@@ -337,6 +347,7 @@ public class LauncherFragment extends Fragment {
             deleteRecursive(dir, failed);
             final boolean gone = !dir.exists();
             com.rimdroid.InstanceSettings.delete(name);   // drop its per-instance settings keys
+            com.rimdroid.InstanceUpdater.deleteBackup(name);   // and the backup of its previous build
             LauncherPreferences lp = LauncherPreferences.requireSingleton();
             if (name.equals(lp.getLastInstanceName())) lp.setLastInstanceName("");
             mainHandler.post(() -> {

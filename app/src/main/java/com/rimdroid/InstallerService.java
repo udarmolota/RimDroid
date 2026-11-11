@@ -37,6 +37,10 @@ public class InstallerService extends Service {
     // Task identifiers
     public static final String TASK_INSTALL_INSTANCE = "INSTALL_INSTANCE";
     public static final String TASK_INSTALL_DEPS     = "INSTALL_DEPS";
+    /** A newer 1.7 build into an existing instance, with a backup (InstanceUpdater). */
+    public static final String TASK_UPDATE_INSTANCE  = "UPDATE_INSTANCE";
+    /** The instance back to its backup (InstanceUpdater.restore). */
+    public static final String TASK_RESTORE_INSTANCE = "RESTORE_INSTANCE";
 
     // Intent extras
     public static final String EXTRA_TASK          = "task";
@@ -96,6 +100,27 @@ public class InstallerService extends Service {
                     case TASK_INSTALL_DEPS:
                         installDepsFromAssets();
                         break;
+                    case TASK_UPDATE_INSTANCE: {
+                        String zipPath = intent.getStringExtra(EXTRA_ZIP_PATH);
+                        String name = intent.getStringExtra(EXTRA_INSTANCE_NAME);
+                        busy = true;
+                        try {
+                            InstanceUpdater.update(name, new File(zipPath), this::broadcastProgress);
+                            broadcastDone(true, "Instance '" + name + "' updated to "
+                                    + InstanceUpdater.versionOf(storage.getInstanceDir(name)));
+                        } finally {
+                            deleteCachedCopy(zipPath);
+                            busy = false;
+                        }
+                        break;
+                    }
+                    case TASK_RESTORE_INSTANCE: {
+                        String name = intent.getStringExtra(EXTRA_INSTANCE_NAME);
+                        InstanceUpdater.restore(name, this::broadcastProgress);
+                        broadcastDone(true, "Instance '" + name + "' is back on "
+                                + InstanceUpdater.versionOf(storage.getInstanceDir(name)));
+                        break;
+                    }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Install failed", e);
@@ -510,6 +535,21 @@ public class InstallerService extends Service {
         i.putExtra(EXTRA_INSTANCE_NAME, instanceName);
         if (extraInstallers != null && extraInstallers.length > 0)
             i.putExtra(EXTRA_EXTRA_INSTALLERS, extraInstallers);
+        ctx.startForegroundService(i);
+    }
+
+    public static void startUpdateInstance(Context ctx, String zipPath, String instanceName) {
+        Intent i = new Intent(ctx, InstallerService.class);
+        i.putExtra(EXTRA_TASK, TASK_UPDATE_INSTANCE);
+        i.putExtra(EXTRA_ZIP_PATH, zipPath);
+        i.putExtra(EXTRA_INSTANCE_NAME, instanceName);
+        ctx.startForegroundService(i);
+    }
+
+    public static void startRestoreInstance(Context ctx, String instanceName) {
+        Intent i = new Intent(ctx, InstallerService.class);
+        i.putExtra(EXTRA_TASK, TASK_RESTORE_INSTANCE);
+        i.putExtra(EXTRA_INSTANCE_NAME, instanceName);
         ctx.startForegroundService(i);
     }
 

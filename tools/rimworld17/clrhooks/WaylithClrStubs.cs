@@ -4,6 +4,12 @@
 // here it reports itself as unsupported, a case the game handles: requested fields are logged as
 // disabled and their accessors throw. tools/rimworld17/build_runtime_facade.sh forwards these names
 // from System.Runtime, where the game looks for them.
+//
+// 1.7.5005 (2026-11-11) moved method body rewriting onto a transformer API: the game derives its
+// Prepatcher, field injection and profiler stages from MethodBodyTransformer and reads bodies through
+// MethodBodyView. Without these types the profiler's static constructor failed at every start. The
+// transformers can be built and registered, but stock .NET never calls them; MethodBodyUpdater
+// still reports itself as unsupported.
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -87,6 +93,71 @@ namespace WaylithClr
         public int NewOffset { get; }
     }
 
+    [Flags]
+    public enum MethodBodyFlags { None = 0 }
+
+    public readonly struct MethodBodyClause
+    {
+        public ExceptionHandlingClauseOptions Flags { get; }
+        public int TryOffset { get; }
+        public int TryLength { get; }
+        public int HandlerOffset { get; }
+        public int HandlerLength { get; }
+        public int ClassTokenOrFilterOffset { get; }
+    }
+
+    public ref struct MethodBodyView
+    {
+        public ReadOnlySpan<byte> IL { get { return default; } }
+        public ReadOnlySpan<byte> LocalSignature { get { return default; } }
+        public int LocalSignatureToken { get { return 0; } }
+        public int MaxStackSize { get { return 0; } }
+        public bool InitLocals { get { return false; } }
+        public int ClauseCount { get { return 0; } }
+        public MethodBodyFlags Flags { get { return MethodBodyFlags.None; } }
+    }
+
+    public sealed class MethodBodyBuilder
+    {
+        internal MethodBodyBuilder() { }
+        public void Write(ReadOnlySpan<byte> il) { }
+        public void AddOffsetMapEntries(ReadOnlySpan<ILOffsetMapEntry> entries) { }
+    }
+
+    public readonly struct MethodBodyTransformFailure
+    {
+        public RuntimeMethodHandle Method { get; }
+        public Exception Exception { get; }
+    }
+
+    /// <summary>The game's stages override the protected members; nothing ever calls them here.</summary>
+    public abstract class MethodBodyTransformer
+    {
+        static readonly MethodBodyTransformFailure[] NoFailures = new MethodBodyTransformFailure[0];
+
+        protected MethodBodyTransformer(int priority) { Priority = priority; }
+
+        public int Priority { get; }
+
+        public static event Action<Module, ReadOnlyMemory<int>, ReadOnlyMemory<int>> DefaultBodiesChanged { add { } remove { } }
+        public static event Action<Exception> UnobservedException { add { } remove { } }
+        public static void ProcessMetadataUpdates() { }
+
+        public void Register() { }
+        public void Unregister() { }
+        public MethodBodyTransformFailure[] Rebuild(ReadOnlySpan<RuntimeMethodHandle> methods) { return NoFailures; }
+
+        protected virtual bool StaysAttached { get { return false; } }
+        protected virtual bool CanTransformConcurrently { get { return false; } }
+        protected virtual bool CanTransform(RuntimeMethodHandle method) { return false; }
+        protected virtual void Prepare(RuntimeMethodHandle method, ref MethodBodyView body, ReadOnlySpan<MethodBodyClause> clauses) { }
+        protected virtual bool TryTransform(RuntimeMethodHandle method, ref MethodBodyView body,
+            ReadOnlySpan<MethodBodyClause> clauses, MethodBodyBuilder builder) { return false; }
+        protected virtual void OnTransformFailed(RuntimeMethodHandle method, Exception exception) { }
+        protected virtual void OnParticipationChanged(ReadOnlySpan<RuntimeMethodHandle> added, ReadOnlySpan<RuntimeMethodHandle> removed) { }
+        protected virtual void OnDefaultBodiesChanged(ReadOnlySpan<RuntimeMethodHandle> methods) { }
+    }
+
     public static class MethodBodyUpdater
     {
         static Exception Unsupported() { return new NotSupportedException("method body updates are not supported"); }
@@ -126,5 +197,18 @@ namespace WaylithClr
         }
 
         public static void Revert(ReadOnlySpan<MethodBase> methods) { throw Unsupported(); }
+
+        // 1.7.5005
+        public static int GetTokenForSignature(Module module, ReadOnlySpan<byte> signature) { throw Unsupported(); }
+        public static RuntimeMethodHandle GetDefinitionHandle(MethodBase method) { return method.MethodHandle; }
+        public static MethodBase GetMethodFromHandle(RuntimeMethodHandle handle) { return MethodBase.GetMethodFromHandle(handle); }
+        public static RuntimeMethodHandle ResolveMethodDef(Module module, int token) { return module.ResolveMethod(token).MethodHandle; }
+        public static object ResolveToken(MethodBase scope, int token) { throw Unsupported(); }
+        public static object ResolveToken(RuntimeMethodHandle scope, int token) { throw Unsupported(); }
+
+        public static bool TryGetDefaultMethodBody(MethodBase method, Span<MethodBodyClause> clauses, ref MethodBodyView body)
+        {
+            return false;
+        }
     }
 }

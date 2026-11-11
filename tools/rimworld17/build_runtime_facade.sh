@@ -24,5 +24,5 @@ printf '%s\n' '{"runtimeOptions":{"tfm":"net6.0","rollForward":"Major","framewor
 "$DOTNET" exec "$(native "$WORK/AddForwards.dll")" "$(native "$FW/System.Runtime.dll")" "$(native "$OUT/System.Runtime.dll")" \
     RimDroidClrHooks WaylithClr.FieldInjection WaylithClr.FieldInjectionApplyResult WaylithClr.FieldInjectionBatch \
     WaylithClr.FieldInjectionBatchStatus WaylithClr.FieldInjectionRefusal WaylithClr.ILOffsetMapEntry \
-    WaylithClr.InjectedField WaylithClr.MethodBodyUpdater
+    WaylithClr.InjectedField WaylithClr.MethodBodyUpdater WaylithClr.MethodBodyFlags WaylithClr.MethodBodyClause     WaylithClr.MethodBodyView WaylithClr.MethodBodyBuilder WaylithClr.MethodBodyTransformFailure     WaylithClr.MethodBodyTransformer
 echo "built $OUT/System.Runtime.dll"

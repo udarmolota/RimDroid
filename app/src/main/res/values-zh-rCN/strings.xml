@@ -377,7 +377,7 @@
     <string name="vk_compat_off">关闭</string>
     <string name="vk_compat_hint">如果画面在标志或菜单处卡住而游戏仍在运行，请开启。画面相同，只是 Unity 构建每一帧的方式不同。下次启动生效。</string>
     <string name="release_notes_title">v%1$s 更新内容</string>
-    <string name="release_notes_body"><b>– RimWorld 1.7（实验性）</b>\nLudeon 的测试版更新以原生方式运行，无需模拟：比 1.6 轻得多。大多数 1.6 模组可以使用。支持任何语言的文字输入。请把 1.7 放在单独的实例中。\n\n<b>– Steam 下载：1.6 和 1.7</b>\n游戏保存为 zip；<b>创建实例</b>即可打开。不再提供 1.5。\n\n<b>– RimWorld 新闻</b>\n显示在主屏幕上。\n\n<b>– 模组界面</b>\n侧边菜单 → <b>模组</b>：全部启用 / 全部停用，每个模组支持的游戏版本（你的版本显示为绿色），一个 zip 中可包含多个模组。\n\n<b>– 其他新功能</b>\n可交换手柄摇杆；1.7 支持鼠标和手柄。\n\n<b>– 修复</b>\n原生引擎下的 F10 截图；含 Prepatcher 的模组包可用一个 zip 安装。\n\n<i>更新前请备份存档：侧边菜单 → 导入 / 导出存档。</i></string>
+    <string name="release_notes_body"><b>– RimWorld 1.7 build 5005</b>\nLudeon 更新后游戏可以再次启动。\n\n<b>– 在原实例中更新游戏</b>\n实例卡片 → ⋮ → <b>更新游戏</b>：把更新的 1.7 版本装进同一个实例。模组、存档和设置保持不变；<b>回到 …</b> 可回到之前的版本。\n\n<b>– Steam 创意工坊</b>\n在应用内浏览创意工坊，点击模组和合集上的 ↓，再点下载。\n\n<b>– 底部栏和导入 / 导出</b>\n首页、游戏、创意工坊、导入、项目。存档、模组、游戏设置和控制都在一个界面导入和导出。\n\n<b>– 复制模组</b>\n模组界面 → 复制按钮：为另一个实例选择模组，也可以保持相同的加载顺序。\n\n<i>更新前请备份存档：底部栏 → 导入 → 存档 → 导出。</i></string>
     <string name="nav_mods">模组</string>
     <string name="mods_active">已启用（%1$d）— 按加载顺序</string>
     <string name="mods_inactive">未启用（%1$d）</string>

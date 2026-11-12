@@ -29,6 +29,8 @@ public class ClrActivity extends Activity {
 
     private TextView text;
     private android.view.View logStrip;
+    /** Opens the log strip after a long press in the top-left corner (see the surface's touch listener). */
+    private final Runnable showLogStrip = () -> { if (logStrip != null) logStrip.setVisibility(android.view.View.VISIBLE); };
     private File logFile;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
@@ -106,9 +108,16 @@ public class ClrActivity extends Activity {
         TouchInput touch = new TouchInput();
         android.view.ScaleGestureDetector pinch = new android.view.ScaleGestureDetector(this, touch);
         surface.setOnTouchListener((v, e) -> {
-            if (e.getActionMasked() == android.view.MotionEvent.ACTION_DOWN && logStrip != null && e.getX() < 60 && e.getY() < 60)
-                logStrip.setVisibility(logStrip.getVisibility() == android.view.View.VISIBLE
-                        ? android.view.View.GONE : android.view.View.VISIBLE);
+            // The log strip opens on a 2 s press in the top-left corner: a tap there opened it by
+            // accident (the game's resource list sits there), and the open strip covered the corner,
+            // so the same tap could never close it (player report, 2026-11-12). A tap on the strip
+            // itself closes it.
+            int action = e.getActionMasked();
+            if (action == android.view.MotionEvent.ACTION_DOWN && logStrip != null && e.getX() < 60 && e.getY() < 60)
+                v.postDelayed(showLogStrip, 2000);
+            else if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL
+                    || (action == android.view.MotionEvent.ACTION_MOVE && (e.getX() > 120 || e.getY() > 120)))
+                v.removeCallbacks(showLogStrip);
             if (touch.onMouse(e)) return true;
             pinch.onTouchEvent(e);
             touch.onTouch(e);
@@ -125,6 +134,8 @@ public class ClrActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(0x88000000);
         scroll.addView(text);
+        scroll.setFillViewport(true);   // the text fills the strip, so a tap anywhere on it closes it
+        text.setOnClickListener(x -> scroll.setVisibility(android.view.View.GONE));
         android.widget.FrameLayout root = new android.widget.FrameLayout(this);
         if (boxAspect > 0f) root.addView(surface, new android.widget.FrameLayout.LayoutParams(boxW, boxH, android.view.Gravity.CENTER));
         else root.addView(surface);
@@ -153,7 +164,8 @@ public class ClrActivity extends Activity {
         // A game: the screen stays on while it runs (it went dark mid-menu).
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // The log strip starts hidden (it covered the loading screen for 8 s; dotnet.log and the game's
-        // own Logs/Player.log keep everything). A tap on the top-left corner shows it, e.g. on a hang.
+        // own Logs/Player.log keep everything). A long press on the top-left corner shows it, e.g. on a
+        // hang; a tap on it hides it.
         logStrip = scroll;
         scroll.setVisibility(android.view.View.GONE);
         getWindow().getDecorView().setSystemUiVisibility(android.view.View.SYSTEM_UI_FLAG_FULLSCREEN

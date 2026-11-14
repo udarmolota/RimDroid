@@ -29,5 +29,14 @@ Built 2026-10-21 from tag `v2026.19` on Windows:
    privileges); the library itself is built. Strip it with NDK `llvm-strip` and copy it as
    `libslang.so` (about 30 MB; libc++ is static, it needs only libc, libm, libdl).
 
+3. `libslang-glslang-2026.19.so` (glslang + SPIRV-Tools; Slang loads it by that name for
+   `spirv-opt` and GLSL work; without it some mod shaders fail with "failed to load downstream
+   compiler 'spirv-opt'"). Added 2026-11-14 from the same tree:
+   ```
+   cmake --build --preset android-arm64-release --target slang-glslang
+   ```
+   Strip with `llvm-strip --strip-unneeded` (about 7 MB; needs only libc, libm, libdl) and copy it
+   under the same name next to `libslang.so`.
+
 When Ludeon moves the game to a newer Slang (check the Linux libslang.so's build tag in the game
 files), rebuild from that tag.

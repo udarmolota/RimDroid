@@ -748,9 +748,85 @@ static VKAPI_ATTR VkResult VKAPI_CALL shim_AcquireNextImage2KHR(VkDevice device,
     return r;
 }
 
+// Mali drivers have a fixed-size kernel command queue. During a long loading step no frame is presented,
+// and without secondary command buffers (our Mali compatibility mode) Unity queues every upload as its own
+// primary command buffer and submits them all at once: 2724 in one vkQueueSubmit with a heavy mod list on
+// a Mali-G615 (2026-11-16). The driver then logs "waiting for contiguous free space fail", returns 2, runs
+// nothing, the frame's fence is never signalled and the game freezes on the loading screen. So a large
+// submit is split into chunks, and a refused submit is retried once after the queue drains.
+#define SUBMIT_CHUNK 256
+
+static VkResult submit_retry(DeviceFns* f, VkQueue queue, uint32_t n, const VkSubmitInfo* submits, VkFence fence)
+{
+    VkResult r = f->submit(queue, n, submits, fence);
+    if (r > 0)   // not a valid vkQueueSubmit result: the driver did not take the work
+    {
+        VkResult idle = f->queue_wait_idle(queue);
+        VkResult again = f->submit(queue, n, submits, fence);
+        LOG("vkQueueSubmit -> %d, retried after the queue drained (wait idle -> %d) -> %d", r, idle, again);
+        r = again;
+    }
+    return r;
+}
+
+// Each chunk runs only after the previous one finished (queue wait idle), so a chunk that does not carry
+// the original waits still starts after them. Waits go with the first chunk of a batch, signals with its
+// last, the fence with the very last. Batches with a pNext chain (timeline values, device groups) are
+// never split, as their arrays are sized by the original counts.
+static VkResult submit_split(DeviceFns* f, VkQueue queue, uint32_t n, const VkSubmitInfo* submits, VkFence fence)
+{
+    uint32_t total = 0;
+    for (uint32_t i = 0; i < n; i++)
+    {
+        if (submits[i].pNext)
+            return submit_retry(f, queue, n, submits, fence);
+        total += submits[i].commandBufferCount;
+    }
+    if (total <= SUBMIT_CHUNK)
+        return submit_retry(f, queue, n, submits, fence);
+    LOG("vkQueueSubmit: %u command buffers in %u submits, sent in chunks of %u", total, n, SUBMIT_CHUNK);
+    for (uint32_t i = 0; i < n; i++)
+    {
+        const VkSubmitInfo* s = &submits[i];
+        uint32_t done = 0;
+        do
+        {
+            uint32_t take = s->commandBufferCount - done;
+            if (take > SUBMIT_CHUNK)
+                take = SUBMIT_CHUNK;
+            bool first = done == 0, last = done + take == s->commandBufferCount;
+            VkSubmitInfo part = *s;
+            part.commandBufferCount = take;
+            part.pCommandBuffers = s->pCommandBuffers ? s->pCommandBuffers + done : NULL;
+            if (!first)
+            {
+                part.waitSemaphoreCount = 0;
+                part.pWaitSemaphores = NULL;
+                part.pWaitDstStageMask = NULL;
+            }
+            if (!last)
+            {
+                part.signalSemaphoreCount = 0;
+                part.pSignalSemaphores = NULL;
+            }
+            bool final_part = last && i == n - 1;
+            VkResult r = submit_retry(f, queue, 1, &part, final_part ? fence : VK_NULL_HANDLE);
+            if (r != VK_SUCCESS)
+            {
+                LOG("vkQueueSubmit chunk (batch %u, buffers %u..%u) -> %d", i, done, done + take, r);
+                return r;
+            }
+            if (!final_part)
+                f->queue_wait_idle(queue);
+            done += take;
+        } while (done < s->commandBufferCount);
+    }
+    return VK_SUCCESS;
+}
+
 static VKAPI_ATTR VkResult VKAPI_CALL shim_QueueSubmit(VkQueue queue, uint32_t n, const VkSubmitInfo* submits, VkFence fence)
 {
-    VkResult r = device_fns(queue)->submit(queue, n, submits, fence);
+    VkResult r = submit_split(device_fns(queue), queue, n, submits, fence);
     count(&c_submit, r);
     if (detailed(&g_detail_submit) || problem(r))
     {

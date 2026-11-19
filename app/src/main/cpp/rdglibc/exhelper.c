@@ -30,6 +30,13 @@ __attribute__((visibility("hidden"))) void** rd_eh_slot(void) {
     return slot;
 }
 
+// Newer MonoMod.Core (Harmony 2.4+ for RimWorld 1.7) on ARM64 also looks this up and calls it after
+// writing a detour, to flush the instruction cache. Without it every patch fails with "Unable to find
+// an entry point named 'mmh_clear_cache'" (2026-11-18).
+__attribute__((visibility("default"))) void mmh_clear_cache(void* addr, size_t size) {
+    __builtin___clear_cache((char*)addr, (char*)addr + size);
+}
+
 __attribute__((visibility("default"))) int eh_has_exception(void) {
     return *rd_eh_slot() != NULL;
 }

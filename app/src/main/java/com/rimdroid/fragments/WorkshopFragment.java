@@ -45,6 +45,7 @@ import java.util.regex.Pattern;
  */
 public class WorkshopFragment extends Fragment {
     private static final String START_URL = "https://steamcommunity.com/app/294100/workshop/";
+    private static final String STATE_URL = "workshop_url";
     /** Item pages: .../sharedfiles/filedetails/?id=N and .../workshop/filedetails/?id=N. */
     private static final Pattern ITEM_URL = Pattern.compile("/filedetails/\\?(?:[^#]*&)?id=(\\d+)");
 
@@ -171,15 +172,18 @@ public class WorkshopFragment extends Fragment {
                     }
                 });
 
-        if (savedInstanceState != null) web.restoreState(savedInstanceState);
-        else web.loadUrl(START_URL);
+        String saved = savedInstanceState != null ? savedInstanceState.getString(STATE_URL) : null;
+        web.loadUrl(saved != null && saved.startsWith("https://") ? saved : START_URL);
         updateBar();
     }
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (web != null) web.saveState(outState);
+        // Only the page address: WebView.saveState() keeps the whole history with page data, and on
+        // Steam pages that grew past the binder limit (715-853 KB) -> TransactionTooLargeException
+        // and a crash each time the app went to the background on this screen (2026-11-14).
+        if (web != null && web.getUrl() != null) outState.putString(STATE_URL, web.getUrl());
     }
 
     @Override

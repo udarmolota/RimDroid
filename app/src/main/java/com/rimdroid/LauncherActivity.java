@@ -106,7 +106,11 @@ public class LauncherActivity extends AppCompatActivity {
 
         binding.appbarLayout.setOnApplyWindowInsetsListener((v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsets.Type.systemBars());
-            v.setPadding(v.getPaddingLeft(), insets.top, v.getPaddingRight(), insets.bottom);
+            // With the bottom bar shown, the bar itself takes the navigation-bar inset
+            // (paddingBottomSystemWindowInsets) so its colour runs under the system buttons;
+            // padding the whole screen too left a strip of page background between them (2026-11-14).
+            boolean barShown = binding.bottomNav.getVisibility() == View.VISIBLE;
+            v.setPadding(v.getPaddingLeft(), insets.top, v.getPaddingRight(), barShown ? 0 : insets.bottom);
             return windowInsets;
         });
 
@@ -125,7 +129,10 @@ public class LauncherActivity extends AppCompatActivity {
         navController.addOnDestinationChangedListener((c, dest, args) -> {
             boolean main = false;
             for (int d : BOTTOM_NAV_DESTINATIONS) if (d == dest.getId()) main = true;
-            binding.bottomNav.setVisibility(main ? View.VISIBLE : View.GONE);
+            if ((binding.bottomNav.getVisibility() == View.VISIBLE) != main) {
+                binding.bottomNav.setVisibility(main ? View.VISIBLE : View.GONE);
+                binding.appbarLayout.requestApplyInsets();   // move the bottom inset to the bar or back
+            }
         });
         // Refresh the toolbar menu on navigation so the "+" (add instance) shows only on the main screen.
         navController.addOnDestinationChangedListener((c, dest, args) -> invalidateOptionsMenu());

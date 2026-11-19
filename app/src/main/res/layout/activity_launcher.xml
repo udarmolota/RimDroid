@@ -43,7 +43,7 @@
             app:itemTextColor="@color/bottom_nav_item"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/menu_bottom_nav"
-            app:paddingBottomSystemWindowInsets="false" />
+            app:paddingBottomSystemWindowInsets="true" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Drawer panel: the menu, then a pinned bottom row of link icons between two divider lines

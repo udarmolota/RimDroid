@@ -47,7 +47,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
 
     private EditText etUser, etPass, etManifest, etModsIds, etModsBrowserId;
     private Button btnStart, btnDlcStart, btnModsStart, btnModsBrowser, btnCancel, btnCreateInstance;
-    private CheckBox cbRoyalty, cbIdeology, cbBiotech, cbAnomaly, cbOdyssey, cbUnstable;
+    private CheckBox cbRoyalty, cbIdeology, cbBiotech, cbAnomaly, cbOdyssey, cbUnstable, cbKnownGood17;
     private android.widget.RadioGroup rgVersion;
     private ProgressBar progress;
     private TextView tvStatus;
@@ -67,6 +67,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         etPass     = v.findViewById(R.id.et_dl_pass);
         etManifest = v.findViewById(R.id.et_dl_manifest);
         cbUnstable = v.findViewById(R.id.cb_dl_unstable);
+        cbKnownGood17 = v.findViewById(R.id.cb_dl_17_known_good);
         rgVersion  = v.findViewById(R.id.rg_dl_version);
         btnStart   = v.findViewById(R.id.btn_dl_start);
         btnCreateInstance = v.findViewById(R.id.btn_dl_create_instance);
@@ -131,8 +132,10 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         // 1.7 only in APKs that carry its .NET engine; its note says where the build comes from.
         View rb17 = v.findViewById(R.id.rb_dl_17), note17 = v.findViewById(R.id.tv_dl_17_note);
         if (!com.rimdroid.game.DotnetEngine.isAvailable(appCtx)) rb17.setVisibility(View.GONE);
-        rgVersion.setOnCheckedChangeListener((group, checkedId) ->
-                note17.setVisibility(checkedId == R.id.rb_dl_17 ? View.VISIBLE : View.GONE));
+        rgVersion.setOnCheckedChangeListener((group, checkedId) -> {
+            note17.setVisibility(checkedId == R.id.rb_dl_17 ? View.VISIBLE : View.GONE);
+            cbKnownGood17.setVisibility(checkedId == R.id.rb_dl_17 ? View.VISIBLE : View.GONE);
+        });
         // The branch checkbox belongs to a manifest number: shown once one is typed.
         etManifest.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -197,7 +200,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
 
         SteamDownloadState st = SteamDownloadState.get();
         SteamDownloadSpike dl = new SteamDownloadSpike(text(etUser), etPass.getText().toString(),
-                manifestId, cbUnstable.isChecked(), selectedVersion(), st);
+                manifestId, cbUnstable.isChecked(), selectedVersion(), st).knownGoodBuild(cbKnownGood17.isChecked());
         st.begin(appCtx, null);          // the instance (and its driver) comes later, from the zip
         st.setActive(dl);
         beginUi();
@@ -392,6 +395,7 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         if (etPass != null) etPass.setEnabled(enabled);
         if (etManifest != null) etManifest.setEnabled(enabled);
         if (cbUnstable != null) cbUnstable.setEnabled(enabled);
+        if (cbKnownGood17 != null) cbKnownGood17.setEnabled(enabled);
         if (etModsIds != null) etModsIds.setEnabled(enabled);
     }
 

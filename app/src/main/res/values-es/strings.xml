@@ -234,7 +234,8 @@ En la nube: %2$s
     <string name="download_version_label">Versión del juego</string>
     <string name="download_version_16">RimWorld 1.6</string>
     <string name="download_version_17">RimWorld 1.7</string>
-    <string name="download_version_17_note">Cuando salió esta versión (15/10/2026) aún no había una RimWorld 1.7 estable pública, así que descargamos la última compilación unstable.</string>
+    <string name="download_version_17_note">RimWorld 1.7 está en la rama unstable de Steam y Ludeon la actualiza a menudo. Puede que una compilación nueva aún no funcione en RimDroid. Con la casilla de abajo marcada obtienes la última compilación compatible con RimDroid; desmárcala para la más nueva de Steam.</string>
+    <string name="download_17_known_good">Última compilación compatible con RimDroid</string>
     <string name="download_unstable">Manifiesto de la rama unstable (beta)</string>
     <string name="download_user_hint">Usuario de Steam</string>
     <string name="download_pass_hint">Contraseña de Steam</string>

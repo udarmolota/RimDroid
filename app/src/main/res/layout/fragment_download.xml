@@ -128,6 +128,15 @@
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:layout_marginTop="4dp"
                 android:visibility="gone" />
+            <!-- On: the latest 1.7 build known to work in RimDroid; off: Steam's newest. On by default while
+                 Steam's newest (1.7.5013, 2026-11-19) does not run in RimDroid. -->
+            <CheckBox
+                android:id="@+id/cb_dl_17_known_good"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/download_17_known_good"
+                android:checked="true"
+                android:visibility="gone" />
         </LinearLayout>
 
         <!-- ============ GAME ============ -->

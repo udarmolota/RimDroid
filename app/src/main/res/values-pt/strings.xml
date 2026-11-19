@@ -236,7 +236,8 @@ Na nuvem: %2$s
     <string name="download_version_label">Versão do jogo</string>
     <string name="download_version_16">RimWorld 1.6</string>
     <string name="download_version_17">RimWorld 1.7</string>
-    <string name="download_version_17_note">Quando esta versão saiu (15/10/2026) ainda não havia uma RimWorld 1.7 estável pública, então baixamos a build unstable mais recente.</string>
+    <string name="download_version_17_note">O RimWorld 1.7 está no branch unstable da Steam e a Ludeon o atualiza com frequência. Uma build nova pode ainda não funcionar no RimDroid. Com a caixa abaixo marcada você recebe a última build compatível com o RimDroid; desmarque-a para a mais nova da Steam.</string>
+    <string name="download_17_known_good">Última build compatível com o RimDroid</string>
     <string name="download_unstable">Manifesto da branch unstable (beta)</string>
     <string name="download_user_hint">Usuário Steam</string>
     <string name="download_pass_hint">Senha da Steam</string>

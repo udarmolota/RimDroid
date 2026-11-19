@@ -86,6 +86,14 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     public enum Version { V1_6, V1_7 }
     /** Where RimWorld 1.7 comes from: the beta branch until Ludeon releases 1.7 as stable, then "public". */
     private static final String RIMWORLD_1_7_BRANCH = BETA_BRANCH;
+    // RimWorld 1.7: the newest build known to work in RimDroid, downloaded when the player asks for it
+    // (a fresh Ludeon build may not run in the port yet; Steam's newest stays the default). Read from
+    // KNOWN_GOOD_URL (one line to change on GitHub when a newer build is verified, no app release);
+    // these constants are the fallback when that file cannot be fetched.
+    private static final long RIMWORLD_1_7_KNOWN_GOOD_MANIFEST = 2171661476947063200L;   // 1.7.5005
+    private static final long RIMWORLD_1_7_KNOWN_GOOD_BUILD = 26571351L;
+    private static final String KNOWN_GOOD_URL =
+            "https://raw.githubusercontent.com/udarmolota/RimDroid/master/downloads/known_good.json";
 
     /**
      * 1.6 DLC pinned like the game, keyed by the DLC's Linux DEPOT id under the base app 294100
@@ -141,6 +149,7 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     private final long manifestId;        // 0 = the version's default build; >0 = pin this build
     private final Version version;        // which RimWorld version to fetch (base game + DLC pinning)
     private final String branch;          // Steam branch the game or DLC builds are requested from
+    private boolean knownGood17;          // 1.7 game: the build known to work in RimDroid, not the newest
     private final List<Dlc> dlcs;         // DLC mode (non-null) → download these into /Download/RimDroid as zips
     private final List<Long> workshopIds; // MODS mode (non-null) → download these Workshop items (logged-in)
     private final Listener listener;
@@ -197,6 +206,42 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
     }
 
     /** DLC mode: download each owned DLC and pack it into a zip under /Download/RimDroid. */
+    /** 1.7 game: take the latest build known to work in RimDroid instead of the newest Steam serves. */
+    public SteamDownloadSpike knownGoodBuild(boolean knownGood) { this.knownGood17 = knownGood; return this; }
+
+    /** {manifest, build id} of the 1.7 build known to work in RimDroid: from GitHub, else built in. */
+    private long[] knownGood17() {
+        java.net.HttpURLConnection conn = null;
+        try {
+            conn = (java.net.HttpURLConnection) new java.net.URL(KNOWN_GOOD_URL).openConnection();
+            conn.setConnectTimeout(6000);
+            conn.setReadTimeout(6000);
+            conn.setUseCaches(false);
+            if (conn.getResponseCode() == java.net.HttpURLConnection.HTTP_OK) {
+                StringBuilder sb = new StringBuilder();
+                try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(
+                        conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                    for (String line; (line = r.readLine()) != null; ) sb.append(line).append('\n');
+                }
+                org.json.JSONObject o = new org.json.JSONObject(sb.toString()).getJSONObject("rimworld17");
+                long gid = Long.parseUnsignedLong(o.getString("manifest"));
+                long build = o.optLong("build", 0L);
+                if (gid != 0L) {
+                    progress("Latest RimWorld 1.7 known to work in RimDroid: " + o.optString("version", "?")
+                            + " (build " + build + ")");
+                    return new long[] { gid, build };
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "known-good list not fetched, using the built-in one", e);
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        progress("Latest RimWorld 1.7 known to work in RimDroid: 1.7.5005 (build "
+                + RIMWORLD_1_7_KNOWN_GOOD_BUILD + ", built in)");
+        return new long[] { RIMWORLD_1_7_KNOWN_GOOD_MANIFEST, RIMWORLD_1_7_KNOWN_GOOD_BUILD };
+    }
+
     public static SteamDownloadSpike forDlc(String username, String password, List<Dlc> dlcs,
                                             Version version, Listener listener) {
         return new SteamDownloadSpike(username, password, dlcs, null, version, listener);
@@ -746,7 +791,8 @@ public class SteamDownloadSpike implements Runnable, IDownloadListener, Cancella
             gid = RIMWORLD_1_6_MANIFEST;
             label = "1.6_" + RIMWORLD_1_6_BUILD;
         } else {
-            long[] build = gameBuildOnBranch();
+            // 1.7: the branch's newest build, or the one known to work in RimDroid if the player asked.
+            long[] build = knownGood17 ? knownGood17() : gameBuildOnBranch();
             gid = build[0];
             if (gid == 0L) {
                 finish(null, "Cannot download RimWorld 1.7: Steam reports no Linux build on branch " + branch + ".");

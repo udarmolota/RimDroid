@@ -235,7 +235,8 @@
     <string name="download_version_label">游戏版本</string>
     <string name="download_version_16">RimWorld 1.6</string>
     <string name="download_version_17">RimWorld 1.7</string>
-    <string name="download_version_17_note">本版本发布时（2026年10月15日）RimWorld 1.7 还没有公开的稳定版，因此我们下载最新的 unstable 构建。</string>
+    <string name="download_version_17_note">RimWorld 1.7 位于 Steam 的 unstable 分支，Ludeon 更新很频繁。最新构建可能还不能在 RimDroid 中运行。勾选下面的选项会下载与 RimDroid 兼容的最新构建；取消勾选则下载 Steam 上最新的构建。</string>
+    <string name="download_17_known_good">与 RimDroid 兼容的最新构建</string>
     <string name="download_unstable">该 Manifest 属于 unstable 分支（测试版）</string>
     <string name="download_user_hint">Steam 用户名</string>
     <string name="download_pass_hint">Steam 密码</string>

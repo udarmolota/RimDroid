@@ -211,6 +211,7 @@ internal static class StartupHook
         {
             RimDroidLaxFieldNames.Install(a, Log);
             RimDroidLaxDynamicMethods.Install(a, Log);
+            RimDroidSkipRuntimeIL.Install(a, Log);
         }
     }
 

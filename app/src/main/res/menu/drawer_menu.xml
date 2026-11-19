@@ -34,16 +34,9 @@
             android:title="@string/nav_icon_packs" />
     </group>
 
-    <!-- 3) Get the game from a store you own it on (Steam, GOG) -->
+    <!-- 3) Stores (Steam, GOG). The game download (Game) and the Workshop are on the bottom bar, not
+         repeated here (2026-11-19). -->
     <group android:id="@+id/group_store" android:checkableBehavior="none">
-        <item
-            android:id="@+id/action_download_game"
-            android:icon="@drawable/ic_steam"
-            android:title="@string/nav_download_game" />
-        <item
-            android:id="@+id/action_open_workshop"
-            android:icon="@drawable/ic_steam"
-            android:title="@string/workshop_menu" />
         <item
             android:id="@+id/action_cloud_saves"
             android:icon="@drawable/mt_icon_save"
@@ -54,16 +47,12 @@
             android:title="@string/nav_gog_login" />
     </group>
 
-    <!-- 4) Settings + data transfer (saves / settings) -->
+    <!-- 4) Settings. Import / export is on the bottom bar (Import). -->
     <group android:id="@+id/group_data" android:checkableBehavior="none">
         <item
             android:id="@+id/action_settings"
             android:icon="@drawable/mt_icon_settings"
             android:title="@string/nav_settings" />
-        <item
-            android:id="@+id/action_open_transfer"
-            android:icon="@drawable/ic_nav_transfer"
-            android:title="@string/transfer_title" />
     </group>
 
     <!-- 5) Diagnostics -->

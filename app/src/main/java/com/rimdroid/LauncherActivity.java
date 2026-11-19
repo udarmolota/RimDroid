@@ -143,11 +143,6 @@ public class LauncherActivity extends AppCompatActivity {
             if (id == R.id.action_settings) {
                 navController.navigate(R.id.action_app_settings);   // global app settings (theme); per-instance is via the card gear
                 return true;
-            } else if (id == R.id.action_download_game) {
-                navController.navigate(R.id.action_download_game);
-            } else if (id == R.id.action_open_workshop) {
-                navController.navigate(R.id.action_open_workshop);   // Steam Workshop with a download queue
-                return true;
             } else if (id == R.id.action_cloud_saves) {
                 navController.navigate(R.id.action_cloud_saves);   // pull PC saves from Steam Cloud
                 return true;
@@ -165,9 +160,6 @@ public class LauncherActivity extends AppCompatActivity {
                 return true;
             } else if (id == R.id.action_custom_driver) {
                 navController.navigate(R.id.action_open_custom_driver);   // device-global custom Vulkan driver import
-                return true;
-            } else if (id == R.id.action_open_transfer) {
-                navController.navigate(R.id.action_open_transfer);   // every import and export, one screen
                 return true;
             } else if (id == R.id.action_edit_controls) {
                 // Controls are per instance: the editor asks which one when there are several.

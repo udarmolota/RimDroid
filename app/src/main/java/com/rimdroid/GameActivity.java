@@ -560,13 +560,53 @@ public class GameActivity extends Activity implements SurfaceHolder.Callback {
         if (hasFocus) hideSystemBars();   // re-hide after dialogs / focus regain
     }
 
-    // Pinch-zoom: only non-stick touches reach here (overlay returns false for them).
+    // Two-finger pan (from the Wishing-Qi fork, 2026-11-19): once the fingers' midpoint moves, it drags
+    // the map with the middle button held, as RimWorld does with a mouse; the pinch still zooms.
+    private boolean twoPanning, twoDown;   // twoDown: the middle button really went down (it waits)
+    private float twoDownX, twoDownY, twoLastX, twoLastY;
+    // The pointer moves to the fingers first and the middle button goes down a few frames later, or the
+    // camera jumps by the pointer's move from the last touch (see ClrActivity.PAN_PRESS_DELAY_MS).
+    private final Runnable delayedTwoPress = () -> {
+        if (!twoPanning || twoDown) return;
+        try { buttonInput(2, 1, gameX(twoLastX), gameY(twoLastY)); } catch (UnsatisfiedLinkError ig) {}
+        twoDown = true;
+    };
+
+    private void endTwoPan() {
+        ui.removeCallbacks(delayedTwoPress);
+        if (!twoPanning) return;
+        if (twoDown) try { buttonInput(2, 0, gameX(twoLastX), gameY(twoLastY)); } catch (UnsatisfiedLinkError ig) {}
+        twoPanning = false;
+        twoDown = false;
+    }
+
+    // Pinch-zoom and two-finger pan: only non-stick touches reach here (overlay returns false for them).
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         if (scaleDetector != null) scaleDetector.onTouchEvent(e);
-        if (e.getPointerCount() >= 2 || scaling) {   // pinch-zoom
+        if (e.getPointerCount() >= 2 || scaling) {   // pinch-zoom + two-finger pan
             ui.removeCallbacks(longPressRunnable);   // a 2nd finger cancels the pending right-click
-            releasePan(); panGestureOwned = false; return true;
+            releasePan(); panGestureOwned = false;
+            int ma = e.getActionMasked();
+            if (ma == MotionEvent.ACTION_POINTER_DOWN && e.getPointerCount() >= 2) {
+                endTwoPan();
+                twoDownX = twoLastX = (e.getX(0) + e.getX(1)) * 0.5f;
+                twoDownY = twoLastY = (e.getY(0) + e.getY(1)) * 0.5f;
+            } else if (ma == MotionEvent.ACTION_MOVE && e.getPointerCount() >= 2) {
+                twoLastX = (e.getX(0) + e.getX(1)) * 0.5f;
+                twoLastY = (e.getY(0) + e.getY(1)) * 0.5f;
+                if (ClrActivity.TWO_FINGER_PAN && !twoPanning && Math.hypot(twoLastX - twoDownX, twoLastY - twoDownY) > 6 * getResources().getDisplayMetrics().density) {
+                    try { touchInput(0, gameX(twoLastX), gameY(twoLastY)); } catch (UnsatisfiedLinkError ig) {}   // 0 = move
+                    twoPanning = true;
+                    twoDown = false;
+                    ui.postDelayed(delayedTwoPress, ClrActivity.PAN_PRESS_DELAY_MS);
+                } else if (twoPanning) {
+                    try { touchInput(0, gameX(twoLastX), gameY(twoLastY)); } catch (UnsatisfiedLinkError ig) {}   // 0 = move
+                }
+            } else if (ma == MotionEvent.ACTION_POINTER_UP || ma == MotionEvent.ACTION_UP || ma == MotionEvent.ACTION_CANCEL) {
+                endTwoPan();
+            }
+            return true;
         }
         float d = getResources().getDisplayMetrics().density;
         switch (e.getActionMasked()) {

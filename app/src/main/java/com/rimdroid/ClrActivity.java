@@ -51,6 +51,12 @@ public class ClrActivity extends Activity {
     static native void glfwDisplayMode(int width, int height, int refreshHz);
     /** Frames presented so far (counted at vkQueuePresentKHR by the libvulkan.so wrapper). */
     static native long frameCount();
+    /**
+     * What the game is placing (RimDroidClrHooks, polled each frame): bits 0-1 the mode (0 none, 1 a single
+     * building or item with a hover preview, 2 a line/box drag: walls, conduits, floors, zones); for mode 1
+     * also bits 2-9 the map cell size in game pixels and bits 10-20 / 21-31 the cell under the pointer.
+     */
+    static native int placingMode();
     /** Where the game last moved the pointer itself (glfwSetCursorPos), in game pixels; false if it didn't. */
     static native boolean glfwTakeCursorWarp(float[] out);
 
@@ -445,14 +451,31 @@ public class ClrActivity extends Activity {
      * default; 1.7 had no finger panning at all, 2026-10-22); with that setting off it drags with
      * the left button held (box selection, sliders).
      * Two fingers pinch-zoom: RimWorld zooms with the mouse wheel, so the pinch turns into wheel
-     * steps, with the cursor between the fingers. The left button goes down only once the finger
-     * moves or lifts, so a second finger landing first makes a clean pinch with no click.
+     * steps, with the cursor between the fingers; moving both fingers pans the map (middle button held
+     * at their midpoint; from the Wishing-Qi fork, 2026-11-19). The left button goes down only once the
+     * finger moves or lifts, so a second finger landing first makes a clean pinch with no click.
+     * Building (from the same fork, on test): RimWorld places a single building on mouse down and shows
+     * its ghost only while the pointer hovers with no button. So while one is selected (placingMode()
+     * 1) a moving finger moves the ghost, and a tap on the ghost's cell places it; a tap elsewhere on
+     * the map moves the ghost there; a tap on the screen's edges (menus, the gizmo bar) is a plain click.
+     * Walls, conduits, floors and zones (placingMode() 2) drag with the left button even when "Drag the
+     * map to pan" is on.
      * Touches act where the finger is, but the drawn cursor (the on-screen controls' stick and
      * trackpad) stays where it was, as on the other engines: players who aim with the stick lost the
      * pointer after every tap (1.6 native engine, 2026-10-13).
      */
     /** Settings → "Drag the map to pan" (on by default), as on the 1.6 engines. */
     private boolean dragPan = true;
+    /** Two-finger pan on every engine (ClrActivity, GameActivity, NativeGameOverlay). */
+    static final boolean TWO_FINGER_PAN = true;
+    /**
+     * RimWorld's Linux build moves the camera on a middle-button drag by how far the pointer went since
+     * the previous frame, the frame the button goes down included (UnityGUIBugsFixer.EnsureFrameMouseDelta).
+     * The pointer is still where the previous touch left it, so moving it to the finger and pressing in
+     * the same frame made the map jump by that distance (2026-11-19). The pointer goes first, the middle
+     * button a few frames later.
+     */
+    static final long PAN_PRESS_DELAY_MS = 50;
 
     private final class TouchInput extends android.view.ScaleGestureDetector.SimpleOnScaleGestureListener {
         private static final long LONG_PRESS_MS = 350;   // as on the other engines
@@ -460,10 +483,29 @@ public class ClrActivity extends Activity {
         private boolean pending, pressed, gesture, rightClicked;
         private int dragButton;   // the button a moving finger holds: 2 middle (pan) or 0 left
         private float downX, downY, scaleAcc = 1f;
+        // Two-finger pan: the fingers' midpoint when the second one landed, and its latest position.
+        private boolean twoPanning;
+        private float twoDownX, twoDownY, focusX, focusY;
+        // Building preview: the mode at the finger's landing, whether it is moving the ghost, and where
+        // the ghost was left (view pixels, its map cell as placingMode() packs it, -1 for none).
+        private int placeMode, previewCell = -1;
+        private boolean hovering, hasPreview;
+        private float previewX, previewY;
+        // Whether the drag's button and the two-finger middle button really went down (they wait
+        // PAN_PRESS_DELAY_MS), and where the dragging finger is now.
+        private boolean buttonDown, twoDown;
+        private float lastX, lastY;
+        private final Runnable delayedPress = () -> {
+            if (pressed && !buttonDown) { glfwMouse(dragButton, 1, gx(lastX), gy(lastY)); buttonDown = true; }
+        };
+        private final Runnable delayedTwoPress = () -> {
+            if (twoPanning && !twoDown) { glfwMouse(2, 1, gx(focusX), gy(focusY)); twoDown = true; }
+        };
         private final Runnable longPress = () -> {
             if (!pending || gesture) return;
             pending = false;
             rightClicked = true;
+            hasPreview = false; previewCell = -1;
             glfwMouse(1, 1, gx(downX), gy(downY));
             glfwMouse(1, 0, gx(downX), gy(downY));
             input.controls.maybeHaptic();
@@ -482,41 +524,167 @@ public class ClrActivity extends Activity {
             pending = false;
             pressed = true;
             dragButton = button;
+            lastX = downX; lastY = downY;
+            buttonDown = false;
             pointerTo(downX, downY);
-            glfwMouse(button, 1, gx(downX), gy(downY));
+            if (button == 2) {
+                ui.postDelayed(delayedPress, PAN_PRESS_DELAY_MS);   // pan: see PAN_PRESS_DELAY_MS
+            } else {
+                glfwMouse(button, 1, gx(downX), gy(downY));
+                buttonDown = true;
+            }
+        }
+
+        /** Lets go of the drag's button, if it went down at all. */
+        private void release(float x, float y) {
+            ui.removeCallbacks(delayedPress);
+            if (pressed && buttonDown) glfwMouse(dragButton, 0, gx(x), gy(y));
+            pressed = false;
+            buttonDown = false;
+        }
+
+        private float dp(float v) { return v * getResources().getDisplayMetrics().density; }
+
+        private void endTwoPan() {
+            ui.removeCallbacks(delayedTwoPress);
+            if (!twoPanning) return;
+            if (twoDown) glfwMouse(2, 0, gx(focusX), gy(focusY));
+            twoPanning = false;
+            twoDown = false;
+        }
+
+        /** A tap on the screen's edges while placing: the menus and the gizmo bar, not the map. */
+        private boolean isEdgeTap(float x, float y) {
+            int w = surface.getWidth(), h = surface.getHeight();
+            if (w <= 0 || h <= 0) return false;
+            return y >= h * 0.72f || x <= w * 0.32f || y <= h * 0.08f;
+        }
+
+        /** One map cell in view pixels, from placingMode()'s packed cell size. */
+        private float cellViewPx(int raw) {
+            int gameCellPx = (raw >>> 2) & 0xFF;
+            if (gameCellPx <= 0) return dp(16);
+            return surface.getWidth() > 0 && bufferW > 0 ? gameCellPx * (float) surface.getWidth() / bufferW : gameCellPx;
+        }
+
+        /** Remembers the ghost's cell; read again a frame later, once the game has seen the pointer move. */
+        private void latchPreviewCell() {
+            int raw = placingMode();
+            if ((raw & 3) == 1) previewCell = raw >>> 10;
+            ui.postDelayed(() -> {
+                int r = placingMode();
+                if (hasPreview && (r & 3) == 1) previewCell = r >>> 10;
+            }, 25);
+        }
+
+        /**
+         * A click at (x, y). With restorePreview, a single building still being placed afterwards (the
+         * tap was on the Rotate gizmo, say) gets the pointer back over its ghost, so it stays visible.
+         */
+        private void click(float x, float y, boolean restorePreview) {
+            pending = false;
+            final float tx = gx(x), ty = gy(y), px = previewX, py = previewY;
+            pointerTo(x, y);
+            glfwMouse(0, 1, tx, ty);
+            ui.postDelayed(() -> {
+                glfwMouse(0, 0, tx, ty);
+                if (restorePreview && (placingMode() & 3) == 1)
+                    ui.postDelayed(() -> { if ((placingMode() & 3) == 1) pointerTo(px, py); }, 35);
+            }, 50);
         }
 
         void onTouch(android.view.MotionEvent e) {
             float x = e.getX(), y = e.getY();
             switch (e.getActionMasked()) {
                 case android.view.MotionEvent.ACTION_DOWN:
-                    gesture = false; pressed = false; rightClicked = false; pending = true;
+                    gesture = false; pressed = false; rightClicked = false; pending = true; hovering = false;
+                    twoPanning = false;
+                    placeMode = placingMode() & 3;
+                    if (placeMode != 1) { hasPreview = false; previewCell = -1; }
                     downX = x; downY = y;                     // the clicks carry the finger's position
+                    // Placing on the map: the ghost jumps to the finger at once.
+                    if (placeMode == 1 && !isEdgeTap(x, y)) pointerTo(x, y);
                     ui.postDelayed(longPress, LONG_PRESS_MS);
                     break;
                 case android.view.MotionEvent.ACTION_POINTER_DOWN:
                     ui.removeCallbacks(longPress);
                     pending = false;
-                    if (pressed) { glfwMouse(dragButton, 0, gx(downX), gy(downY)); pressed = false; }
+                    release(x, y);
+                    endTwoPan();
+                    if (e.getPointerCount() >= 2) {
+                        twoDownX = focusX = (e.getX(0) + e.getX(1)) * 0.5f;
+                        twoDownY = focusY = (e.getY(0) + e.getY(1)) * 0.5f;
+                    }
                     gesture = true;
                     scaleAcc = 1f;
                     break;
                 case android.view.MotionEvent.ACTION_MOVE:
-                    if (gesture || rightClicked) break;
-                    if (pending && Math.hypot(x - downX, y - downY) > 12 * getResources().getDisplayMetrics().density) {
-                        ui.removeCallbacks(longPress);
-                        press(dragPan ? 2 : 0);
+                    if (gesture) {
+                        // Two fingers: once their midpoint moves, it drags the map with the middle button.
+                        if (e.getPointerCount() < 2) break;
+                        focusX = (e.getX(0) + e.getX(1)) * 0.5f;
+                        focusY = (e.getY(0) + e.getY(1)) * 0.5f;
+                        if (TWO_FINGER_PAN && !twoPanning && Math.hypot(focusX - twoDownX, focusY - twoDownY) > dp(6)) {
+                            pointerTo(focusX, focusY);
+                            twoPanning = true;
+                            twoDown = false;
+                            ui.postDelayed(delayedTwoPress, PAN_PRESS_DELAY_MS);   // see PAN_PRESS_DELAY_MS
+                        } else if (twoPanning) {
+                            pointerTo(focusX, focusY);
+                        }
+                        break;
                     }
-                    if (pressed) pointerTo(x, y);
+                    if (rightClicked) break;
+                    if (placeMode == 1) {
+                        // A single building: sliding moves its ghost, no button down.
+                        if (pending && Math.hypot(x - downX, y - downY) > dp(6)) {
+                            ui.removeCallbacks(longPress);
+                            pending = false;
+                            hovering = true;
+                        }
+                        if (hovering) {
+                            previewX = x; previewY = y; hasPreview = true;
+                            pointerTo(x, y);
+                        }
+                        break;
+                    }
+                    if (pending && Math.hypot(x - downX, y - downY) > dp(placeMode == 2 ? 6 : 12)) {
+                        ui.removeCallbacks(longPress);
+                        press(placeMode == 2 ? 0 : (dragPan ? 2 : 0));
+                    }
+                    if (pressed) { lastX = x; lastY = y; pointerTo(x, y); }
+                    break;
+                case android.view.MotionEvent.ACTION_POINTER_UP:
+                    endTwoPan();
                     break;
                 case android.view.MotionEvent.ACTION_UP:
                 case android.view.MotionEvent.ACTION_CANCEL:
                     ui.removeCallbacks(longPress);
                     if (!gesture && !rightClicked) {
-                        if (pending) pressLeft();             // a tap
-                        if (pressed) glfwMouse(dragButton, 0, gx(x), gy(y));
+                        if (hovering) {
+                            latchPreviewCell();               // the ghost stays where the finger left it
+                        } else if (pending && placeMode == 1) {
+                            int raw = placingMode();
+                            if (isEdgeTap(downX, downY)) {
+                                click(downX, downY, hasPreview);
+                            } else if (hasPreview && previewCell >= 0 && (raw >>> 10) == previewCell
+                                    && Math.hypot(downX - previewX, downY - previewY) <= cellViewPx(raw) * 0.65f) {
+                                hasPreview = false; previewCell = -1;
+                                click(previewX, previewY, false);   // a tap on the ghost places it
+                            } else {
+                                pending = false;              // elsewhere on the map: the ghost moves there
+                                previewX = downX; previewY = downY; hasPreview = true;
+                                pointerTo(downX, downY);
+                                latchPreviewCell();
+                            }
+                        } else if (pending) {
+                            pressLeft();                      // a tap
+                        }
+                        release(x, y);
                     }
+                    endTwoPan();
                     pending = false; pressed = false; gesture = false; rightClicked = false;
+                    placeMode = 0; hovering = false;
                     break;
             }
         }

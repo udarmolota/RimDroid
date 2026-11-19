@@ -164,6 +164,18 @@ JNIEXPORT void JNICALL Java_com_rimdroid_ClrActivity_glfwDisplayMode(JNIEnv* env
     LOGI("display mode %dx%d @ %d Hz", g_mode.width, g_mode.height, g_mode.refreshRate);
 }
 
+// Designator placement mode in RimWorld 1.7 (from the Wishing-Qi fork, 2026-11-19): RimDroidClrHooks
+// registers a query that glfwPollEvents calls on the game thread each frame; Java reads the last
+// answer lock-free (ClrActivity.placingMode: the mode, the cell size and the cell under the pointer).
+typedef int (*PFN_rd_is_placing)(void);
+static _Atomic PFN_rd_is_placing g_is_placing_cb;
+static _Atomic int g_placing;
+API void rd_set_placing_query(PFN_rd_is_placing cb) { g_is_placing_cb = cb; }
+JNIEXPORT jint JNICALL Java_com_rimdroid_ClrActivity_placingMode(JNIEnv* env, jclass c) {
+    (void)env; (void)c;
+    return (jint)g_placing;
+}
+
 // Presented frames, for the FPS overlay: counted by the libvulkan.so wrapper at each vkQueuePresentKHR.
 static _Atomic unsigned long long g_frames;
 API void rd_frame_tick(void) { g_frames++; }
@@ -403,6 +415,8 @@ static void dispatch(Event* e) {
 }
 
 API void glfwPollEvents(void) {
+    PFN_rd_is_placing cb = g_is_placing_cb;
+    if (cb) g_placing = cb();
     for (;;) {
         Event e;
         pthread_mutex_lock(&g_lock);

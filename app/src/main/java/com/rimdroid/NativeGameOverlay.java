@@ -293,6 +293,23 @@ public class NativeGameOverlay extends FrameLayout
     private static final Binding[] PAN_KEYS = { Binding.KEY_UP, Binding.KEY_RIGHT, Binding.KEY_DOWN, Binding.KEY_LEFT };
     private final Runnable panIdleRelease = this::releasePan;
     private final Runnable longPressRunnable = this::longPress;
+    private boolean twoPanning, twoDown;   // twoDown: the middle button really went down (it waits)
+    private float twoDownX, twoDownY, twoLastX, twoLastY;
+    // The pointer moves to the fingers first and the middle button goes down a few frames later, or the
+    // camera jumps by the pointer's move from the last touch (see ClrActivity.PAN_PRESS_DELAY_MS).
+    private final Runnable delayedTwoPress = () -> {
+        if (!twoPanning || twoDown) return;
+        button(2, true, gameX(twoLastX) - boxLeft, gameY(twoLastY) - boxTop);
+        twoDown = true;
+    };
+
+    private void endTwoPan() {
+        ui.removeCallbacks(delayedTwoPress);
+        if (!twoPanning) return;
+        if (twoDown) button(2, false, gameX(twoLastX) - boxLeft, gameY(twoLastY) - boxTop);
+        twoPanning = false;
+        twoDown = false;
+    }
 
     private int gameX(float x) { return Math.round(Math.max(boxLeft, Math.min(boxLeft + boxW - 1, x))); }
     private int gameY(float y) { return Math.round(Math.max(boxTop, Math.min(boxTop + boxH - 1, y))); }
@@ -339,10 +356,32 @@ public class NativeGameOverlay extends FrameLayout
         if (isMouse(e)) return mouseTouch(e);
         if (scaleDetector == null) scaleDetector = new ScaleGestureDetector(getContext(), new ScaleListener());
         scaleDetector.onTouchEvent(e);
-        if (e.getPointerCount() >= 2 || scaling) {   // pinch: never a tap, a long press or a pan
+        if (e.getPointerCount() >= 2 || scaling) {   // pinch + two-finger pan: never a tap or a long press
             ui.removeCallbacks(longPressRunnable);
             releasePan();
             panGestureOwned = false;
+            // Two-finger pan (from the Wishing-Qi fork, 2026-11-19): once the fingers' midpoint moves,
+            // it drags the map with the middle button held; the pinch still zooms.
+            int ma = e.getActionMasked();
+            if (ma == MotionEvent.ACTION_POINTER_DOWN && e.getPointerCount() >= 2) {
+                endTwoPan();
+                twoDownX = twoLastX = (e.getX(0) + e.getX(1)) * 0.5f;
+                twoDownY = twoLastY = (e.getY(0) + e.getY(1)) * 0.5f;
+            } else if (ma == MotionEvent.ACTION_MOVE && e.getPointerCount() >= 2) {
+                twoLastX = (e.getX(0) + e.getX(1)) * 0.5f;
+                twoLastY = (e.getY(0) + e.getY(1)) * 0.5f;
+                int bx = gameX(twoLastX) - boxLeft, by = gameY(twoLastY) - boxTop;
+                if (ClrActivity.TWO_FINGER_PAN && !twoPanning && Math.hypot(twoLastX - twoDownX, twoLastY - twoDownY) > 6 * getResources().getDisplayMetrics().density) {
+                    touch(bx, by);
+                    twoPanning = true;
+                    twoDown = false;
+                    ui.postDelayed(delayedTwoPress, ClrActivity.PAN_PRESS_DELAY_MS);
+                } else if (twoPanning) {
+                    touch(bx, by);
+                }
+            } else if (ma == MotionEvent.ACTION_POINTER_UP || ma == MotionEvent.ACTION_UP || ma == MotionEvent.ACTION_CANCEL) {
+                endTwoPan();
+            }
             return true;
         }
         float d = getResources().getDisplayMetrics().density;

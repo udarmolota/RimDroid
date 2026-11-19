@@ -45,6 +45,8 @@ internal static class StartupHook
         redirects = ParseRedirects(ReadRedirects());
         AppDomain.CurrentDomain.AssemblyLoad += OnAssemblyLoad;
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+        foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies()) TryBindPlacing(a);
+        try { rd_set_placing_query(pollPlacingRef); } catch { }
         Log(4, "ready: " + redirects.Count + " assembly redirects");
     }
 
@@ -191,6 +193,7 @@ internal static class StartupHook
         Assembly a = args.LoadedAssembly;
         if (a.IsDynamic) return;
         string name = a.GetName().Name;
+        if (!placingBound && (name == "RimWorld" || name == "Assembly-CSharp")) TryBindPlacing(a);
         if (name == "CameraPlus") { SkipCameraPlusRendering(a); return; }
         if (name == "com.rlabrecque.steamworks.net") { RouteSteam(a); return; }
         if (name != "0Harmony" && !name.StartsWith("MonoMod", StringComparison.Ordinal)) return;
@@ -276,6 +279,249 @@ internal static class StartupHook
             }
             Log(6, "librdglibc.so not found in " + dirs);
             return IntPtr.Zero;
+        }
+    }
+
+    // ---- designator placement state (for ClrActivity's touch preview) ---------------------------
+    // From the Wishing-Qi fork (2026-11-19), on test.
+    //
+    // In RimWorld, placing a single building or installing an item (Designator_Place with
+    // DraggableDimensions == 0) commits immediately on MouseDown, while previewing its ghost
+    // requires moving the cursor with no button pressed (hover). Line/box designators
+    // (DraggableDimensions > 0: walls, conduits, floors, zones) instead use DesignationDragger
+    // from MouseDown to MouseUp.
+    // PollPlacing() runs on the game thread in glfwPollEvents() and returns:
+    //   0 = no placement/drag designator active
+    //   1 = single-tile Designator_Place (DraggableDimensions == 0): slide hovers ghost, tap places
+    //   2 = draggable Designator (DraggableDimensions > 0): slide holds Left Mouse Button to drag line/box
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    delegate int PollPlacingFn();
+
+    [DllImport("glfw", EntryPoint = "rd_set_placing_query")]
+    static extern void rd_set_placing_query(PollPlacingFn cb);
+
+    static readonly PollPlacingFn pollPlacingRef = PollPlacing;
+    static bool placingBound;
+    static Func<object> getCurrentMap;
+    static Func<object> getDesignatorManager;
+    static MethodInfo selectedDesignatorGetter;
+    static MethodInfo selectedStyleGetter;
+    static MethodInfo drawStyleGetter;
+    static MethodInfo draggableDimsGetter;
+    static FieldInfo defNameField;
+    static FieldInfo stylesField;
+    static FieldInfo dropdownActiveField;
+    static Type designatorPlaceType;
+    static Type dropdownType;
+    static object cachedDm;
+    static Func<object> getSelectedDesignator;
+    static object cachedDes;
+    static int cachedMode;
+    static Func<float> getCurUICellSize;
+    static FieldInfo lastUIScaleField;
+    static MethodInfo mouseCellMethod;
+    static FieldInfo intVecXField;
+    static FieldInfo intVecZField;
+
+    static void TryBindPlacing(Assembly a)
+    {
+        if (placingBound || a == null || a.IsDynamic) return;
+        string name = a.GetName().Name;
+        if (name != "RimWorld" && name != "Assembly-CSharp") return;
+        try
+        {
+            Type find = a.GetType("Verse.Find", false);
+            Type dm = a.GetType("Verse.DesignatorManager", false);
+            Type desType = a.GetType("Verse.Designator", false);
+            Type defType = a.GetType("Verse.Def", false);
+            Type catType = a.GetType("Verse.DrawStyleCategoryDef", false);
+            Type place = a.GetType("RimWorld.Designator_Place", false);
+            Type dropdown = a.GetType("RimWorld.Designator_Dropdown", false);
+            if (find == null || dm == null || desType == null || place == null) return;
+            MethodInfo mapGet = find.GetProperty("CurrentMap", BindingFlags.Public | BindingFlags.Static)?.GetGetMethod();
+            MethodInfo dmGet = find.GetProperty("DesignatorManager", BindingFlags.Public | BindingFlags.Static)?.GetGetMethod();
+            MethodInfo selGet = dm.GetProperty("SelectedDesignator", BindingFlags.Public | BindingFlags.Instance)?.GetGetMethod();
+            MethodInfo selStyleGet = dm.GetProperty("SelectedStyle", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetGetMethod(true);
+            // RimWorld 1.6+ uses DrawStyleCategory ("Default" for single-cell buildings, "Walls" /
+            // "Conduits" / "Floors" / "Zones" / "Orders" for draggable ones); older builds used DraggableDimensions.
+            MethodInfo styleGet = desType.GetProperty("DrawStyleCategory", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetGetMethod(true);
+            MethodInfo dragGet = desType.GetProperty("DraggableDimensions", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetGetMethod(true)
+                ?? desType.GetMethod("DraggableDimensions", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
+            if (mapGet == null || dmGet == null || selGet == null) return;
+            getCurrentMap = (Func<object>)Delegate.CreateDelegate(typeof(Func<object>), mapGet);
+            getDesignatorManager = (Func<object>)Delegate.CreateDelegate(typeof(Func<object>), dmGet);
+            selectedDesignatorGetter = selGet;
+            selectedStyleGetter = selStyleGet;
+            drawStyleGetter = styleGet;
+            draggableDimsGetter = dragGet;
+            defNameField = defType?.GetField("defName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            stylesField = catType?.GetField("styles", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            dropdownType = dropdown;
+            dropdownActiveField = dropdown?.GetField("activeDesignator", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            designatorPlaceType = place;
+            try
+            {
+                Type uiType = a.GetType("Verse.UI", false);
+                Type iv3Type = a.GetType("Verse.IntVec3", false);
+                MethodInfo cellSz = uiType?.GetMethod("CurUICellSize", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null);
+                if (cellSz != null && cellSz.ReturnType == typeof(float))
+                    getCurUICellSize = (Func<float>)Delegate.CreateDelegate(typeof(Func<float>), cellSz);
+                lastUIScaleField = uiType?.GetField("lastUIScale", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                mouseCellMethod = uiType?.GetMethod("MouseCell", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null);
+                intVecXField = iv3Type?.GetField("x", BindingFlags.Public | BindingFlags.Instance);
+                intVecZField = iv3Type?.GetField("z", BindingFlags.Public | BindingFlags.Instance);
+            }
+            catch { }
+            placingBound = true;
+            Log(4, "designator placement query bound (" + name + ", drawStyle=" + (styleGet != null) + ")");
+        }
+        catch (Exception e)
+        {
+            Log(5, "cannot bind designator placement query: " + e.Message);
+        }
+    }
+
+    static bool IsSingleCellName(string name)
+    {
+        return string.IsNullOrEmpty(name)
+            || string.Equals(name, "Default", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "SingleCell", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "Single", StringComparison.OrdinalIgnoreCase);
+    }
+
+    static string GetDefName(object def)
+    {
+        if (def == null) return null;
+        try
+        {
+            if (defNameField != null)
+            {
+                string n = defNameField.GetValue(def) as string;
+                if (n != null) return n;
+            }
+            return def.ToString();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    static int ClassifyDesignator(object dm, object des)
+    {
+        if (des == null) return 0;
+        try
+        {
+            if (dropdownType != null && dropdownActiveField != null && dropdownType.IsInstanceOfType(des))
+            {
+                object inner = dropdownActiveField.GetValue(des);
+                if (inner != null) des = inner;
+            }
+        }
+        catch { }
+
+        string catName = null;
+        try
+        {
+            if (drawStyleGetter != null)
+            {
+                object cat = drawStyleGetter.Invoke(des, null);
+                if (cat != null)
+                {
+                    catName = GetDefName(cat);
+                    if (!IsSingleCellName(catName))
+                    {
+                        bool onlySingle = false;
+                        if (stylesField != null && stylesField.GetValue(cat) is System.Collections.IList list)
+                        {
+                            if (list.Count == 0) onlySingle = true;
+                            else if (list.Count == 1 && IsSingleCellName(GetDefName(list[0]))) onlySingle = true;
+                        }
+                        if (!onlySingle)
+                        {
+                            if (selectedStyleGetter != null && dm != null)
+                            {
+                                object curStyle = selectedStyleGetter.Invoke(dm, null);
+                                if (curStyle != null && IsSingleCellName(GetDefName(curStyle)))
+                                    return designatorPlaceType.IsInstanceOfType(des) ? 1 : 0;
+                            }
+                            return 2;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        try
+        {
+            if (draggableDimsGetter != null && Convert.ToInt32(draggableDimsGetter.Invoke(des, null)) > 0)
+                return 2;
+        }
+        catch { }
+
+        return designatorPlaceType.IsInstanceOfType(des) ? 1 : 0;
+    }
+
+    static int PollPlacing()
+    {
+        if (!placingBound) return 0;
+        try
+        {
+            if (getCurrentMap() == null) return 0;
+            object dm = getDesignatorManager();
+            if (dm == null) return 0;
+            if (!object.ReferenceEquals(dm, cachedDm))
+            {
+                cachedDm = dm;
+                getSelectedDesignator = (Func<object>)Delegate.CreateDelegate(typeof(Func<object>), dm, selectedDesignatorGetter);
+            }
+            object des = getSelectedDesignator();
+            if (des == null) { cachedDes = null; cachedMode = 0; return 0; }
+            try
+            {
+                if (dropdownType != null && dropdownActiveField != null && dropdownType.IsInstanceOfType(des))
+                {
+                    object inner = dropdownActiveField.GetValue(des);
+                    if (inner != null) des = inner;
+                }
+            }
+            catch { }
+            if (!object.ReferenceEquals(des, cachedDes))
+            {
+                cachedDes = des;
+                cachedMode = ClassifyDesignator(dm, des);
+            }
+            if (cachedMode == 1)
+            {
+                int cellPx = 32, cx = 0, cz = 0;
+                try
+                {
+                    if (getCurUICellSize != null)
+                    {
+                        float uiCell = getCurUICellSize();
+                        float scale = lastUIScaleField != null ? Convert.ToSingle(lastUIScaleField.GetValue(null)) : 1f;
+                        int px = (int)Math.Round(uiCell * (scale > 0f ? scale : 1f));
+                        cellPx = px < 4 ? 4 : (px > 255 ? 255 : px);
+                    }
+                    if (mouseCellMethod != null && intVecXField != null && intVecZField != null)
+                    {
+                        object cell = mouseCellMethod.Invoke(null, null);
+                        if (cell != null)
+                        {
+                            cx = Convert.ToInt32(intVecXField.GetValue(cell)) & 0x7FF;
+                            cz = Convert.ToInt32(intVecZField.GetValue(cell)) & 0x7FF;
+                        }
+                    }
+                }
+                catch { }
+                return 1 | (cellPx << 2) | (cx << 10) | (cz << 21);
+            }
+            return cachedMode;
+        }
+        catch
+        {
+            return 0;
         }
     }
 

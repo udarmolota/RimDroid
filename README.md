@@ -168,4 +168,5 @@ data we're missing, and they're how the device recommendations here will get mor
 - [Winlator](https://github.com/brunodev85/winlator) by [BrunoSX](https://github.com/brunodev85) (LGPL-2.1) — the in-process X11 server used for RimWorld 1.6, ported from [winlator-app](https://github.com/brunodev85/winlator-app)
 - [liblinkernsbypass](https://github.com/bylaws/liblinkernsbypass) — Android linker namespace access
 - [Harmony](https://github.com/pardeike/Harmony) — required by mods
+- [Wishing-Qi](https://github.com/Wishing-Qi/RimDroid) — one-finger building placement on RimWorld 1.7 and two-finger map panning
 - [Zomdroid](https://github.com/udarmolota/zomdroid) (MIT) — architecture reference and inspiration; the gamepad remapper, the on-screen controls layout model and the controls editor are ported from it

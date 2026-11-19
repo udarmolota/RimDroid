@@ -378,7 +378,7 @@
     <string name="vk_compat_off">关闭</string>
     <string name="vk_compat_hint">如果画面在标志或菜单处卡住而游戏仍在运行，请开启。画面相同，只是 Unity 构建每一帧的方式不同。下次启动生效。</string>
     <string name="release_notes_title">v%1$s 更新内容</string>
-    <string name="release_notes_body"><b>– RimWorld 1.7 build 5005</b>\nLudeon 更新后游戏可以再次启动。\n\n<b>– 在原实例中更新游戏</b>\n实例卡片 → ⋮ → <b>更新游戏</b>：把更新的 1.7 版本装进同一个实例。模组、存档和设置保持不变；<b>回到 …</b> 可回到之前的版本。\n\n<b>– Steam 创意工坊</b>\n在应用内浏览创意工坊，点击模组和合集上的 ↓，再点下载。\n\n<b>– 底部栏和导入 / 导出</b>\n首页、游戏、创意工坊、导入、项目。存档、模组、游戏设置和控制都在一个界面导入和导出。\n\n<b>– 复制模组</b>\n模组界面 → 复制按钮：为另一个实例选择模组，也可以保持相同的加载顺序。\n\n<i>更新前请备份存档：底部栏 → 导入 → 存档 → 导出。</i></string>
+    <string name="release_notes_body"><b>– 单指建造（RimWorld 1.7）</b>\n选择建筑，滑动手指移动虚影，点击同一格即可放置。墙、管线、地板和区域可以用单指拖动。感谢 Wishing-Qi！\n\n<b>– 双指移动地图</b>\n所有引擎都可以用双指移动地图，捏合仍然缩放。\n\n<b>– 与 RimDroid 兼容的最新构建</b>\n游戏 → RimWorld 1.7：默认勾选，下载确认能在 RimDroid 中运行的构建。取消勾选则下载 Steam 上最新的构建。\n\n<b>– 修复</b>\n最新的 Harmony 可在 1.7 上使用。在 Mali GPU 上，大量模组不再在主菜单前卡住。离开应用时创意工坊不再关闭。底部栏下方不再有空隙。开始拖动时地图不再跳动。\n\n<i>更新前请备份存档：底部栏 → 导入 → 存档 → 导出。</i></string>
     <string name="nav_mods">模组</string>
     <string name="mods_active">已启用（%1$d）— 按加载顺序</string>
     <string name="mods_inactive">未启用（%1$d）</string>

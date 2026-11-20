@@ -123,6 +123,22 @@ public final class ContentInstaller {
 
     /** Copy the picked zip file(s) to cache, then import them into the instance's Mods or Data folder. */
     public static void install(Activity act, List<Uri> zipUris, GameInstance instance, boolean intoData) {
+        install(act, zipUris, instance, intoData, null);
+    }
+
+    /** Hooks for a caller that installs on the player's behalf ("Install missing" in the mod sorter). */
+    public interface Extras {
+        /** Worker thread, once something got installed; the text returned goes into the result dialog. */
+        default String afterInstall() { return null; }
+        /** Main thread, just before the result dialog shows (e.g. to go back to another screen). */
+        default void beforeReport() {}
+        /** The last paragraph of the result dialog, or null. */
+        default String note() { return null; }
+    }
+
+    /** As above; {@code extras} (may be null) adds the steps of {@link Extras}. */
+    public static void install(Activity act, List<Uri> zipUris, GameInstance instance, boolean intoData,
+                               Extras extras) {
         if (zipUris == null || zipUris.isEmpty()) return;
         final Handler main = new Handler(Looper.getMainLooper());
         final File destDir = new File(instance.getGamePath(), intoData ? "Data" : "Mods");
@@ -174,17 +190,22 @@ public final class ContentInstaller {
                 }
             }
 
+            final String afterText = extras == null || allImported.isEmpty() ? null : extras.afterInstall();
             main.post(() -> {
                 String msg;
                 if (allErrors.isEmpty() && !allImported.isEmpty()) {
-                    msg = "Installed: " + String.join(", ", allImported)
-                            + " → " + (intoData ? "Data" : "Mods") + " of " + instance.getName();
+                    msg = "Installed into " + (intoData ? "Data" : "Mods") + " of " + instance.getName()
+                            + ":" + bullets(allImported);
                 } else if (!allImported.isEmpty()) {
-                    msg = "Installed " + String.join(", ", allImported)
+                    msg = "Installed:" + bullets(allImported)
                             + "\n\nErrors:\n" + String.join("\n", allErrors);
                 } else {
                     msg = "Install failed:\n" + String.join("\n", allErrors.isEmpty() ? Collections.singletonList("Unknown error") : allErrors);
                 }
+                if (afterText != null && !afterText.isEmpty()) msg += "\n\n" + afterText;
+                String note = extras == null ? null : extras.note();
+                if (note != null && !note.isEmpty()) msg += "\n\n" + note;
+                if (extras != null) extras.beforeReport();
                 new MaterialAlertDialogBuilder(act)
                         .setTitle(totalFiles > 1 ? "Installation Complete" : "Install mod / DLC")
                         .setMessage(msg)
@@ -192,6 +213,13 @@ public final class ContentInstaller {
                         .show();
             });
         }, "rd-content-install").start();
+    }
+
+    /** One "\n• item" line per item. */
+    private static String bullets(List<String> items) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : items) sb.append("\n• ").append(s);
+        return sb.toString();
     }
 
     /** Install a GOG installer (a single {@code .sh}, or a zip bundling installers) into

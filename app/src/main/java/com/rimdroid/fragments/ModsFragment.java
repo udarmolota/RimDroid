@@ -438,7 +438,52 @@ public class ModsFragment extends Fragment {
         } else {
             b.setPositiveButton(android.R.string.ok, null);
         }
+        if (editable && hasWorkshopId(r.missing)) {
+            String instance = gi.getName();
+            b.setNeutralButton(R.string.mods_install_missing, (d, w) -> installMissing(instance, r.missing));
+        }
         b.show();
+    }
+
+    private static boolean hasWorkshopId(List<ModList.Dependency> deps) {
+        for (ModList.Dependency d : deps) if (!isDlc(d) && !d.workshopId.isEmpty()) return true;
+        return false;
+    }
+
+    /** Ludeon's expansions: bought on Steam, never a Workshop download. */
+    private static boolean isDlc(ModList.Dependency d) {
+        return d.packageId.startsWith("ludeon.rimworld");
+    }
+
+    /**
+     * Download the missing dependencies that have a Workshop ID and install them into the instance
+     * (the download screen does both, the same way as the Workshop queue) and switch them on. DLCs and dependencies
+     * without an ID are listed in the final report for the player to get by hand.
+     */
+    private void installMissing(String instance, List<ModList.Dependency> missing) {
+        if (com.rimdroid.SteamDownloadState.get().isDownloading()) {
+            Toast.makeText(requireContext(), R.string.workshop_download_busy, Toast.LENGTH_LONG).show();
+            return;
+        }
+        List<String> ids = new ArrayList<>(), names = new ArrayList<>(), manual = new ArrayList<>(),
+                packages = new ArrayList<>();
+        for (ModList.Dependency d : missing) {
+            String name = d.displayName.isEmpty() ? d.packageId : d.displayName;
+            if (isDlc(d)) manual.add(getString(R.string.mods_install_missing_dlc, name));
+            else if (d.workshopId.isEmpty()) manual.add(getString(R.string.mods_install_missing_no_id, name));
+            else {
+                if (!ids.contains(d.workshopId)) { ids.add(d.workshopId); names.add(name); }
+                packages.add(d.packageId);
+            }
+        }
+        Bundle args = new Bundle();
+        args.putString(DownloadFragment.ARG_MOD_IDS, String.join(" ", ids));
+        args.putString(DownloadFragment.ARG_INSTALL_INSTANCE, instance);
+        args.putStringArray(DownloadFragment.ARG_INSTALL_NAMES, names.toArray(new String[0]));
+        args.putStringArray(DownloadFragment.ARG_INSTALL_MANUAL, manual.toArray(new String[0]));
+        args.putStringArray(DownloadFragment.ARG_INSTALL_PACKAGES, packages.toArray(new String[0]));
+        View root = getView();
+        if (root != null) Navigation.findNavController(root).navigate(R.id.action_download_game, args);
     }
 
     private boolean draggable(int pos) {

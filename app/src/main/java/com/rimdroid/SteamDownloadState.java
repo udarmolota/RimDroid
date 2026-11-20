@@ -49,6 +49,41 @@ public final class SteamDownloadState
     private GpuDriverAdvisor.Result pendingDriverResult;
     /** The zip of the last GAME download (instances are created from it), else null. */
     private volatile java.io.File gameZip;
+    /** Mods to install into an instance once their download is over (see {@link ModInstall}), else null. */
+    private ModInstall modInstall;
+
+    /**
+     * "Install missing" from the mod sorter: the Workshop items to download and the instance they go
+     * into. The downloader fills {@link #zips}; whatever it could not fetch anonymously (a paid or
+     * private item) is reported for the player to get by hand, with what was never downloadable.
+     */
+    public static final class ModInstall {
+        public final String instance;
+        /** Workshop ID → the name to report it by, in the order asked for. */
+        public final java.util.Map<Long, String> wanted;
+        /** Lines for the report that need no download attempt to know (DLCs, no Workshop ID). */
+        public final java.util.List<String> manual;
+        /** The packageIds the dependent mods asked for: switched on once installed. */
+        public final java.util.List<String> packageIds;
+        /** Workshop ID → its downloaded zip. */
+        public final java.util.Map<Long, java.io.File> zips = new java.util.LinkedHashMap<>();
+
+        public ModInstall(String instance, java.util.Map<Long, String> wanted, java.util.List<String> manual,
+                          java.util.List<String> packageIds) {
+            this.instance = instance;
+            this.wanted = wanted;
+            this.manual = manual;
+            this.packageIds = packageIds;
+        }
+
+        /** The report lines of everything that is not going to be installed. */
+        public java.util.List<String> notInstalled() {
+            java.util.List<String> out = new java.util.ArrayList<>(manual);
+            for (java.util.Map.Entry<Long, String> e : wanted.entrySet())
+                if (!zips.containsKey(e.getKey())) out.add(e.getValue() + "  (" + e.getKey() + ")");
+            return out;
+        }
+    }
 
     public boolean isDownloading() { return downloading; }
     public boolean isCancelling() { return cancelling; }
@@ -57,6 +92,16 @@ public final class SteamDownloadState
     public boolean isIndeterminate() { return indeterminate; }
     public String getAdviseInstance() { return adviseInstance; }
     public java.io.File getGameZip() { return gameZip; }
+
+    /** Install the mods of this download into an instance when it is over. Call right after {@link #begin}. */
+    public synchronized void setModInstall(ModInstall job) { modInstall = job; }
+
+    /** The finished download's mods to install, once; null when there is nothing to do. */
+    public synchronized ModInstall takeModInstall() {
+        ModInstall job = downloading ? null : modInstall;
+        if (job != null) modInstall = null;
+        return job;
+    }
 
     public synchronized GpuDriverAdvisor.Result takeDriverResult() {
         GpuDriverAdvisor.Result result = pendingDriverResult;
@@ -71,6 +116,7 @@ public final class SteamDownloadState
     public void cancel() {
         if (!downloading) return;
         cancelling = true;
+        synchronized (this) { modInstall = null; }   // a cancelled download installs nothing
         appendLine("Cancelling…");
         main.post(() -> { if (view != null) view.onLog(getLog()); });
         Cancellable c = active;
@@ -97,6 +143,7 @@ public final class SteamDownloadState
         synchronized (this) {
             pendingFinishedMessage = null;
             pendingDriverResult = null;
+            modInstall = null;
         }
         DownloadKeepAliveService.start(appCtx);
     }
@@ -125,6 +172,11 @@ public final class SteamDownloadState
     @Override
     public void onGameZip(java.io.File zip) {
         gameZip = zip;
+    }
+
+    @Override
+    public synchronized void onModZip(long workshopId, java.io.File zip) {
+        if (modInstall != null) modInstall.zips.put(workshopId, zip);
     }
 
     @Override

@@ -411,6 +411,12 @@
     <string name="mods_sort_inactive">需要但已停用：</string>
     <string name="mods_sort_incompatible">互不兼容，且都已启用：</string>
     <string name="mods_sort_conflicts">这些模组的规则相互矛盾；它们会尽量保持原位：</string>
+    <string name="mods_install_missing">安装缺失项</string>
+    <string name="mods_install_missing_manual">需要手动安装（Steam 匿名下载无法获取）：</string>
+    <string name="mods_install_missing_dlc">%1$s：DLC，需在 Steam 购买</string>
+    <string name="mods_install_missing_no_id">%1$s：模组未提供创意工坊链接</string>
+    <string name="mods_install_missing_no_instance">实例 %1$s 已不存在。已下载的模组仍在 Download 文件夹中。</string>
+    <string name="mods_install_missing_enabled">已启用：%1$s\n\n点按“排序”将它们放到正确位置。</string>
     <string name="mods_move_top">移到最前</string>
     <string name="mods_move_up">上移</string>
     <string name="mods_move_down">下移</string>

@@ -428,6 +428,12 @@ In the cloud: %2$s
     <string name="mods_sort_inactive">Needed, but switched off:</string>
     <string name="mods_sort_incompatible">Incompatible, both on:</string>
     <string name="mods_sort_conflicts">These mods\' rules contradict each other; they keep their places as far as possible:</string>
+    <string name="mods_install_missing">Install missing</string>
+    <string name="mods_install_missing_manual">Install by hand (not available to an anonymous Steam download):</string>
+    <string name="mods_install_missing_dlc">%1$s: a DLC, bought on Steam</string>
+    <string name="mods_install_missing_no_id">%1$s: no Workshop link in the mod</string>
+    <string name="mods_install_missing_no_instance">Instance %1$s is gone. The downloaded mods stay in the Download folder.</string>
+    <string name="mods_install_missing_enabled">Switched on:%1$s\n\nTap Sort to put them in their places.</string>
     <string name="mods_move_top">Move to the top</string>
     <string name="mods_move_up">Move up</string>
     <string name="mods_move_down">Move down</string>

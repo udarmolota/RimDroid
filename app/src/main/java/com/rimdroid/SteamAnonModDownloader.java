@@ -103,6 +103,8 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
     public interface Listener {
         void onProgress(String message);
         default void onPercent(int percent) {}
+        /** One Workshop item packed into its zip, before onDone. */
+        default void onModZip(long workshopId, File zip) {}
         void onDone(String message);
     }
 
@@ -291,6 +293,7 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
                 File zip = new File(downloadsDir, sanitizeFileName(lastTitle) + "_" + id + ".zip");
                 ZipUtil.zipDir(work, zip);
                 progress("✓ " + id + " → " + zip.getAbsolutePath());
+                if (listener != null) listener.onModZip(id, zip);
                 ok = true;
             } else {
                 progress("✗ " + id + " — nothing usable downloaded "

@@ -21,10 +21,16 @@ public final class ZipUtil {
 
     /** Zip the entire contents of {@code srcDir} into {@code destZip} (entries relative to srcDir). */
     public static void zipDir(File srcDir, File destZip) throws IOException {
+        zipDir(srcDir, destZip, null);
+    }
+
+    /** As above, with {@code comment} (may be null) as the zip file's comment. */
+    public static void zipDir(File srcDir, File destZip, String comment) throws IOException {
         File parent = destZip.getParentFile();
         if (parent != null) parent.mkdirs();
         try (ZipOutputStream zos = new ZipOutputStream(
                 new BufferedOutputStream(new FileOutputStream(destZip)))) {
+            if (comment != null) zos.setComment(comment);
             addEntries(srcDir, srcDir, zos);
         }
     }

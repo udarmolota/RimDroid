@@ -407,6 +407,12 @@
     <string name="mods_sort_inactive">Нужны, но выключены:</string>
     <string name="mods_sort_incompatible">Несовместимы, включены оба:</string>
     <string name="mods_sort_conflicts">Правила этих модов противоречат друг другу; они по возможности остаются на своих местах:</string>
+    <string name="mods_install_missing">Установить недостающие</string>
+    <string name="mods_install_missing_manual">Установите вручную (анонимная загрузка из Steam их не достанет):</string>
+    <string name="mods_install_missing_dlc">%1$s: DLC, покупается в Steam</string>
+    <string name="mods_install_missing_no_id">%1$s: в моде нет ссылки на Workshop</string>
+    <string name="mods_install_missing_no_instance">Инстанса %1$s больше нет. Скачанные моды остались в папке Download.</string>
+    <string name="mods_install_missing_enabled">Включены:%1$s\n\nНажмите «Сортировать», чтобы расставить их по местам.</string>
     <string name="mods_move_top">В начало</string>
     <string name="mods_move_up">Выше</string>
     <string name="mods_move_down">Ниже</string>

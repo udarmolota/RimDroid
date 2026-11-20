@@ -405,6 +405,12 @@ En la nube: %2$s
     <string name="mods_sort_inactive">Necesarios, pero desactivados:</string>
     <string name="mods_sort_incompatible">Incompatibles, ambos activos:</string>
     <string name="mods_sort_conflicts">Las reglas de estos mods se contradicen; conservan su sitio en lo posible:</string>
+    <string name="mods_install_missing">Instalar faltantes</string>
+    <string name="mods_install_missing_manual">Instalar a mano (no disponibles en una descarga anónima de Steam):</string>
+    <string name="mods_install_missing_dlc">%1$s: un DLC, se compra en Steam</string>
+    <string name="mods_install_missing_no_id">%1$s: el mod no da un enlace de Workshop</string>
+    <string name="mods_install_missing_no_instance">La instancia %1$s ya no existe. Los mods descargados siguen en la carpeta Download.</string>
+    <string name="mods_install_missing_enabled">Activados:%1$s\n\nPulsa Ordenar para colocarlos en su sitio.</string>
     <string name="mods_move_top">Mover al principio</string>
     <string name="mods_move_up">Subir</string>
     <string name="mods_move_down">Bajar</string>

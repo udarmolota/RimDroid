@@ -42,6 +42,19 @@ import java.util.concurrent.CompletableFuture;
 public class DownloadFragment extends Fragment implements SteamDownloadState.View {
     /** Workshop ids to download right away, space-separated (from the Steam Workshop screen). */
     public static final String ARG_MOD_IDS = "mod_ids";
+    /**
+     * With {@link #ARG_MOD_IDS}: install the downloaded mods into this instance when the download is
+     * over ("Install missing" in the mod sorter). {@link #ARG_INSTALL_NAMES} names each of the IDs
+     * for the report, {@link #ARG_INSTALL_MANUAL} lists what cannot be downloaded at all,
+     * {@link #ARG_INSTALL_PACKAGES} the packageIds to switch on once they are installed.
+     */
+    public static final String ARG_INSTALL_INSTANCE = "install_instance";
+    public static final String ARG_INSTALL_NAMES = "install_names";
+    public static final String ARG_INSTALL_MANUAL = "install_manual";
+    public static final String ARG_INSTALL_PACKAGES = "install_packages";
+
+    /** The install to attach to the next mods download (see ARG_INSTALL_INSTANCE). */
+    private SteamDownloadState.ModInstall pendingInstall;
 
     private final Handler mainH = new Handler(Looper.getMainLooper());
 
@@ -125,7 +138,9 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         if (queued != null && !queued.trim().isEmpty()) {
             toggle.check(R.id.btn_type_mods);
             etModsIds.setText(queued);
+            pendingInstall = installArgs(getArguments(), queued);
             getArguments().remove(ARG_MOD_IDS);   // once: coming back here must not start it again
+            getArguments().remove(ARG_INSTALL_INSTANCE);
             if (!SteamDownloadState.get().isDownloading()) v.post(this::startMods);
         }
 
@@ -274,6 +289,8 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         SteamDownloadState st = SteamDownloadState.get();
         SteamAnonModDownloader dl = new SteamAnonModDownloader(ids, st);
         st.begin(appCtx, null);
+        st.setModInstall(pendingInstall);
+        pendingInstall = null;
         st.setActive(dl);
         beginUi();
         new Thread(dl, "rd-anon-mod").start();
@@ -428,6 +445,100 @@ public class DownloadFragment extends Fragment implements SteamDownloadState.Vie
         // the download finished. Here we only show its one-time explanation.
         com.rimdroid.GpuDriverAdvisor.Result driver = SteamDownloadState.get().takeDriverResult();
         if (driver != null && driver.announce && isAdded()) showDriverResult(driver);
+        if (isAdded()) {
+            SteamDownloadState.ModInstall job = SteamDownloadState.get().takeModInstall();
+            if (job != null) installMods(job);
+        }
+    }
+
+    // ---- "Install missing" from the mod sorter ----
+
+    @Nullable
+    private static SteamDownloadState.ModInstall installArgs(Bundle args, String ids) {
+        String instance = args.getString(ARG_INSTALL_INSTANCE);
+        if (instance == null || instance.isEmpty()) return null;
+        String[] names = args.getStringArray(ARG_INSTALL_NAMES);
+        String[] manual = args.getStringArray(ARG_INSTALL_MANUAL);
+        String[] packages = args.getStringArray(ARG_INSTALL_PACKAGES);
+        java.util.Map<Long, String> wanted = new java.util.LinkedHashMap<>();
+        List<Long> parsed = SteamAnonModDownloader.parseWorkshopIds(ids);
+        for (int i = 0; i < parsed.size(); i++) {
+            String name = names != null && i < names.length ? names[i] : "";
+            wanted.put(parsed.get(i), name.isEmpty() ? String.valueOf(parsed.get(i)) : name);
+        }
+        return new SteamDownloadState.ModInstall(instance, wanted,
+                manual == null ? new ArrayList<>() : new ArrayList<>(java.util.Arrays.asList(manual)),
+                packages == null ? new ArrayList<>() : java.util.Arrays.asList(packages));
+    }
+
+    /**
+     * Switch on the asked-for mods that are installed now, at the end of the load order: the mods
+     * that need them are already on, and Sort puts them in place. Runs on the install's worker thread.
+     */
+    private static String switchOn(android.content.Context ctx, com.rimdroid.game.GameInstance gi,
+                                   List<String> packageIds) {
+        java.io.File dir = new java.io.File(gi.getGamePath());
+        List<String> order = com.rimdroid.mods.ModList.activeOrder(dir);
+        if (order == null) return null;   // no ModsConfig.xml until the game's first start
+        java.util.Map<String, com.rimdroid.mods.ModList.Mod> installed =
+                com.rimdroid.mods.ModList.byId(com.rimdroid.mods.ModList.installed(dir));
+        List<String> names = new ArrayList<>();
+        for (String id : packageIds) {
+            com.rimdroid.mods.ModList.Mod m = installed.get(id);
+            if (m == null || order.contains(id)) continue;
+            order.add(id);
+            names.add(m.name);
+        }
+        if (names.isEmpty()) return null;
+        if (!com.rimdroid.mods.ModList.writeOrder(dir, order))
+            return ctx.getString(R.string.mods_switch_failed);
+        StringBuilder list = new StringBuilder();
+        for (String n : names) list.append("\n• ").append(n);
+        return ctx.getString(R.string.mods_install_missing_enabled, list.toString());
+    }
+
+    /** The report belongs to the Mods screen the player started from, back there (fresh list) first. */
+    private static void backToMods(androidx.navigation.NavController nav) {
+        try {
+            nav.popBackStack(R.id.mods_fragment, false);
+        } catch (RuntimeException ignored) { /* the activity is gone: the report still shows */ }
+    }
+
+    /** Install what was downloaded, then say what is left to get by hand. */
+    private void installMods(SteamDownloadState.ModInstall job) {
+        com.rimdroid.game.GameInstance gi = com.rimdroid.game.GameInstanceManager.requireSingleton()
+                .getByName(job.instance);
+        List<String> left = job.notInstalled();
+        StringBuilder note = new StringBuilder();
+        if (!left.isEmpty()) {
+            note.append(getString(R.string.mods_install_missing_manual));
+            for (String line : left) note.append("\n• ").append(line);
+        }
+        List<android.net.Uri> zips = new ArrayList<>();
+        for (java.io.File zip : job.zips.values()) zips.add(android.net.Uri.fromFile(zip));
+        if (gi != null && !zips.isEmpty()) {
+            android.content.Context ctx = requireContext().getApplicationContext();
+            androidx.navigation.NavController nav =
+                    androidx.navigation.fragment.NavHostFragment.findNavController(this);
+            String noteText = note.toString();
+            com.rimdroid.ContentInstaller.install(requireActivity(), zips, gi, false,
+                    new com.rimdroid.ContentInstaller.Extras() {
+                        @Override public String afterInstall() { return switchOn(ctx, gi, job.packageIds); }
+                        @Override public void beforeReport() { backToMods(nav); }
+                        @Override public String note() { return noteText; }
+                    });
+            return;
+        }
+        // Nothing to install: the instance is gone, or every item needs a manual download.
+        android.app.Activity act = requireActivity();
+        String message = gi == null ? getString(R.string.mods_install_missing_no_instance, job.instance)
+                : note.toString();
+        backToMods(androidx.navigation.fragment.NavHostFragment.findNavController(this));
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(act)
+                .setTitle(R.string.mods_install_missing)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     @Override

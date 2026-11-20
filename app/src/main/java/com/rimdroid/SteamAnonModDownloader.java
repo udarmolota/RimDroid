@@ -148,6 +148,8 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
     private volatile Thread workerThread;   // the download thread (interrupted on cancel)
     private volatile boolean doneEmitted;   // ensure exactly one terminal onDone
     private volatile String lastTitle;   // resolved mod title, used for an informative zip name
+    private volatile long lastManifest;  // its content manifest: the version, kept in the zip's comment
+    private volatile File upToDateZip;   // a zip already holding that version: nothing to download
 
     public SteamAnonModDownloader(List<Long> workshopIds, Listener listener) {
         this.workshopIds = workshopIds;
@@ -286,10 +288,12 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
         if (!work.mkdirs()) { progress("✗ " + id + ": cannot create work dir"); return false; }
         boolean ok = false;
         try {
-            if (downloadOne(cdn, id, work) && containsAboutXml(work)) {
+            upToDateZip = null;
+            if (downloadOne(cdn, id, work, downloadsDir) && (upToDateZip != null || containsAboutXml(work))) {
                 // Informative name: "<Mod Title>_<id>.zip" (id kept for uniqueness/traceability).
-                File zip = new File(downloadsDir, sanitizeFileName(lastTitle) + "_" + id + ".zip");
-                ZipUtil.zipDir(work, zip);
+                File zip = upToDateZip != null ? upToDateZip
+                        : new File(downloadsDir, sanitizeFileName(lastTitle) + "_" + id + ".zip");
+                if (upToDateZip == null) ZipUtil.zipDir(work, zip, versionTag(id, lastManifest));
                 progress("✓ " + id + " → " + zip.getAbsolutePath());
                 ok = true;
             } else {
@@ -432,8 +436,12 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
         }
     }
 
-    /** Full manual SteamPipe download of one Workshop item into {@code work}. */
-    private boolean downloadOne(Client cdn, long id, File work) throws Exception {
+    /**
+     * Full manual SteamPipe download of one Workshop item into {@code work}, unless a zip in
+     * {@code downloadsDir} already holds this version: then that zip is {@link #upToDateZip} and
+     * nothing is downloaded.
+     */
+    private boolean downloadOne(Client cdn, long id, File work, File downloadsDir) throws Exception {
         PubInfo info = resolvePublishedFile(id);
         lastTitle = info.title;
         if (!info.ok || info.consumerAppId <= 0 || info.hcontentFile == 0) {
@@ -442,6 +450,13 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
         }
         int appId = info.consumerAppId;
         progress("item '" + info.title + "' → app " + appId + ", manifest " + info.hcontentFile);
+        lastManifest = info.hcontentFile;
+        File have = zipOfVersion(downloadsDir, id, info.hcontentFile);
+        if (have != null) {
+            progress("up to date, not downloading again: " + have.getName());
+            upToDateZip = have;
+            return true;
+        }
 
         int depot = resolveWorkshopDepot(appId);
         if (depot <= 0) { progress("✗ could not resolve workshop depot for app " + appId); return false; }
@@ -714,6 +729,29 @@ public class SteamAnonModDownloader implements Runnable, Cancellable {
         while (rel.startsWith("/")) rel = rel.substring(1);
         if (rel.isEmpty() || rel.contains("../")) return null;
         return rel;
+    }
+
+    /**
+     * The zip comment naming the Workshop version a zip holds. Every update of an item gets a new
+     * content manifest, and GetPublishedFileDetails tells it before any download.
+     */
+    private static String versionTag(long id, long manifest) {
+        return "rimdroid workshop=" + id + " manifest=" + Long.toUnsignedString(manifest);
+    }
+
+    /** A zip of this item in {@code dir} that holds exactly this version, else null. */
+    private static File zipOfVersion(File dir, long id, long manifest) {
+        File[] zips = dir.listFiles((d, name) -> name.endsWith("_" + id + ".zip"));
+        if (zips == null) return null;
+        String tag = versionTag(id, manifest);
+        for (File z : zips) {
+            try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(z)) {
+                if (tag.equals(zf.getComment())) return z;
+            } catch (java.io.IOException e) {
+                // Unreadable or half written (the comment is the zip's very end): download it again.
+            }
+        }
+        return null;
     }
 
     /** Make a Workshop title safe + tidy for a filename (drop illegal chars, collapse spaces, cap length). */
